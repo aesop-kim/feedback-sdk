@@ -30,6 +30,7 @@ type PreparedUpload = {
   viewport: { width: number; height: number };
   // 앞선 업로드 시도에서 서버가 만든 녹화 id. 다시 보낼 때 같은 녹화를 이어 쓴다.
   recordingId: string | null;
+  reverifyIssueId: string | null;
 };
 
 type UseWidgetRecordingInput = {
@@ -81,6 +82,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
   const [isMicrophoneSilent, setIsMicrophoneSilent] = useState(false);
   const sessionRef = useRef<CaptureSession | null>(null);
   const stopMicrophoneWatchRef = useRef<(() => void) | null>(null);
+  const reverifyIssueIdRef = useRef<string | null>(null);
   const rrwebEventsRef = useRef<unknown[]>([]);
   const contextsRef = useRef<RecordedContext[]>([]);
   const domStoppedResolverRef = useRef<(() => void) | null>(null);
@@ -127,6 +129,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
         conversationToken: token,
         ...prepared,
         recordingId: prepared.recordingId,
+        reverifyIssueId: prepared.reverifyIssueId,
         onProgress: (progress) => setPendingUpload((current) => (current ? { ...current, progress } : current)),
       });
       preparedUploadRef.current = null;
@@ -182,6 +185,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
       page: { url: meta?.href ?? currentPage?.url ?? "", title: currentPage?.title ?? "" },
       viewport: getHostViewport(meta, contexts),
       recordingId: null,
+      reverifyIssueId: reverifyIssueIdRef.current,
     };
     preparedUploadRef.current = prepared;
     await runUpload(prepared, `local-${capture.t0}`);
@@ -198,10 +202,12 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
   }, [finishSession]);
 
   // 브라우저는 사용자 클릭 직후에만 화면 공유를 허락하므로, 첫 await가 getDisplayMedia여야 한다.
-  const startRecording = useCallback(async () => {
+  // reverifyIssueId를 주면 고친 이슈를 다시 확인하는 녹화로 올린다.
+  const startRecording = useCallback(async (options?: { reverifyIssueId?: string | null }) => {
     if (sessionRef.current || phase !== "idle") {
       return;
     }
+    reverifyIssueIdRef.current = options?.reverifyIssueId ?? null;
     const { onToast: showToast, post: postToHost, onModeChange: changeMode } = latestInputRef.current;
     let displayStream: MediaStream;
     try {

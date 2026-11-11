@@ -27,6 +27,8 @@ export type UploadRecordingInput = {
   contexts: RecordedContext[];
   // "다시 보내기"면 앞선 시도의 녹화 id. 서버는 새로 만들지 않고 업로드 주소만 다시 발급한다.
   recordingId?: string | null;
+  // 재확인 녹화면 고친 이슈 id. 서버가 업로드를 마치면 그 이슈를 reverify로 바꾼다.
+  reverifyIssueId?: string | null;
   onProgress?: (progress: number) => void;
 };
 
@@ -119,7 +121,7 @@ async function uploadFile(task: UploadTask): Promise<void> {
 }
 
 export async function uploadRecording(input: UploadRecordingInput): Promise<{ recordingId: string }> {
-  const { conversationToken, capture, page, viewport, rrwebEvents, contexts, recordingId, onProgress } = input;
+  const { conversationToken, capture, page, viewport, rrwebEvents, contexts, recordingId, reverifyIssueId, onProgress } = input;
   let created: CreateRecordingResponse;
   try {
     created = await requestWidgetJson<CreateRecordingResponse>(conversationToken, "/api/recordings", {
@@ -133,6 +135,7 @@ export async function uploadRecording(input: UploadRecordingInput): Promise<{ re
         audioOffsetMs: Math.round(capture.audioOffsetMs),
         frames: capture.frames.map((frame) => ({ tMs: frame.tMs, reason: frame.reason })),
         recordingId: recordingId ?? undefined,
+        reverifyIssueId: reverifyIssueId ?? undefined,
       }),
     });
   } catch (error) {

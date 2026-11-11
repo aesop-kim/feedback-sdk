@@ -177,6 +177,10 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
     void recording.startRecording();
   };
 
+  const handleStartReverify = (issueId: string | null) => {
+    void recording.startRecording({ reverifyIssueId: issueId });
+  };
+
   if (recording.phase !== "idle") {
     return (
       <RecordingPill
@@ -216,10 +220,12 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
         {isReady && hasMessages ? (
           <MessageList
             messages={conversation.messages}
+            reverifyRequest={conversation.reverifyRequest}
             pendingTexts={pendingTexts}
             pendingUpload={recording.pendingUpload}
             onAnswer={handleAnswer}
             onRetryText={handleRetryText}
+            onStartReverify={handleStartReverify}
             onRetryUpload={recording.retryUpload}
           />
         ) : null}
