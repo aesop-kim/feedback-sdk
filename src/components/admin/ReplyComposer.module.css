@@ -1,0 +1,63 @@
+.composer {
+  flex-shrink: 0;
+  padding: var(--sp-3) var(--sp-6) var(--sp-4);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.box {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  padding: 7px 7px 7px var(--sp-4);
+  border-radius: var(--r-btn-l);
+  background: var(--grey-100);
+  border: 1px solid transparent;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.box:focus-within {
+  border-color: var(--blue-500);
+  background: var(--bg);
+}
+
+.textarea {
+  flex: 1;
+  min-height: 32px;
+  max-height: 160px;
+  padding: 5px 0;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  color: var(--grey-900);
+}
+
+.textarea::placeholder {
+  color: var(--grey-500);
+}
+
+.hint,
+.error {
+  margin: 6px 2px 0;
+  font-size: var(--fs-t8);
+  line-height: var(--lh-t8);
+}
+
+.hint {
+  color: var(--grey-500);
+}
+
+.error {
+  color: var(--red-500);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

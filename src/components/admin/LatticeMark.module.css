@@ -1,0 +1,13 @@
+.mark {
+  flex-shrink: 0;
+  color: var(--blue-500);
+}
+
+.cell {
+  fill: var(--bg);
+}
+
+.cellDim {
+  fill: var(--bg);
+  opacity: 0.55;
+}

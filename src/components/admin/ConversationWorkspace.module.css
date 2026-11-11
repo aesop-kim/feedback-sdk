@@ -1,0 +1,73 @@
+.threadColumn {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.analysisColumn {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  border-left: 1px solid var(--border-hairline);
+}
+
+.notice {
+  margin: 0;
+  padding: var(--sp-6);
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--grey-600);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-6);
+}
+
+.skeletonTitle,
+.skeletonCaption,
+.skeletonBubble {
+  display: block;
+  border-radius: 8px;
+  background: var(--grey-100);
+  animation: pulse 1.2s var(--ease-out) infinite alternate;
+}
+
+.skeletonTitle {
+  width: 120px;
+  height: 18px;
+}
+
+.skeletonCaption {
+  width: 220px;
+  height: 12px;
+  margin-bottom: var(--sp-6);
+}
+
+.skeletonBubble {
+  height: 40px;
+  border-radius: 18px;
+}
+
+.skeletonLeft {
+  width: 46%;
+}
+
+.skeletonRight {
+  width: 32%;
+  align-self: flex-end;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.5;
+  }
+}

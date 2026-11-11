@@ -1,0 +1,71 @@
+.card {
+  width: 360px;
+  padding: var(--sp-8) 28px 28px;
+  border-radius: var(--r-card);
+  background: var(--bg);
+  border: 1px solid var(--border-hairline);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.caption {
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  font-weight: var(--fw-semibold);
+  color: var(--grey-600);
+}
+
+.title {
+  margin: var(--sp-3) 0 var(--sp-6);
+  font-size: var(--fs-t3);
+  line-height: var(--lh-t3);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-tight);
+  color: var(--grey-900);
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--grey-700);
+}
+
+.input {
+  width: 100%;
+  height: var(--h-btn-l);
+  padding: 0 var(--sp-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-input);
+  background: var(--grey-100);
+  font-size: var(--fs-t6);
+  color: var(--grey-900);
+  outline: none;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.input::placeholder {
+  color: var(--grey-500);
+}
+
+.input:focus {
+  border-color: var(--blue-500);
+  background: var(--bg);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--red-500);
+}
+
+.error {
+  min-height: var(--lh-t7);
+  margin: var(--sp-2) 0 var(--sp-5);
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--red-500);
+}
