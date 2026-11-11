@@ -12,7 +12,7 @@ import {
   cleanupQaUsers,
   createQaUser,
   getQaDatabase,
-  readEnvFile,
+  getSigningSecrets,
   seedAnalyzedRecording,
   startConversationViaApi,
 } from "./qa-helpers";
@@ -44,12 +44,12 @@ for (const [label, authorization] of Object.entries(FORGED_TOKENS)) {
 }
 
 test("서명은 맞지만 만료된 대화 토큰과 관리자 쿠키는 401", async ({ request, playwright }) => {
-  test.skip(IS_DEPLOYED, "운영 서명 비밀값은 QA 러너에 없어서, 만료 토큰은 .env.local의 테스트 비밀값으로 로컬에서만 만든다");
-  const secrets = readEnvFile(".env.local");
+  // 배포에서도 돈다. 배포는 .env.cloud의 운영 비밀값으로 서명한다(V4-04).
+  const secrets = getSigningSecrets();
   const owner = await startConversationViaApi(request, createQaUser("sec-expired"));
   // expiresAt = now + ttl이라 ttl을 음수로 주면 1분 전에 만료된 토큰이 된다.
-  const expiredToken = createSignedToken(owner.conversationId, -60_000, secrets.WIDGET_TOKEN_SECRET);
-  const freshToken = createSignedToken(owner.conversationId, 60_000, secrets.WIDGET_TOKEN_SECRET);
+  const expiredToken = createSignedToken(owner.conversationId, -60_000, secrets.widgetTokenSecret);
+  const freshToken = createSignedToken(owner.conversationId, 60_000, secrets.widgetTokenSecret);
 
   const fresh = await request.get(`${SDK_ORIGIN}/api/messages`, { headers: { authorization: `Bearer ${freshToken}` } });
   expect(fresh.status(), "같은 비밀값으로 만든 유효한 토큰은 통과해야 만료 검사가 의미 있다").toBe(200);
@@ -64,7 +64,7 @@ test("서명은 맞지만 만료된 대화 토큰과 관리자 쿠키는 401", a
 
   const adminStatuses: number[] = [];
   for (const ttlMs of [60_000, -60_000]) {
-    const session = createSignedToken("admin", ttlMs, secrets.ADMIN_SESSION_SECRET);
+    const session = createSignedToken("admin", ttlMs, secrets.adminSessionSecret);
     const adminContext = await playwright.request.newContext({ extraHTTPHeaders: { cookie: `lattice_admin_session=${session}` } });
     adminStatuses.push((await adminContext.get(`${SDK_ORIGIN}/api/admin/conversations`)).status());
     await adminContext.dispose();

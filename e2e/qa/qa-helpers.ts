@@ -34,6 +34,18 @@ export function readEnvFile(fileName: string): Record<string, string> {
 
 let cachedAdminClient: SupabaseClient | null = null;
 
+// 토큰·관리자 쿠키 서명 비밀값. 로컬은 .env.local, 배포는 .env.cloud의 CLOUD_* 값을 쓴다. 값은 출력하지 않는다.
+export function getSigningSecrets(): { widgetTokenSecret: string; adminSessionSecret: string } {
+  const local = readEnvFile(".env.local");
+  const cloud = readEnvFile(".env.cloud");
+  const widgetTokenSecret = IS_DEPLOYED ? cloud.CLOUD_WIDGET_TOKEN_SECRET : local.WIDGET_TOKEN_SECRET;
+  const adminSessionSecret = IS_DEPLOYED ? cloud.CLOUD_ADMIN_SESSION_SECRET : local.ADMIN_SESSION_SECRET;
+  if (!widgetTokenSecret || !adminSessionSecret) {
+    throw new Error(`서명 비밀값이 없어요 (${QA_TARGET}: ${IS_DEPLOYED ? ".env.cloud의 CLOUD_*" : ".env.local"})`);
+  }
+  return { widgetTokenSecret, adminSessionSecret };
+}
+
 // 정리·검증용 service role 클라이언트. 키는 출력하지 않는다.
 const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
 
