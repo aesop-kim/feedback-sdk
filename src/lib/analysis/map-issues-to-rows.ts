@@ -75,18 +75,22 @@ export function findNormalizedHighlight(element: ElementContext | null): Highlig
   return { x: roundRatio(x), y: roundRatio(y), width: roundRatio(width), height: roundRatio(height) };
 }
 
+// isReverify: 고객이 고친 이슈를 다시 확인하려고 보낸 녹화. 여기서 나온 내용은 원래 이슈를 닫을지 다시 열지
+// 판단하는 근거라서, 고객에게 또 묻는 질문 초안을 만들지 않고 "확인 필요"로도 표시하지 않는다(V4-06).
 export function mapIssuesToRows(input: {
   recordingId: string;
   issues: AnalysisIssue[];
   contexts: TimedElementContext[];
   frames: FrameReference[];
+  isReverify?: boolean;
 }): IssueRowPayload[] {
   return input.issues.map((issue) => {
     const tMs = Math.max(0, Math.round(issue.tMs));
     const frame = findFrame(input.frames, issue.frameRef, tMs);
     const element = findElement(input.contexts, issue.selector, tMs);
+    const confidence = input.isReverify ? "clear" : issue.confidence;
     const clarification =
-      issue.confidence === "ambiguous" && issue.clarification
+      confidence === "ambiguous" && issue.clarification
         ? {
             question: issue.clarification.question,
             options: issue.clarification.options.map((label, index) => ({ id: `o${index + 1}`, label })),
@@ -99,7 +103,7 @@ export function mapIssuesToRows(input: {
       title: issue.title,
       summary: issue.summary,
       suggestion: issue.suggestion,
-      confidence: issue.confidence,
+      confidence,
       frame_path: frame ? `${input.recordingId}/frames/${getFileName(frame.path)}` : null,
       element,
       clarification,

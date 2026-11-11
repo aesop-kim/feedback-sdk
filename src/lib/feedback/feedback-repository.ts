@@ -1,5 +1,5 @@
 import "server-only";
-import { isRemainingIssue } from "@/lib/feedback/issue-status";
+import { countRemainingIssues } from "@/lib/feedback/issue-status";
 import { findRecordingFailureKind } from "@/lib/feedback/recording-failure";
 import { findOpenReverifyRequest } from "@/lib/feedback/reverify-request";
 import { getFirstRelation } from "@/lib/supabase/first-relation";
@@ -275,21 +275,26 @@ export async function getConversationSummaries(conversationId?: string): Promise
   const supabase = getServerSupabase();
   const baseQuery = supabase
     .from("conversations")
-    .select("id, last_message_at, last_message_preview, admin_unread_count, end_users(external_id, name, email), recordings(id), issues(id, status)");
+    .select("id, last_message_at, last_message_preview, admin_unread_count, end_users(external_id, name, email), recordings(id, reverify_issue_id), issues(id, status, recording_id)");
   const { data: rows } = conversationId
     ? await baseQuery.eq("id", conversationId)
     : await baseQuery.order("last_message_at", { ascending: false }).limit(100);
   return (rows ?? []).map((row) => {
     const endUser = getFirstRelation<{ external_id: string; name: string; email: string | null }>(row.end_users);
-    const issueRows = (row.issues ?? []) as { status: IssueStatus }[];
+    const recordingRows = (row.recordings ?? []) as { id: string; reverify_issue_id: string | null }[];
+    const issueRows = (row.issues ?? []) as { status: IssueStatus; recording_id: string }[];
+    const reverifyRecordingIds = new Set(recordingRows.filter((recording) => recording.reverify_issue_id).map((recording) => recording.id));
     return {
       id: row.id,
       endUser: { externalId: endUser.external_id, name: endUser.name, email: endUser.email },
       lastMessageAt: row.last_message_at,
       lastMessagePreview: row.last_message_preview,
       adminUnreadCount: row.admin_unread_count,
-      recordingCount: (row.recordings ?? []).length,
-      openIssueCount: issueRows.filter((issue) => isRemainingIssue(issue.status)).length,
+      recordingCount: recordingRows.length,
+      openIssueCount: countRemainingIssues(
+        issueRows.map((issue) => ({ status: issue.status, recordingId: issue.recording_id })),
+        reverifyRecordingIds,
+      ),
     };
   });
 }

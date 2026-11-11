@@ -204,7 +204,9 @@ test("업로드가 끝나지 않은 녹화는 다시 녹화를 안내하고 다�
   const adminPage = await loginAdmin(context);
   const analysis = await openConversation(adminPage, conversation.conversationId);
   await expect(analysis.getByText("녹화를 끝까지 받지 못했어요")).toBeVisible();
-  await expect(analysis.getByText(reason)).toBeVisible();
+  // V4-05: 저장된 이유는 안내 줄과 같은 말이라 따로 보이지 않고, 다시 녹화 안내는 한 번만 나온다.
+  await expect(analysis.getByText(reason)).toHaveCount(0);
+  await expect(analysis.getByText(/다시 녹화해 달라고/)).toHaveCount(1);
   await expect(analysis.getByText(/안전하게 받아|다시 정리하면/)).toHaveCount(0);
   await expect(analysis.getByRole("button", { name: /다시 정리하기/ })).toHaveCount(0);
   await captureQaScreen(adminPage, "admin-05-upload-incomplete");
@@ -499,6 +501,29 @@ test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 �
   const { data: reopenedIssue } = await database.from("issues").select("status, resolved_at").eq("id", seeded.issueId).single();
   expect(reopenedIssue).toEqual({ status: "open", resolved_at: null });
   expect(await readSystemMessages()).toHaveLength(3);
+  await adminContext.close();
+});
+
+// V4-06: 재확인 녹화에서 나온 이슈는 원래 이슈의 재확인 녹화 아래에 묶이고 "남은 문제"를 늘리지 않는다.
+test("재확인 녹화에서 나온 이슈는 남은 문제에 세지 않고 그 녹화 아래에 묶인다", async ({ browser }) => {
+  const user = createQaUser("adm-reverify-derived");
+  const adminContext = await browser.newContext();
+  const adminPage = await loginAdmin(adminContext);
+  const { conversationId } = await startConversationViaApi(adminPage.request, user);
+  const original = await seedAnalyzedRecording(conversationId, { ambiguous: false });
+  const database = getQaDatabase();
+  await database.from("issues").update({ status: "reverify" }).eq("id", original.issueId);
+  const derived = await seedAnalyzedRecording(conversationId, { ambiguous: false });
+  await database.from("recordings").update({ reverify_issue_id: original.issueId }).eq("id", derived.recordingId);
+
+  const analysis = await openConversation(adminPage, conversationId);
+  const listRow = adminPage.getByRole("navigation", { name: "받은 의견" }).getByRole("link", { name: new RegExp(user.name) });
+  await expect(listRow).toContainText("남은 문제 1건");
+  // 최신 녹화(재확인 녹화)가 먼저 열린다.
+  await expect(analysis.getByText("‘QA 이슈 제목’ 다시 확인 녹화")).toBeVisible();
+  await expect(analysis.getByRole("heading", { name: "다시 확인에서 찾은 내용 1건" })).toBeVisible();
+  await expect(analysis.getByText("남은 문제에는 세지 않아요. 원래 이슈에서 해결됨으로 닫거나 다시 열어 주세요.")).toBeVisible();
+  await captureQaScreen(adminPage, "admin-13-reverify-derived");
   await adminContext.close();
 });
 

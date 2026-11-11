@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findIssueTransition, getStatusAfterAnswer, isRemainingIssue } from "@/lib/feedback/issue-status";
+import { countRemainingIssues, findIssueTransition, getStatusAfterAnswer, isRemainingIssue } from "@/lib/feedback/issue-status";
 
 describe("getStatusAfterAnswer", () => {
   it("질문 중이거나 열린 이슈는 답변 받음이 된다", () => {
@@ -60,5 +60,18 @@ describe("isRemainingIssue", () => {
     for (const status of ["open", "asked", "answered", "reverify"] as const) {
       expect(isRemainingIssue(status)).toBe(true);
     }
+  });
+});
+
+describe("countRemainingIssues", () => {
+  it("재확인 녹화에서 나온 이슈는 남은 문제에 세지 않는다 (V4-06)", () => {
+    const issues = [
+      { status: "reverify" as const, recordingId: "original" },
+      { status: "open" as const, recordingId: "original" },
+      { status: "open" as const, recordingId: "reverify-recording" },
+      { status: "closed" as const, recordingId: "original" },
+    ];
+    expect(countRemainingIssues(issues, new Set(["reverify-recording"]))).toBe(2);
+    expect(countRemainingIssues(issues, new Set())).toBe(3);
   });
 });

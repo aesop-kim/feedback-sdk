@@ -88,6 +88,18 @@ describe("mapIssuesToRows", () => {
     });
   });
 
+  it("재확인 녹화의 이슈는 질문 초안을 만들지 않고 clear로 둔다 (V4-06)", () => {
+    const [row] = mapIssuesToRows({
+      recordingId: RECORDING_ID,
+      issues: [issue({ confidence: "ambiguous", clarification: { question: "q", options: ["a", "b"] } })],
+      contexts: [],
+      frames: [],
+      isReverify: true,
+    });
+    expect(row.confidence).toBe("clear");
+    expect(row.clarification).toBeNull();
+  });
+
   it("ambiguous인데 요소가 없으면 하이라이트는 null", () => {
     const [row] = mapIssuesToRows({
       recordingId: RECORDING_ID,
