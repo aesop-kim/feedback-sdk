@@ -1,0 +1,230 @@
+import { createServer, type Server } from "node:http";
+import { expect, test } from "@playwright/test";
+// eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
+import {
+  DEMO_URL,
+  IS_DEPLOYED,
+  SDK_ORIGIN,
+  approveCardInDatabase,
+  cleanupQaUsers,
+  createQaUser,
+  getQaDatabase,
+  seedAnalyzedRecording,
+  startConversationViaApi,
+} from "./qa-helpers";
+
+// 보안·API QA: Bearer 토큰, 다른 대화 리소스, CSP frame-ancestors, 관리자 API 쿠키 가드.
+test.afterAll(async () => {
+  await cleanupQaUsers("qa-sec-");
+});
+
+const FORGED_TOKENS = {
+  missing: undefined,
+  notBearer: "Token abc",
+  garbage: "Bearer not-a-token",
+  forgedSignature: `Bearer ${Buffer.from(JSON.stringify({ subject: "00000000-0000-0000-0000-000000000000", expiresAt: Date.now() + 1e9 })).toString("base64url")}.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`,
+};
+
+for (const [label, authorization] of Object.entries(FORGED_TOKENS)) {
+  test(`위젯 API는 ${label} 토큰을 401로 거절한다`, async ({ request }) => {
+    const headers = authorization ? { authorization } : undefined;
+    const responses = await Promise.all([
+      request.get(`${SDK_ORIGIN}/api/messages`, { headers }),
+      request.post(`${SDK_ORIGIN}/api/messages`, { headers, data: { body: "x" } }),
+      request.post(`${SDK_ORIGIN}/api/recordings`, { headers, data: {} }),
+      request.patch(`${SDK_ORIGIN}/api/recordings/00000000-0000-0000-0000-000000000000`, { headers, data: { status: "uploaded" } }),
+      request.post(`${SDK_ORIGIN}/api/clarifications/00000000-0000-0000-0000-000000000000/answer`, { headers, data: { optionId: "a" } }),
+    ]);
+    expect(responses.map((response) => response.status())).toEqual([401, 401, 401, 401, 401]);
+  });
+}
+
+test("다른 대화의 토큰으로 질문 카드에 답하면 404", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-owner"));
+  const intruder = await startConversationViaApi(request, createQaUser("sec-intruder"));
+  const seeded = await seedAnalyzedRecording(owner.conversationId);
+  await approveCardInDatabase(seeded.cardId!, owner.conversationId);
+
+  const response = await request.post(`${SDK_ORIGIN}/api/clarifications/${seeded.cardId}/answer`, {
+    headers: { authorization: `Bearer ${intruder.conversationToken}` },
+    data: { optionId: "option-1" },
+  });
+  expect(response.status()).toBe(404);
+});
+
+test("승인 전 질문 카드에는 대화 주인도 답할 수 없다(404)", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-unapproved"));
+  const seeded = await seedAnalyzedRecording(owner.conversationId);
+  const response = await request.post(`${SDK_ORIGIN}/api/clarifications/${seeded.cardId}/answer`, {
+    headers: { authorization: `Bearer ${owner.conversationToken}` },
+    data: { optionId: "option-1" },
+  });
+  expect(response.status()).toBe(404);
+});
+
+test("다른 대화의 이슈를 재확인 녹화로 연결하면 404", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-reverify-owner"));
+  const intruder = await startConversationViaApi(request, createQaUser("sec-reverify-intruder"));
+  const seeded = await seedAnalyzedRecording(owner.conversationId, { ambiguous: false });
+  const response = await request.post(`${SDK_ORIGIN}/api/recordings`, {
+    headers: { authorization: `Bearer ${intruder.conversationToken}` },
+    data: {
+      pageUrl: DEMO_URL,
+      viewport: { width: 1440, height: 900 },
+      t0EpochMs: Date.now(),
+      durationMs: 1000,
+      audioOffsetMs: 0,
+      frames: [],
+      reverifyIssueId: seeded.issueId,
+    },
+  });
+  expect(response.status()).toBe(404);
+});
+
+test("다른 대화의 녹화를 완료 처리해도 바뀌지 않는다", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-rec-owner"));
+  const intruder = await startConversationViaApi(request, createQaUser("sec-rec-intruder"));
+  const { data: recording } = await getQaDatabase()
+    .from("recordings")
+    .insert({ conversation_id: owner.conversationId, status: "uploading", duration_ms: 1000, frames: [] })
+    .select("id")
+    .single();
+  const response = await request.patch(`${SDK_ORIGIN}/api/recordings/${recording!.id}`, {
+    headers: { authorization: `Bearer ${intruder.conversationToken}` },
+    data: { status: "uploaded" },
+  });
+  console.log(`[qa] cross-conversation recording PATCH → ${response.status()} ${await response.text()}`);
+  const { data: after } = await getQaDatabase().from("recordings").select("status").eq("id", recording!.id).single();
+  expect(after?.status).toBe("uploading");
+  // 200 changed:false 이지만 404가 더 정확하다(존재 여부를 숨기려면 둘 다 괜찮음) — 상태가 바뀌지 않는 것만 강제한다.
+});
+
+test("같은 질문에 두 번 답하면 두 번째는 409", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-409"));
+  const seeded = await seedAnalyzedRecording(owner.conversationId);
+  await approveCardInDatabase(seeded.cardId!, owner.conversationId);
+  const headers = { authorization: `Bearer ${owner.conversationToken}` };
+  const first = await request.post(`${SDK_ORIGIN}/api/clarifications/${seeded.cardId}/answer`, { headers, data: { optionId: "option-1" } });
+  const second = await request.post(`${SDK_ORIGIN}/api/clarifications/${seeded.cardId}/answer`, { headers, data: { optionId: "option-2" } });
+  expect([first.status(), second.status()]).toEqual([200, 409]);
+});
+
+test("같은 질문에 동시에 두 번 답해도 답변은 하나만 저장된다", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-race"));
+  const seeded = await seedAnalyzedRecording(owner.conversationId);
+  await approveCardInDatabase(seeded.cardId!, owner.conversationId);
+  const headers = { authorization: `Bearer ${owner.conversationToken}` };
+  const responses = await Promise.all(
+    ["option-1", "option-2", "option-1", "option-2"].map((optionId) =>
+      request.post(`${SDK_ORIGIN}/api/clarifications/${seeded.cardId}/answer`, { headers, data: { optionId } }),
+    ),
+  );
+  const statuses = responses.map((response) => response.status());
+  const { count: answerCount } = await getQaDatabase()
+    .from("clarification_answers")
+    .select("id", { count: "exact", head: true })
+    .eq("card_id", seeded.cardId);
+  const { count: messageCount } = await getQaDatabase()
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", owner.conversationId)
+    .eq("type", "text");
+  console.log(`[qa] concurrent answers statuses=${JSON.stringify(statuses)} answers=${answerCount} textMessages=${messageCount}`);
+  expect(answerCount).toBe(1);
+  expect(messageCount).toBe(1);
+});
+
+test("허용되지 않은 hostOrigin으로는 대화를 열 수 없다(403)", async ({ request }) => {
+  const response = await request.post(`${SDK_ORIGIN}/api/conversations`, {
+    data: { projectKey: "lattice-demo", hostOrigin: "https://evil.example", user: createQaUser("sec-origin") },
+  });
+  expect(response.status()).toBe(403);
+});
+
+test("위젯 iframe CSP는 허용된 사이트만 frame-ancestors로 연다", async ({ request }) => {
+  const allowed = await request.get(`${SDK_ORIGIN}/widget?projectKey=lattice-demo`);
+  const unknown = await request.get(`${SDK_ORIGIN}/widget?projectKey=does-not-exist`);
+  const missing = await request.get(`${SDK_ORIGIN}/widget`);
+  const allowedCsp = allowed.headers()["content-security-policy"] ?? "";
+  console.log(`[qa] widget CSP (${IS_DEPLOYED ? "deployed" : "local"}): ${allowedCsp}`);
+  expect(allowedCsp).toContain("frame-ancestors");
+  expect(allowedCsp).toContain(new URL(DEMO_URL).origin);
+  expect(unknown.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  expect(missing.headers()["content-security-policy"]).toBe("frame-ancestors 'none'");
+  if (IS_DEPLOYED) {
+    // 운영 허용 목록에 개발용 localhost가 남아 있으면 안 된다.
+    expect(allowedCsp, "운영 CSP에 localhost가 허용돼 있다").not.toContain("localhost");
+  }
+});
+
+test("허용되지 않은 사이트에 넣은 위젯 iframe은 브라우저가 막는다", async ({ page }) => {
+  // 허용 목록에 없는 origin에서 iframe으로 띄운다. 로컬은 127.0.0.1:3005에 직접 띄우고, 배포는 example.com을 route로 흉내 낸다.
+  const hostHtml = `<!doctype html><title>not-allowed</title><iframe id="w" src="${SDK_ORIGIN}/widget?projectKey=lattice-demo"></iframe>`;
+  const blocked: string[] = [];
+  page.on("console", (message) => {
+    if (/frame-ancestors|Refused to frame/i.test(message.text())) {
+      blocked.push(message.text());
+    }
+  });
+  let server: Server | null = null;
+  const hostUrl = IS_DEPLOYED ? "https://example.com/" : "http://127.0.0.1:3005/";
+  if (IS_DEPLOYED) {
+    await page.route(hostUrl, (route) => route.fulfill({ contentType: "text/html", body: hostHtml }));
+  } else {
+    server = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end(hostHtml);
+    });
+    await new Promise<void>((resolve) => server!.listen(3005, "127.0.0.1", resolve));
+  }
+  try {
+    await page.goto(hostUrl);
+    await page.waitForTimeout(3_000);
+    const frame = page.frames().find((candidate) => candidate.url().includes("/widget"));
+    const renderedLength = frame ? await frame.evaluate(() => document.body?.innerHTML.length ?? 0).catch(() => 0) : 0;
+    console.log(`[qa] blocked messages: ${blocked.length}, rendered length: ${renderedLength}`);
+    expect(blocked.length).toBeGreaterThan(0);
+  } finally {
+    await new Promise<void>((resolve) => (server ? server.close(() => resolve()) : resolve()));
+  }
+});
+
+test("관리자 API는 쿠키가 없거나 위조되면 401", async ({ playwright }) => {
+  for (const cookie of [undefined, "lattice_admin_session=forged.value", "lattice_admin_session=eyJzdWJqZWN0IjoiYWRtaW4iLCJleHBpcmVzQXQiOjk5OTk5OTk5OTk5OTl9.AAAA"]) {
+    const context = await playwright.request.newContext({ extraHTTPHeaders: cookie ? { cookie } : {} });
+    const id = "00000000-0000-0000-0000-000000000000";
+    const responses = await Promise.all([
+      context.get(`${SDK_ORIGIN}/api/admin/conversations`),
+      context.get(`${SDK_ORIGIN}/api/admin/conversations/${id}`),
+      context.post(`${SDK_ORIGIN}/api/admin/conversations/${id}/messages`, { data: { body: "x" } }),
+      context.patch(`${SDK_ORIGIN}/api/admin/issues/${id}`, { data: { status: "resolved" } }),
+      context.post(`${SDK_ORIGIN}/api/admin/clarifications/${id}/approve`, { data: {} }),
+      context.post(`${SDK_ORIGIN}/api/admin/recordings/${id}/reanalyze`),
+    ]);
+    expect(responses.map((response) => response.status()), `cookie=${cookie ?? "none"}`).toEqual([401, 401, 401, 401, 401, 401]);
+    await context.dispose();
+  }
+});
+
+test("관리자 화면을 쿠키 없이 열면 로그인으로 보낸다", async ({ page }) => {
+  await page.goto(`${SDK_ORIGIN}/admin`);
+  await expect(page).toHaveURL(/\/admin\/login$/);
+  await page.goto(`${SDK_ORIGIN}/admin/00000000-0000-0000-0000-000000000000`);
+  await expect(page).toHaveURL(/\/admin\/login$/);
+});
+
+test("위조된 관리자 쿠키로 화면을 열면 결국 로그인으로 보낸다", async ({ page, context }) => {
+  await context.addCookies([{ name: "lattice_admin_session", value: "forged.value", url: SDK_ORIGIN }]);
+  await page.goto(`${SDK_ORIGIN}/admin`);
+  await expect(page).toHaveURL(/\/admin\/login$/, { timeout: 10_000 });
+});
+
+test("관리자 비밀번호를 연속으로 틀리면 시도 제한(429)이 걸린다", async ({ request }) => {
+  const statuses: number[] = [];
+  for (let attempt = 0; attempt < 15; attempt += 1) {
+    const response = await request.post(`${SDK_ORIGIN}/api/admin/session`, { data: { password: `wrong-${attempt}` } });
+    statuses.push(response.status());
+  }
+  console.log(`[qa] 15 wrong logins → ${JSON.stringify([...new Set(statuses)])}`);
+  expect(statuses.some((status) => status === 429), "로그인 시도 제한(429)이 없다").toBe(true);
+});
