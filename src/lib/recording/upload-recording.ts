@@ -7,6 +7,7 @@ import type { ElementContext } from "@/types/feedback";
 const RECORDINGS_BUCKET = "recordings";
 const UPLOAD_CONCURRENCY = 6;
 const UPLOAD_ATTEMPTS = 2;
+const ALREADY_UPLOADED_STATUS = 409;
 
 type UploadTarget = { path: string; token: string; signedUrl: string };
 
@@ -24,6 +25,10 @@ export type UploadRecordingInput = {
   viewport: { width: number; height: number };
   rrwebEvents: unknown[];
   contexts: RecordedContext[];
+  // "다시 보내기"면 앞선 시도의 녹화 id. 서버는 새로 만들지 않고 업로드 주소만 다시 발급한다.
+  recordingId?: string | null;
+  // 재확인 녹화면 고친 이슈 id. 서버가 업로드를 마치면 그 이슈를 reverify로 바꾼다.
+  reverifyIssueId?: string | null;
   onProgress?: (progress: number) => void;
 };
 
@@ -39,6 +44,21 @@ export class RecordingUploadError extends Error {
   }
 }
 
+export class RecordingRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "RecordingRequestError";
+  }
+}
+
+// 다시 보내기에 409("이미 보낸 녹화예요")가 오면 앞선 시도가 끝까지 올라간 것이므로 성공으로 본다.
+export function isAlreadyUploadedError(error: unknown, recordingId: string | null | undefined): boolean {
+  return Boolean(recordingId) && error instanceof RecordingRequestError && error.status === ALREADY_UPLOADED_STATUS;
+}
+
 async function requestWidgetJson<TResponse>(conversationToken: string, path: string, init: RequestInit): Promise<TResponse> {
   const response = await fetch(path, {
     ...init,
@@ -46,7 +66,7 @@ async function requestWidgetJson<TResponse>(conversationToken: string, path: str
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error ?? `요청 실패 (${response.status})`);
+    throw new RecordingRequestError(body?.error ?? `요청 실패 (${response.status})`, response.status);
   }
   return (await response.json()) as TResponse;
 }
@@ -101,19 +121,30 @@ async function uploadFile(task: UploadTask): Promise<void> {
 }
 
 export async function uploadRecording(input: UploadRecordingInput): Promise<{ recordingId: string }> {
-  const { conversationToken, capture, page, viewport, rrwebEvents, contexts, onProgress } = input;
-  const created = await requestWidgetJson<CreateRecordingResponse>(conversationToken, "/api/recordings", {
-    method: "POST",
-    body: JSON.stringify({
-      pageUrl: page.url,
-      pageTitle: page.title || undefined,
-      viewport,
-      t0EpochMs: Math.round(capture.t0),
-      durationMs: Math.round(capture.durationMs),
-      audioOffsetMs: Math.round(capture.audioOffsetMs),
-      frames: capture.frames.map((frame) => ({ tMs: frame.tMs, reason: frame.reason })),
-    }),
-  });
+  const { conversationToken, capture, page, viewport, rrwebEvents, contexts, recordingId, reverifyIssueId, onProgress } = input;
+  let created: CreateRecordingResponse;
+  try {
+    created = await requestWidgetJson<CreateRecordingResponse>(conversationToken, "/api/recordings", {
+      method: "POST",
+      body: JSON.stringify({
+        pageUrl: page.url,
+        pageTitle: page.title || undefined,
+        viewport,
+        t0EpochMs: Math.round(capture.t0),
+        durationMs: Math.round(capture.durationMs),
+        audioOffsetMs: Math.round(capture.audioOffsetMs),
+        frames: capture.frames.map((frame) => ({ tMs: frame.tMs, reason: frame.reason })),
+        recordingId: recordingId ?? undefined,
+        reverifyIssueId: reverifyIssueId ?? undefined,
+      }),
+    });
+  } catch (error) {
+    if (recordingId && isAlreadyUploadedError(error, recordingId)) {
+      onProgress?.(1);
+      return { recordingId };
+    }
+    throw new RecordingUploadError(error instanceof Error ? error.message : "업로드 준비 실패", recordingId ?? null);
+  }
 
   const eventsBlob = new Blob([JSON.stringify({ t0: capture.t0, rrwebEvents, contexts })], { type: "application/json" });
   const framesByPath = new Map(capture.frames.map((frame) => [getFramePath(frame), frame]));

@@ -11,7 +11,7 @@ import {
   storeLastReadAt,
 } from "@/lib/widget/unread-replies";
 import type { HostToWidgetMessage } from "@/sdk/bridge-protocol";
-import type { ChatMessage } from "@/types/feedback";
+import type { ChatMessage, ReverifyRequest } from "@/types/feedback";
 
 export type HostInit = Extract<HostToWidgetMessage, { type: "host:init" }>["payload"];
 
@@ -90,16 +90,22 @@ function storeSession(key: string, session: WidgetSession): void {
   }
 }
 
-async function getMessages(token: string): Promise<ChatMessage[]> {
-  const { messages } = await requestWidgetApi<{ messages: ChatMessage[] }>("/api/messages", { method: "GET", token });
-  return messages;
+// reverifyRequest: 열린 재확인 요청(없으면 null). 이 필드를 모르는 서버면 undefined로 남긴다.
+type MessagesResponse = { messages: ChatMessage[]; reverifyRequest?: ReverifyRequest | null };
+
+async function getMessages(token: string): Promise<MessagesResponse> {
+  return requestWidgetApi<MessagesResponse>("/api/messages", { method: "GET", token });
 }
 
-async function startSession(init: HostInit, hostOrigin: string, storageKey: string): Promise<{ session: WidgetSession; messages: ChatMessage[] }> {
+async function startSession(
+  init: HostInit,
+  hostOrigin: string,
+  storageKey: string,
+): Promise<{ session: WidgetSession; response: MessagesResponse }> {
   const storedSession = findStoredSession(storageKey);
   if (storedSession) {
     try {
-      return { session: storedSession, messages: await getMessages(storedSession.conversationToken) };
+      return { session: storedSession, response: await getMessages(storedSession.conversationToken) };
     } catch {
       // 토큰이 만료됐거나 대화가 사라졌으면 아래에서 새로 연결한다.
     }
@@ -109,7 +115,7 @@ async function startSession(init: HostInit, hostOrigin: string, storageKey: stri
     body: JSON.stringify({ projectKey: init.projectKey, hostOrigin, user: init.user }),
   });
   storeSession(storageKey, session);
-  return { session, messages: await getMessages(session.conversationToken) };
+  return { session, response: await getMessages(session.conversationToken) };
 }
 
 type UseWidgetConversationInput = {
@@ -124,6 +130,7 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [session, setSession] = useState<WidgetSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [reverifyRequest, setReverifyRequest] = useState<ReverifyRequest | null | undefined>(undefined);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const messagesRef = useRef<ChatMessage[]>([]);
   const lastReadKeyRef = useRef<string | null>(null);
@@ -157,10 +164,11 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
   }, [markReadUntil]);
 
   const applyMessages = useCallback(
-    (nextMessages: ChatMessage[]) => {
+    ({ messages: nextMessages, reverifyRequest: nextReverifyRequest }: MessagesResponse) => {
       messagesRef.current = nextMessages;
       updateUnread(nextMessages);
       setMessages(nextMessages);
+      setReverifyRequest(nextReverifyRequest);
     },
     [updateUnread],
   );
@@ -187,9 +195,9 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
         setSession(result.session);
         // 이 기기에서 처음 연 위젯이면 지금까지 온 메시지는 읽은 것으로 본다(메시지가 없으면 앞으로 오는 답장부터 센다).
         if (lastReadAtRef.current === null) {
-          markReadUntil(findLatestMessageTime(result.messages) ?? new Date(0).toISOString());
+          markReadUntil(findLatestMessageTime(result.response.messages) ?? new Date(0).toISOString());
         }
-        applyMessages(result.messages);
+        applyMessages(result.response);
         setStatus("ready");
       })
       .catch((error: unknown) => {
@@ -249,7 +257,7 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
           token: session.conversationToken,
         });
       } catch (error) {
-        // 다른 탭에서 이미 답했으면 다시 불러와 카드를 '답변을 보냈어요'로 바꾼다.
+        // 다른 탭에서 이미 답했으면 다시 불러와 카드를 답한 상태로 바꾼다.
         if (isAlreadyAnsweredError(error)) {
           await refetch();
         }
@@ -260,5 +268,5 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
     [session, refetch],
   );
 
-  return { status, errorMessage, session, messages, refetch, reload, sendText, answerClarification };
+  return { status, errorMessage, session, messages, reverifyRequest, refetch, reload, sendText, answerClarification };
 }

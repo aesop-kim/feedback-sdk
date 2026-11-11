@@ -1,0 +1,56 @@
+/* 질문 카드와 같은 카드 면. */
+.card {
+  margin: var(--sp-2) 0;
+  padding: var(--sp-4);
+  border-radius: var(--r-card);
+  border: 1px solid var(--border-hairline);
+  background: var(--bg);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.issueTitle {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  color: var(--text-secondary);
+}
+
+.description {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--text-tertiary);
+}
+
+.startButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--h-btn-l);
+  margin-top: var(--sp-3);
+  padding: 2px var(--sp-4);
+  border-radius: var(--r-btn-l);
+  background: var(--blue-500);
+  color: var(--bg);
+  font-size: var(--fs-t6);
+  font-weight: var(--fw-semibold);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.startButton:hover {
+  background: var(--blue-600);
+}
+
+.startButton:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}
