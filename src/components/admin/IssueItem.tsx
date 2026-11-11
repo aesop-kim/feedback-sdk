@@ -141,13 +141,13 @@ function isFinished(issue: Issue): boolean {
 }
 
 // 상태마다 마무리 버튼이 다르다. 재확인 중인 이슈에 반영 완료 버튼을 다시 보여 주면 고객에게 요청이 또 가므로,
-// 고객이 다시 확인한 뒤에는 해결됨으로 닫거나 다시 여는 것만 고르게 한다.
+// 고객이 다시 확인한 뒤에는 해결됨으로 닫거나 다시 여는 것만 고르게 한다. 닫은 이슈도 다시 열 수 있다.
 function IssueActions({ issue }: { issue: Issue }) {
   switch (issue.status) {
     case "resolved":
       return <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>;
     case "closed":
-      return <p className={styles.resolvedNote}>고객 확인까지 끝나서 해결됨으로 닫았어요</p>;
+      return <ClosedActions issueId={issue.id} />;
     case "reverify":
       return <ReverifyActions issueId={issue.id} />;
     default:
@@ -155,52 +155,105 @@ function IssueActions({ issue }: { issue: Issue }) {
   }
 }
 
-function ReverifyActions({ issueId }: { issueId: string }) {
+type FinishingStatus = "closed" | "open";
+
+// 해결됨으로 닫기·다시 열기 요청. 성공하면 화면을 새로 고치고, 실패하면 이유를 남긴다.
+function useIssueStatusChange(issueId: string) {
   const request = useAdminRequest();
   const { refresh } = useAdminRevision();
-  const [savingStatus, setSavingStatus] = useState<"closed" | "open" | null>(null);
+  const [savingStatus, setSavingStatus] = useState<FinishingStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function changeStatus(status: "closed" | "open") {
+  async function changeStatus(status: FinishingStatus): Promise<boolean> {
     setSavingStatus(status);
     setErrorMessage(null);
     const result = await request(`/api/admin/issues/${issueId}`, { method: "PATCH", body: { status } });
     setSavingStatus(null);
     if (!result.ok) {
       setErrorMessage(result.message);
-      return;
+      return false;
     }
     refresh();
+    return true;
+  }
+
+  return { savingStatus, errorMessage, changeStatus };
+}
+
+function ActionError({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <span className={styles.actionError} role="alert">
+      {message}
+    </span>
+  );
+}
+
+// 해결됨으로 닫기는 반영 완료처럼 제자리에서 한 번 더 묻는다. 닫은 뒤에도 다시 열 수 있다.
+function ReverifyActions({ issueId }: { issueId: string }) {
+  const { savingStatus, errorMessage, changeStatus } = useIssueStatusChange(issueId);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const [isConfirmingClose, setIsConfirmingClose] = useState(false);
+
+  useEffect(() => {
+    if (isConfirmingClose) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [isConfirmingClose]);
+
+  async function closeIssue() {
+    if (await changeStatus("closed")) {
+      setIsConfirmingClose(false);
+    }
+  }
+
+  if (isConfirmingClose) {
+    return (
+      <div className={styles.actions} role="group" aria-label="해결됨으로 닫기 확인">
+        <span className={styles.confirmQuestion}>해결됨으로 닫을까요?</span>
+        <AdminButton ref={confirmButtonRef} size="small" onClick={() => void closeIssue()} isLoading={savingStatus === "closed"}>
+          닫기
+        </AdminButton>
+        <AdminButton variant="text" size="small" onClick={() => setIsConfirmingClose(false)} disabled={savingStatus === "closed"}>
+          다음에
+        </AdminButton>
+        <span className={styles.actionCaption}>닫은 뒤에도 다시 열 수 있어요</span>
+        <ActionError message={errorMessage} />
+      </div>
+    );
   }
 
   return (
     <div className={styles.actions} role="group" aria-label="다시 확인 결과">
-      <span className={styles.actionCaption}>고객이 다시 녹화해 보냈어요. 영상을 보고 골라 주세요</span>
+      <span className={styles.actionCaption}>고객이 다시 녹화해 보냈어요. 고쳐졌으면 닫고, 아직 남아 있으면 다시 열어 주세요</span>
       <div className={styles.actionButtons}>
-        <AdminButton
-          variant="weak"
-          size="small"
-          onClick={() => void changeStatus("closed")}
-          isLoading={savingStatus === "closed"}
-          disabled={savingStatus === "open"}
-        >
-          확인 끝 · 해결됨
+        <AdminButton variant="weak" size="small" onClick={() => setIsConfirmingClose(true)} disabled={savingStatus === "open"}>
+          해결됨으로 닫기
         </AdminButton>
-        <AdminButton
-          variant="text"
-          size="small"
-          onClick={() => void changeStatus("open")}
-          isLoading={savingStatus === "open"}
-          disabled={savingStatus === "closed"}
-        >
-          아직 안 고쳐졌어요 · 다시 열기
+        <AdminButton variant="text" size="small" onClick={() => void changeStatus("open")} isLoading={savingStatus === "open"}>
+          다시 열기
         </AdminButton>
       </div>
-      {errorMessage ? (
-        <span className={styles.actionError} role="alert">
-          {errorMessage}
-        </span>
-      ) : null}
+      <ActionError message={errorMessage} />
+    </div>
+  );
+}
+
+// 잘못 닫았거나 문제가 다시 나왔을 때 되돌린다.
+function ClosedActions({ issueId }: { issueId: string }) {
+  const { savingStatus, errorMessage, changeStatus } = useIssueStatusChange(issueId);
+  return (
+    <div className={styles.actions} role="group" aria-label="해결된 이슈">
+      <p className={styles.resolvedNote}>고객 확인까지 끝나서 해결됨으로 닫았어요</p>
+      <div className={styles.actionButtons}>
+        <AdminButton variant="text" size="small" onClick={() => void changeStatus("open")} isLoading={savingStatus === "open"}>
+          다시 열기
+        </AdminButton>
+        <span className={styles.actionCaption}>문제가 남아 있으면 다시 열어 반영 완료부터 다시 해요</span>
+      </div>
+      <ActionError message={errorMessage} />
     </div>
   );
 }
