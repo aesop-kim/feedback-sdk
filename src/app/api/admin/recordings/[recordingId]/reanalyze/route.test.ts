@@ -4,7 +4,7 @@ import { createFakeSupabase, type FakeResult } from "@/lib/testing/fake-supabase
 const supabaseHolder = vi.hoisted(() => ({ client: null as unknown }));
 
 vi.mock("@/lib/auth/require-admin", () => ({ findAdminRejection: async () => null }));
-vi.mock("@/lib/supabase/server-client", () => ({ getServerSupabase: () => supabaseHolder.client }));
+vi.mock("@/lib/supabase/server-client", () => ({ RECORDINGS_BUCKET: "recordings", getServerSupabase: () => supabaseHolder.client }));
 
 const { POST } = await import("@/app/api/admin/recordings/[recordingId]/reanalyze/route");
 

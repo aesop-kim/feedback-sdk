@@ -6,7 +6,7 @@ import {
   findReanalyzeRejection,
   findRecordingFailureKind,
 } from "@/lib/feedback/recording-failure";
-import { getServerSupabase } from "@/lib/supabase/server-client";
+import { RECORDINGS_BUCKET, getServerSupabase } from "@/lib/supabase/server-client";
 import type { RecordingStatus } from "@/types/feedback";
 
 const REANALYZE_INTERVAL_MS = 60_000;
@@ -34,7 +34,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
   if (!recording) {
     return respondError(404, "녹화를 찾을 수 없어요.");
   }
-  const { data: audioFiles } = await supabase.storage.from("recordings").list(recordingId, { search: "audio.webm" });
+  const { data: audioFiles } = await supabase.storage.from(RECORDINGS_BUCKET).list(recordingId, { search: "audio.webm" });
   const uploadRejection = findReanalyzeRejection({
     failureKind: findRecordingFailureKind({
       status: recording.status as RecordingStatus,

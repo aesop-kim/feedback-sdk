@@ -1,4 +1,5 @@
 import { findAuthorizedConversation } from "@/lib/auth/request-auth";
+import { getAnswerText } from "@/lib/feedback/clarification-answer";
 import { insertMessage } from "@/lib/feedback/feedback-repository";
 import { getStatusAfterAnswer } from "@/lib/feedback/issue-status";
 import { respondError, respondJson, respondUnauthorized, respondValidationError } from "@/lib/http/api-response";
@@ -81,7 +82,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
     }
   }
 
-  const answerText = [selectedOption?.label, parsed.data.text].filter(Boolean).join(" · ");
+  const answerText = getAnswerText(selectedOption?.label, parsed.data.text);
   let messageId: string | null = null;
   try {
     messageId = await insertMessage({
