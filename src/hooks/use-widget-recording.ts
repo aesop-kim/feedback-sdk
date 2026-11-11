@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { requestMicrophone, watchMicrophone } from "@/lib/recording/request-microphone";
 import { startCaptureSession, type CaptureResult, type CaptureSession } from "@/lib/recording/capture-session";
 import { RecordingUploadError, uploadRecording, type RecordedContext } from "@/lib/recording/upload-recording";
-import { MAX_RECORDING_MS } from "@/lib/validation/api-schemas";
 import type { HostToWidgetMessage, WidgetToHostMessage } from "@/sdk/bridge-protocol";
 
 const FRAME_INTERVAL_MS = 2_000;
@@ -40,6 +39,7 @@ type UseWidgetRecordingInput = {
   onToast: (message: string) => void;
   onModeChange: (mode: "open" | "recording") => void;
   onUploaded: () => Promise<void> | void;
+  maxDurationMs: number;
 };
 
 type DisplayMediaOptions = DisplayMediaStreamOptions & { preferCurrentTab?: boolean; selfBrowserSurface?: "include" | "exclude" };
@@ -74,7 +74,7 @@ function getHostViewport(meta: RrwebMetaEvent["data"] | null, contexts: Recorded
   return { width: window.screen.width, height: window.screen.height };
 }
 
-export function useWidgetRecording({ post, conversationToken, page, onToast, onModeChange, onUploaded }: UseWidgetRecordingInput) {
+export function useWidgetRecording({ post, conversationToken, page, onToast, onModeChange, onUploaded, maxDurationMs }: UseWidgetRecordingInput) {
   const [phase, setPhase] = useState<RecordingPhase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null);
@@ -229,7 +229,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
 
     rrwebEventsRef.current = [];
     contextsRef.current = [];
-    const session = startCaptureSession({ displayStream, microphoneStream, maxDurationMs: MAX_RECORDING_MS, frameIntervalMs: FRAME_INTERVAL_MS });
+    const session = startCaptureSession({ displayStream, microphoneStream, maxDurationMs, frameIntervalMs: FRAME_INTERVAL_MS });
     sessionRef.current = session;
     // 녹화 중에는 패널(토스트 자리)이 없으므로, 음량과 무음 경고는 알약이 직접 보여 준다.
     setMicrophoneLevel(0);
@@ -251,7 +251,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
     postToHost({ type: "recording:start", payload: { t0: session.t0 } });
     postToHost({ type: "widget:mode", payload: { mode: "recording" } });
     changeMode("recording");
-  }, [phase, stopRecording]);
+  }, [phase, stopRecording, maxDurationMs]);
 
   const retryUpload = useCallback(() => {
     const prepared = preparedUploadRef.current;
@@ -287,7 +287,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
   return {
     phase,
     elapsedMs,
-    maxDurationMs: MAX_RECORDING_MS,
+    maxDurationMs,
     pendingUpload,
     microphoneLevel,
     isMicrophoneSilent,

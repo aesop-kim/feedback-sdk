@@ -2,6 +2,7 @@ import { createServer, type Server } from "node:http";
 import { expect, test } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import {
+  ADMIN_PASSWORD,
   DEMO_URL,
   IS_DEPLOYED,
   SDK_ORIGIN,
@@ -219,12 +220,26 @@ test("위조된 관리자 쿠키로 화면을 열면 결국 로그인으로 보�
   await expect(page).toHaveURL(/\/admin\/login$/, { timeout: 10_000 });
 });
 
-test("관리자 비밀번호를 연속으로 틀리면 시도 제한(429)이 걸린다", async ({ request }) => {
+// 제한은 IP(x-forwarded-for)별이다. 로컬에는 프록시가 없어 모든 요청이 한 덩어리("unknown")로 세어지므로,
+// 이 테스트만의 IP를 붙인다. 그러지 않으면 5분 동안 뒤 스펙의 loginAdmin이 모두 429로 막힌다.
+test("관리자 비밀번호를 연속으로 틀리면 그 IP만 시도 제한(429)이 걸린다", async ({ request }) => {
+  test.skip(IS_DEPLOYED, "Vercel은 x-forwarded-for를 실제 IP로 덮어써서, 배포에서는 QA 러너의 IP가 5분 동안 막힌다");
+  const testIp = `198.51.100.${Math.floor(Math.random() * 254) + 1}`;
   const statuses: number[] = [];
-  for (let attempt = 0; attempt < 15; attempt += 1) {
-    const response = await request.post(`${SDK_ORIGIN}/api/admin/session`, { data: { password: `wrong-${attempt}` } });
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const response = await request.post(`${SDK_ORIGIN}/api/admin/session`, {
+      headers: { "x-forwarded-for": testIp },
+      data: { password: `wrong-${attempt}` },
+    });
     statuses.push(response.status());
   }
-  console.log(`[qa] 15 wrong logins → ${JSON.stringify([...new Set(statuses)])}`);
-  expect(statuses.some((status) => status === 429), "로그인 시도 제한(429)이 없다").toBe(true);
+  console.log(`[qa] 6 wrong logins → ${JSON.stringify(statuses)}`);
+  expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+  const blockedLogin = await request.post(`${SDK_ORIGIN}/api/admin/session`, {
+    headers: { "x-forwarded-for": testIp },
+    data: { password: ADMIN_PASSWORD },
+  });
+  expect(blockedLogin.status(), "막힌 IP는 맞는 비밀번호도 잠시 받지 않는다").toBe(429);
+  const otherIpLogin = await request.post(`${SDK_ORIGIN}/api/admin/session`, { data: { password: ADMIN_PASSWORD } });
+  expect(otherIpLogin.status(), "다른 IP의 로그인은 막히지 않는다").toBe(200);
 });

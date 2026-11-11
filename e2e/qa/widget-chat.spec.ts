@@ -218,26 +218,41 @@ test("360×740 화면에서 위젯이 화면 안에 들어오고 긴 이름이 �
   await context.close();
 });
 
-test("메시지 전송이 실패하면 쓴 내용이 사라지지 않는다(입력창에 되돌리거나 다시 보내기 제공)", async ({ page }) => {
+// BUG-10: 실패한 글은 말풍선으로 남고, 그 아래 "다시 보내기"로 같은 글을 다시 보낸다.
+test("메시지 전송이 실패하면 쓴 내용이 말풍선으로 남고, 다시 보내면 한 번만 저장된다", async ({ page }) => {
   const user = createQaUser("chat-sendfail");
   const widget = await openWidget(page, user);
-  await page.route(`${SDK_ORIGIN}/api/messages`, async (route) => {
+  const messagesUrl = `${SDK_ORIGIN}/api/messages`;
+  await page.route(messagesUrl, async (route) => {
     if (route.request().method() === "POST") {
       await route.abort("failed");
       return;
     }
     await route.continue();
   });
+  const body = "네트워크가 끊긴 순간 보낸 긴 설명";
   const textbox = widget.getByRole("textbox", { name: "메시지" });
-  await textbox.fill("네트워크가 끊긴 순간 보낸 긴 설명");
+  await textbox.fill(body);
   await textbox.press("Enter");
-  await expect(widget.getByText("연결이 잠깐 불안정해요. 잠시 후 다시 해볼까요?")).toBeVisible();
-  await page.waitForTimeout(500);
+  await expect(widget.getByText("메시지를 보내지 못했어요. 말풍선 아래 ‘다시 보내기’를 눌러 주세요")).toBeVisible();
+  const failedBubble = widget.locator('[data-failed="true"]');
+  await expect(failedBubble).toHaveText(body);
+  const retryButton = widget.getByRole("button", { name: "다시 보내기" });
+  await expect(retryButton).toBeVisible();
   await captureQaScreen(page, "chat-06-send-failed");
-  const restoredInComposer = (await textbox.inputValue()) === "네트워크가 끊긴 순간 보낸 긴 설명";
-  const keptAsBubble = await widget.getByText("네트워크가 끊긴 순간 보낸 긴 설명").isVisible();
-  console.log(`[qa] after send failure: composer restored=${restoredInComposer}, bubble kept=${keptAsBubble}`);
-  expect(restoredInComposer || keptAsBubble, "전송 실패 시 고객이 쓴 글이 사라진다").toBe(true);
+
+  await page.unroute(messagesUrl);
+  await retryButton.click();
+  await expect(failedBubble).toHaveCount(0);
+  await expect(retryButton).toHaveCount(0);
+  await expect(widget.getByText(body, { exact: true })).toHaveCount(1);
+  const conversationId = await findConversationIdForUser(user.id);
+  const { count } = await getQaDatabase()
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", conversationId)
+    .eq("body", body);
+  expect(count).toBe(1);
 });
 
 test("위젯을 닫아 둔 사이 온 답장은 런처 배지로 보이고, 새로고침해도 배지가 유지된다", async ({ page, browser }) => {
