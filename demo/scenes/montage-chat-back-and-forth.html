@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>몽타주 3 · 되묻는 대화</title>
+<link rel="stylesheet" href="scene-base.css" />
+<style>
+  body {
+    background: #e9ecef;
+    display: flex;
+    justify-content: center;
+  }
+  .window {
+    width: 1040px;
+    height: 1080px;
+    background: #f4f5f7;
+    border-left: 1px solid #dde1e5;
+    border-right: 1px solid #dde1e5;
+    display: flex;
+    flex-direction: column;
+  }
+  .header {
+    height: 88px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--grey-200);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 36px;
+  }
+  .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: #d9dee4;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: var(--grey-700);
+    font-size: 19px;
+  }
+  .header-name {
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .header-status {
+    font-size: 15px;
+    color: var(--grey-500);
+    margin-top: 2px;
+  }
+  .thread {
+    flex: 1;
+    padding: 56px 44px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .row.mine {
+    flex-direction: row-reverse;
+  }
+  .bubble {
+    max-width: 560px;
+    padding: 16px 22px;
+    border-radius: 22px;
+    font-size: 24px;
+    line-height: 1.45;
+    background: #ffffff;
+    color: var(--grey-900);
+  }
+  .mine .bubble {
+    background: #333d4b;
+    color: #ffffff;
+  }
+  time {
+    font-size: 14px;
+    color: var(--grey-500);
+    padding-bottom: 6px;
+    white-space: nowrap;
+  }
+  .image {
+    width: 400px;
+    height: 230px;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px solid var(--grey-200);
+    padding: 18px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+    position: relative;
+    overflow: hidden;
+  }
+  .image span {
+    height: 12px;
+    border-radius: 3px;
+    background: var(--grey-200);
+  }
+  .image span:first-child {
+    width: 45%;
+    background: var(--grey-300);
+  }
+  .image span:nth-child(4) {
+    width: 60%;
+  }
+  .scribble {
+    position: absolute;
+    left: 120px;
+    top: 66px;
+    width: 250px;
+    height: 58px;
+    border: 3px solid #e02424;
+    border-radius: 50%;
+    transform: rotate(-4deg);
+  }
+  .read {
+    font-size: 14px;
+    color: var(--grey-500);
+    text-align: right;
+    margin-top: -10px;
+  }
+  .typing {
+    display: inline-flex;
+    gap: 7px;
+    padding: 20px 24px;
+    border-radius: 22px;
+    background: #333d4b;
+  }
+  .typing span {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+  }
+</style>
+</head>
+<body>
+  <div class="window">
+    <div class="header">
+      <div class="avatar">고</div>
+      <div>
+        <div class="header-name">고객사 담당자</div>
+        <div class="header-status">계약 관리 2차 개발</div>
+      </div>
+    </div>
+    <div class="thread">
+      <div class="row mine"><div class="bubble">말씀하신 화면이 어디인지 캡처 보내 주실 수 있을까요?</div><time>오후 3:02</time></div>
+      <div class="row"><div class="image"><span></span><span></span><span></span><span></span><span></span><i class="scribble"></i></div><time>오후 3:20</time></div>
+      <div class="row"><div class="bubble">이 화면입니다</div><time>오후 3:20</time></div>
+      <div class="row mine"><div class="bubble">어떤 버튼을 누르셨나요?</div><time>오후 3:21</time></div>
+      <div class="row"><div class="bubble">아까 말씀드린 그 버튼요</div><time>오후 4:05</time></div>
+      <div class="row mine"><div class="typing"><span></span><span></span><span></span></div></div>
+    </div>
+  </div>
+</body>
+</html>

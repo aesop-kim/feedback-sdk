@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>몽타주 1 · 수정 요청 슬라이드</title>
+<link rel="stylesheet" href="scene-base.css" />
+<style>
+  body {
+    background: #dfe2e6;
+  }
+  .toolbar {
+    height: 64px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--grey-200);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 16px;
+    font-size: 17px;
+    color: var(--grey-700);
+  }
+  .file-icon {
+    width: 22px;
+    height: 26px;
+    border-radius: 3px;
+    background: #e5484d;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+  }
+  .file-name {
+    font-weight: 600;
+    color: var(--grey-900);
+  }
+  .toolbar-spacer {
+    flex: 1;
+  }
+  .page-indicator {
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--grey-100);
+    font-size: 15px;
+  }
+  .stage {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    height: 880px;
+    display: grid;
+    place-items: center;
+  }
+  .slide {
+    width: 1440px;
+    height: 810px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    padding: 56px 64px 40px;
+    position: relative;
+  }
+  .slide-title {
+    font-size: 34px;
+    font-weight: 700;
+    padding-bottom: 18px;
+    border-bottom: 3px solid #1f3864;
+    color: #1f3864;
+  }
+  .mark {
+    background: linear-gradient(transparent 18%, var(--yellow-highlight) 18%, var(--yellow-highlight) 92%, transparent 92%);
+    padding: 0 4px;
+  }
+  .slide-body {
+    display: grid;
+    grid-template-columns: 820px 1fr;
+    gap: 44px;
+    margin-top: 36px;
+  }
+  .capture {
+    position: relative;
+    height: 470px;
+    border: 1px solid var(--grey-300);
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    background: #fff;
+    overflow: visible;
+  }
+  .capture-side {
+    background: var(--grey-50);
+    border-right: 1px solid var(--grey-200);
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .capture-side span {
+    height: 10px;
+    border-radius: 3px;
+    background: var(--grey-200);
+  }
+  .capture-side span:nth-child(3) {
+    background: #cfdcf5;
+  }
+  .capture-main {
+    padding: 22px 24px;
+  }
+  .capture-heading {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    display: flex;
+    gap: 2px;
+  }
+  .capture-heading .odd {
+    font-weight: 800;
+    letter-spacing: -0.12em;
+  }
+  .capture-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--grey-100);
+    font-size: 15px;
+    color: var(--grey-700);
+  }
+  .capture-row b {
+    font-weight: 500;
+    color: var(--grey-500);
+  }
+  .capture-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .capture-buttons span {
+    height: 36px;
+    width: 120px;
+    border-radius: 8px;
+    background: var(--grey-100);
+  }
+  .capture-buttons span:first-child {
+    background: #3a6fd8;
+  }
+  .capture-heading .odd {
+    margin: 0 8px 0 6px;
+    outline: 3px solid #e02424;
+    outline-offset: 4px;
+  }
+  .red-line {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .red-memo {
+    position: absolute;
+    left: 470px;
+    top: 120px;
+    padding: 10px 16px;
+    border: 3px solid #e02424;
+    background: #fff;
+    color: #e02424;
+    font-size: 22px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .notes {
+    font-size: 22px;
+    line-height: 1.75;
+    color: #222;
+  }
+  .notes p + p {
+    margin-top: 14px;
+  }
+  .notes .muted {
+    color: var(--grey-600);
+    font-size: 19px;
+  }
+  .slide-footer {
+    position: absolute;
+    left: 64px;
+    right: 64px;
+    bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    color: var(--grey-500);
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="file-icon">PDF</span>
+    <span class="file-name">QA_수정요청_2차_최종(수정).pdf</span>
+    <span class="toolbar-spacer"></span>
+    <span class="page-indicator">7 / 23</span>
+    <span>100%</span>
+  </div>
+  <div class="stage">
+    <div class="slide">
+      <h1 class="slide-title"><span class="mark">[Comment 사항]</span> 조회권한 요청 관련 기능 수정</h1>
+      <div class="slide-body">
+        <div class="capture">
+          <div class="capture-side"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="capture-main">
+            <div class="capture-heading">계약 <span class="odd">보</span>기 · 조회권한 요청</div>
+            <div class="capture-row"><b>문서 번호</b>DOC-2041</div>
+            <div class="capture-row"><b>요청자</b>운영팀 담당자</div>
+            <div class="capture-row"><b>요청 사유</b>분기 정산 확인</div>
+            <div class="capture-row"><b>승인자</b>-</div>
+            <div class="capture-row"><b>상태</b>요청 대기</div>
+            <div class="capture-buttons"><span></span><span></span></div>
+          </div>
+          <svg class="red-line"><line id="memo-line" stroke="#e02424" stroke-width="3" /></svg>
+          <div class="red-memo">계약의 '보'자가 좀 이상합니다</div>
+        </div>
+        <div class="notes">
+          <p>1. <span class="mark">조회권한 요청 누르면 화면이 멈춤</span></p>
+          <p>2. 승인자 이름이 안 보임 (요청 대기 상태)</p>
+          <p>3. <span class="mark">제목 글씨 확인 부탁드립니다</span></p>
+          <p class="muted">※ 지난주에 말씀드린 그 화면과 동일합니다</p>
+        </div>
+      </div>
+      <div class="slide-footer"><span>고객사 내부 검토용</span><span>7</span></div>
+    </div>
+  </div>
+<script>
+  // 빨간 박스('보')와 메모를 잇는 선. 글자 위치를 재서 그린다.
+  document.fonts.ready.then(() => {
+    const capture = document.querySelector(".capture").getBoundingClientRect();
+    const letter = document.querySelector(".capture-heading .odd").getBoundingClientRect();
+    const memo = document.querySelector(".red-memo").getBoundingClientRect();
+    const line = document.getElementById("memo-line");
+    line.setAttribute("x1", String(letter.right + 8 - capture.left));
+    line.setAttribute("y1", String(letter.bottom + 8 - capture.top));
+    line.setAttribute("x2", String(memo.left - capture.left));
+    line.setAttribute("y2", String(memo.top + memo.height / 2 - capture.top));
+  });
+</script>
+</body>
+</html>

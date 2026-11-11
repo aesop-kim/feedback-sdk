@@ -41,7 +41,12 @@ const eslintConfig = defineConfig([
       "check-file/filename-naming-convention": ["error", { "**/*.tsx": "PASCAL_CASE" }],
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "public/sdk.js", "playwright-report/**", "test-results/**"]),
+  {
+    // demo/scripts는 Next 밖에서 node로 바로 실행하는 .mjs라 @/ 별칭을 쓸 수 없다. 이 규칙만 끈다.
+    files: ["demo/scripts/**/*.mjs"],
+    rules: { "no-restricted-imports": "off" },
+  },
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "public/sdk.js", "playwright-report/**", "test-results/**", "demo/raw/**", "demo/build/**", "demo/cards/**"]),
 ]);
 
 export default eslintConfig;

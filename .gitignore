@@ -55,3 +55,8 @@ supabase/.temp/
 /test-results/
 /playwright-report/
 !.env.example
+
+# demo video (raw footage, build output)
+/demo/raw/
+/demo/build/
+/fixtures/demo-recording/snapshot/

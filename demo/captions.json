@@ -1,0 +1,140 @@
+{
+  "note": "kind=scene: 장면 캡션(타임라인의 segment.caption이 id로 참조). kind=speech: 고객 대사 자막. narrationStart/End는 narration.wav 기준 초이며, 녹화 장면에서 이 구간이 보이면 자동으로 깔린다.",
+  "captions": [
+    {
+      "id": "montage-slide",
+      "kind": "scene",
+      "text": "QA 요청은 보통 이렇게 와요"
+    },
+    {
+      "id": "montage-messenger",
+      "kind": "scene",
+      "text": "메신저로 하나씩 이어서 오고"
+    },
+    {
+      "id": "montage-chat",
+      "kind": "scene",
+      "text": "어느 화면, 어느 버튼인지 다시 물어봐야 해요"
+    },
+    {
+      "id": "widget-open",
+      "kind": "scene",
+      "text": "위젯을 열고 화면 녹화를 눌러요"
+    },
+    {
+      "id": "recording-finish",
+      "kind": "scene",
+      "text": "끝내기를 누르면 바로 보내져요"
+    },
+    {
+      "id": "admin-analysis",
+      "kind": "scene",
+      "text": "문제마다 장면과 말한 내용이 남아요"
+    },
+    {
+      "id": "admin-reply",
+      "kind": "scene",
+      "text": "이슈를 보면서 바로 답장해요"
+    },
+    {
+      "id": "customer-reply",
+      "kind": "scene",
+      "text": "답장은 고객 화면에 바로 떠요"
+    },
+    {
+      "id": "admin-ask",
+      "kind": "scene",
+      "text": "애매한 문제는 고객에게 되물어요"
+    },
+    {
+      "id": "customer-answer",
+      "kind": "scene",
+      "text": "고객은 그 장면을 보며 고르기만 하면 돼요"
+    },
+    {
+      "id": "admin-answered",
+      "kind": "scene",
+      "text": "답변은 이슈에 바로 붙어요"
+    },
+    {
+      "id": "admin-resolve",
+      "kind": "scene",
+      "text": "고치고 나면 반영 완료로 바꿔요"
+    },
+    {
+      "id": "customer-reverify",
+      "kind": "scene",
+      "text": "고객에게 같은 화면에서 확인을 부탁해요"
+    },
+    {
+      "id": "speech-01",
+      "kind": "speech",
+      "text": "먼저 여기 오른쪽 위에 있는 파란 계약서 등록 버튼이요.",
+      "narrationStart": 10.29,
+      "narrationEnd": 14.03
+    },
+    {
+      "id": "speech-02",
+      "kind": "speech",
+      "text": "새 계약서를 하나 만들려고 눌렀는데, 아무 반응이 없어요.",
+      "narrationStart": 14.28,
+      "narrationEnd": 18.24
+    },
+    {
+      "id": "speech-03",
+      "kind": "speech",
+      "text": "혹시 몰라서 한 번 더 눌러 봤는데도 똑같아요.",
+      "narrationStart": 18.49,
+      "narrationEnd": 21.67
+    },
+    {
+      "id": "speech-header-intro",
+      "kind": "speech",
+      "text": "그다음은 표 머리글이에요.",
+      "narrationStart": 27.36,
+      "narrationEnd": 29.08
+    },
+    {
+      "id": "speech-04",
+      "kind": "speech",
+      "text": "여기 금액 칸 제목이 계약 금액이어야 하는데,",
+      "narrationStart": 29.32,
+      "narrationEnd": 32.22
+    },
+    {
+      "id": "speech-05",
+      "kind": "speech",
+      "text": "계약 긍액이라고 오타가 나 있어요.",
+      "narrationStart": 32.47,
+      "narrationEnd": 34.85
+    },
+    {
+      "id": "speech-06",
+      "kind": "speech",
+      "text": "마지막으로 맨 위에 있는 전체 계약서라는 제목이요.",
+      "narrationStart": 39.21,
+      "narrationEnd": 42.5
+    },
+    {
+      "id": "speech-07",
+      "kind": "speech",
+      "text": "이 글씨가 다른 곳이랑 좀 달라 보여요.",
+      "narrationStart": 42.74,
+      "narrationEnd": 45.36
+    },
+    {
+      "id": "speech-08",
+      "kind": "speech",
+      "text": "정확히 뭐가 문제인지는 저도 모르겠는데,",
+      "narrationStart": 45.64,
+      "narrationEnd": 48.53
+    },
+    {
+      "id": "speech-09",
+      "kind": "speech",
+      "text": "굵기가 너무 굵거나 글자 사이가 좁은 것 같아서 어색해요.",
+      "narrationStart": 48.77,
+      "narrationEnd": 52.85
+    }
+  ]
+}

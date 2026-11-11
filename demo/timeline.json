@@ -1,0 +1,447 @@
+{
+  "note": "편집 목록. clip은 녹화 영상의 구간을 cues.json의 이름으로 자른다(at: {cue, offset}). cue에 배열을 주면 있는 것 중 첫 번째를 쓴다. zooms의 at은 cue 시각 또는 local(장면 안 초). focus는 cue가 가리킨 지점(x, y) 또는 직접 준 {x, y}. transition은 이 장면이 시작할 때의 전환.",
+  "defaults": {
+    "transition": "fade",
+    "transitionSeconds": 0.35,
+    "zoomSeconds": 0.8
+  },
+  "segments": [
+    {
+      "id": "montage-slide",
+      "type": "card",
+      "card": "montage-request-slide.png",
+      "seconds": 3.6,
+      "pushIn": 0.045,
+      "caption": "montage-slide",
+      "transition": "cut"
+    },
+    {
+      "id": "montage-messenger",
+      "type": "card",
+      "card": "montage-messenger-thread.png",
+      "seconds": 3.0,
+      "pushIn": 0.045,
+      "caption": "montage-messenger",
+      "transition": "cut"
+    },
+    {
+      "id": "montage-chat",
+      "type": "card",
+      "card": "montage-chat-back-and-forth.png",
+      "seconds": 4.0,
+      "pushIn": 0.045,
+      "caption": "montage-chat",
+      "transition": "cut"
+    },
+    {
+      "id": "title",
+      "type": "card",
+      "card": "title-card.png",
+      "seconds": 4.0,
+      "transition": "fade",
+      "transitionSeconds": 0.5
+    },
+    {
+      "id": "widget-open",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "launcher-hover",
+        "offset": -1.6
+      },
+      "to": {
+        "cue": "record-click",
+        "offset": 1.0
+      },
+      "caption": "widget-open",
+      "zooms": [
+        {
+          "at": {
+            "cue": "launcher-click",
+            "offset": 0.1
+          },
+          "zoom": 1.45,
+          "focus": {
+            "cue": "record-hover",
+            "dy": -0.12
+          }
+        }
+      ]
+    },
+    {
+      "id": "bug-register-button",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "recording-start",
+        "offset": 10.1
+      },
+      "to": {
+        "cue": "recording-start",
+        "offset": 21.85
+      },
+      "narration": true,
+      "zooms": [
+        {
+          "at": {
+            "cue": "bug-1-hover",
+            "offset": -0.4
+          },
+          "zoom": 1.7,
+          "focus": {
+            "cue": "bug-1-hover"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bug-header-typo",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "recording-start",
+        "offset": 27.15
+      },
+      "to": {
+        "cue": "recording-start",
+        "offset": 35.0
+      },
+      "narration": true,
+      "zooms": [
+        {
+          "at": {
+            "cue": "bug-2-hover",
+            "offset": -0.5
+          },
+          "zoom": 1.8,
+          "focus": {
+            "cue": "bug-2-hover"
+          }
+        }
+      ]
+    },
+    {
+      "id": "bug-title-style",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "recording-start",
+        "offset": 39.0
+      },
+      "to": {
+        "cue": "recording-start",
+        "offset": 53.0
+      },
+      "narration": true,
+      "zooms": [
+        {
+          "at": {
+            "local": 0.25
+          },
+          "zoom": 1.8,
+          "focus": {
+            "cue": "bug-3-hover"
+          }
+        },
+        {
+          "at": {
+            "cue": "recording-start",
+            "offset": 45.4
+          },
+          "seconds": 2.4,
+          "zoom": 1.45,
+          "focus": {
+            "cue": "bug-3-hover",
+            "dx": 0.1,
+            "dy": 0.1
+          }
+        }
+      ]
+    },
+    {
+      "id": "recording-finish",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "finish-hover",
+        "offset": -1.0
+      },
+      "to": {
+        "cue": [
+          "analyzing-visible",
+          "upload-done"
+        ],
+        "offset": 1.4
+      },
+      "caption": "recording-finish",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.1
+          },
+          "zoom": 1.5,
+          "focus": {
+            "cue": "finish-hover",
+            "dy": -0.18
+          }
+        }
+      ]
+    },
+    {
+      "id": "analysis-card",
+      "type": "card",
+      "card": "analysis-card.png",
+      "seconds": 3.4,
+      "transitionSeconds": 0.45
+    },
+    {
+      "id": "admin-analysis",
+      "type": "clip",
+      "source": "admin",
+      "from": {
+        "cue": "analysis-ready",
+        "offset": -0.3
+      },
+      "to": {
+        "cue": "ambiguous-issue-hover",
+        "offset": 2.0
+      },
+      "caption": "admin-analysis",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.9
+          },
+          "zoom": 1.35,
+          "focus": {
+            "cue": "issue-list-hover"
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin-reply",
+      "type": "clip",
+      "source": "admin",
+      "from": {
+        "cue": "reply-field-hover",
+        "offset": -0.7
+      },
+      "to": {
+        "cue": "reply-sent",
+        "offset": 1.3
+      },
+      "caption": "admin-reply",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.0
+          },
+          "zoom": 1.6,
+          "focus": {
+            "cue": "reply-field-hover"
+          }
+        },
+        {
+          "at": {
+            "cue": "reply-sent",
+            "offset": -0.1
+          },
+          "seconds": 0.9,
+          "zoom": 1.4,
+          "focus": {
+            "x": 0.5,
+            "y": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "id": "customer-reply",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "reply-visible",
+        "offset": -0.4
+      },
+      "to": {
+        "cue": "reply-visible",
+        "offset": 3.2
+      },
+      "caption": "customer-reply",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.0
+          },
+          "zoom": 1.5,
+          "focus": {
+            "cue": "record-hover",
+            "dy": -0.1
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin-ask",
+      "type": "clip",
+      "source": "admin",
+      "from": {
+        "cue": "ask-hover",
+        "offset": -1.2
+      },
+      "to": {
+        "cue": "asked",
+        "offset": 1.8
+      },
+      "caption": "admin-ask",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.0
+          },
+          "zoom": 1.5,
+          "focus": {
+            "cue": "ask-hover",
+            "dy": -0.08
+          }
+        }
+      ]
+    },
+    {
+      "id": "customer-answer",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "question-visible",
+        "offset": -0.3
+      },
+      "to": {
+        "cue": "answered",
+        "offset": 1.2
+      },
+      "caption": "customer-answer",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.1
+          },
+          "zoom": 1.5,
+          "focus": {
+            "cue": "question-visible"
+          }
+        },
+        {
+          "at": {
+            "cue": "answer-option-hover",
+            "offset": -0.8
+          },
+          "zoom": 1.5,
+          "focus": {
+            "cue": "answer-option-hover",
+            "dy": 0.08
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin-answered",
+      "type": "clip",
+      "source": "admin",
+      "from": {
+        "cue": "answer-visible",
+        "offset": -0.4
+      },
+      "to": {
+        "cue": "answer-visible",
+        "offset": 3.4
+      },
+      "caption": "admin-answered",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.0
+          },
+          "zoom": 1.45,
+          "focus": {
+            "cue": "ambiguous-issue-hover",
+            "dy": 0.06
+          }
+        }
+      ]
+    },
+    {
+      "id": "admin-resolve",
+      "type": "clip",
+      "source": "admin",
+      "from": {
+        "cue": [
+          "issue-1-hover"
+        ],
+        "offset": -0.9
+      },
+      "to": {
+        "cue": "resolved",
+        "offset": 1.8
+      },
+      "caption": "admin-resolve",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.0
+          },
+          "zoom": 1.35,
+          "focus": {
+            "cue": "issue-1-hover",
+            "dy": 0.12
+          }
+        },
+        {
+          "at": {
+            "cue": "resolve-hover",
+            "offset": -0.8
+          },
+          "zoom": 1.5,
+          "focus": {
+            "cue": "resolve-hover",
+            "dy": -0.06
+          }
+        }
+      ]
+    },
+    {
+      "id": "customer-reverify",
+      "type": "clip",
+      "source": "customer",
+      "from": {
+        "cue": "reverify-visible",
+        "offset": -0.4
+      },
+      "to": {
+        "cue": "reverify-visible",
+        "offset": 4.2
+      },
+      "caption": "customer-reverify",
+      "zooms": [
+        {
+          "at": {
+            "local": 0.0
+          },
+          "zoom": 1.9,
+          "focus": {
+            "cue": "reverify-visible",
+            "dx": -0.02
+          }
+        }
+      ]
+    },
+    {
+      "id": "end",
+      "type": "card",
+      "card": "end-card.png",
+      "seconds": 6.0,
+      "transitionSeconds": 0.6,
+      "fadeOutSeconds": 0.8
+    }
+  ]
+}
