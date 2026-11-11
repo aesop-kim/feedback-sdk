@@ -35,7 +35,10 @@ export function createDomRecorder({ post, isInsideSdkRoot }: DomRecorderInput): 
     if (isInsideSdkRoot(event.target) || !(event.target instanceof Element)) {
       return;
     }
-    post({ type: "dom:click", payload: { epochMs: Date.now(), context: getElementContext(event.target) } });
+    const context = getElementContext(event.target);
+    // 분석 워커가 events.json만 보고도 클릭 요소를 알 수 있게 rrweb에도 남긴다.
+    record.addCustomEvent("element-click", context);
+    post({ type: "dom:click", payload: { epochMs: Date.now(), context } });
   };
 
   const handleHoverRest = () => {
