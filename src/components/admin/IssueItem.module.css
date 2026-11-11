@@ -259,6 +259,14 @@
   margin-top: var(--sp-1);
 }
 
+.actionButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-basis: 100%;
+}
+
 .actionCaption {
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
