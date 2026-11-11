@@ -32,13 +32,20 @@
   border-radius: var(--r-input);
   background: var(--grey-50);
   box-shadow: inset 0 0 0 1px var(--border-hairline);
-  overflow-x: auto;
   text-align: left;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 20px;
   color: var(--grey-800);
-  white-space: pre;
+  /* 긴 주소도 상자 안에서 줄을 바꿔 가로 스크롤이 생기지 않게 한다(NEW-11). */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.projectKey {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-weight: var(--fw-semibold);
+  color: var(--grey-800);
 }
 
 .visuallyHidden {

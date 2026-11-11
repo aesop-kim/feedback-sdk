@@ -7,6 +7,7 @@ import type { ConversationSummary } from "@/types/feedback";
 export type ConversationListResponse = {
   projectId: string | null;
   projectName: string | null;
+  projectKey: string | null;
   conversations: ConversationSummary[];
 };
 

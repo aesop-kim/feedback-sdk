@@ -210,7 +210,7 @@ test("데모 영상 촬영: 고객 녹화부터 반영 완료 후 다시 확인 
   await glideAndClick(
     adminPage,
     "admin",
-    adminPage.getByRole("navigation", { name: "받은 대화" }).getByText("김데모").first(),
+    adminPage.getByRole("navigation", { name: "받은 의견" }).getByText("김데모").first(),
     "conversation",
   );
 

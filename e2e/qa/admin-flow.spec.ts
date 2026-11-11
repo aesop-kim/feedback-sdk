@@ -38,7 +38,7 @@ test("틀린 비밀번호는 안내하고, 맞는 비밀번호로 들어가고, 
   await page.getByPlaceholder("비밀번호를 입력해 주세요").fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "로그인하기" }).click();
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByRole("navigation", { name: "받은 대화" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "받은 의견" })).toBeVisible();
 
   await page.getByRole("button", { name: "로그아웃" }).click();
   await expect(page).toHaveURL(/\/admin\/login$/);
@@ -53,21 +53,41 @@ test("틀린 비밀번호는 안내하고, 맞는 비밀번호로 들어가고, 
   expect(badResponses).toEqual([]);
 });
 
-test("받은 대화가 없으면 빈 상태를 보여 준다", async ({ browser }) => {
+test("받은 의견이 없으면 실제 프로젝트 키가 든 설치 코드를 가로 넘침 없이 보여 준다", async ({ browser }) => {
   const context = await browser.newContext();
   const adminPage = await loginAdmin(context);
   await adminPage.route(`${SDK_ORIGIN}/api/admin/conversations`, (route) =>
-    route.fulfill({ json: { projectId: null, projectName: "래티스 주식회사", conversations: [] } }),
+    route.fulfill({ json: { projectId: null, projectName: "래티스 주식회사", projectKey: "lattice-demo", conversations: [] } }),
   );
   await adminPage.reload();
   // UX(#47): 목록이 비면 가운데 칸은 "골라 주세요" 대신 위젯 설치 방법을 보여 준다.
-  await expect(adminPage.getByRole("navigation", { name: "받은 대화" }).getByText("아직 받은 의견이 없어요")).toBeVisible();
-  const placeholder = adminPage.locator("section").filter({ hasText: "고객사 페이지에 아래 두 줄을 넣으면 위젯이 떠요" });
+  await expect(adminPage.getByRole("navigation", { name: "받은 의견" }).getByText("아직 받은 의견이 없어요")).toBeVisible();
+  const placeholder = adminPage.locator("section").filter({ hasText: "고객사 페이지에 아래 코드를 넣으면 위젯이 떠요" });
   await expect(placeholder.getByText("아직 받은 의견이 없어요")).toBeVisible();
-  await expect(placeholder.locator("code")).toContainText("Feedback.init(");
+  const snippet = placeholder.locator("pre code");
+  await expect(snippet).toContainText("Feedback.init(");
+  // NEW-11: 자리표시 대신 이 프로젝트의 키가 들어가고, 긴 줄은 상자 안에서 줄을 바꾼다.
+  await expect(snippet).toContainText('projectKey: "lattice-demo"');
+  const overflow = await placeholder.locator("pre").evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
   await expect(placeholder.getByRole("button", { name: "코드 복사하기" })).toBeVisible();
   await expect(adminPage.getByText("의견을 골라 주세요")).toHaveCount(0);
   await captureQaScreen(adminPage, "admin-02-empty-list");
+  await context.close();
+});
+
+test("좁은 화면에서는 PC 안내를 보여 주고 로그아웃은 그대로 누를 수 있다", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  const adminPage = await loginAdmin(context);
+  await expect(adminPage.getByText("관리자 화면은 PC에서 써 주세요")).toBeVisible();
+  await expect(adminPage.getByRole("navigation", { name: "받은 의견" })).toBeHidden();
+  const pageOverflow = await adminPage.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(pageOverflow).toBeLessThanOrEqual(0);
+  await captureQaScreen(adminPage, "admin-02-narrow-notice");
+  const logout = adminPage.getByRole("button", { name: "로그아웃" });
+  await expect(logout).toBeInViewport();
+  await logout.click();
+  await expect(adminPage).toHaveURL(/\/admin\/login$/);
   await context.close();
 });
 
@@ -88,9 +108,12 @@ test("메시지가 없는 대화를 고르면 빈 대화·빈 녹화 안내가 �
   await expect(adminPage.getByText("아직 받은 녹화가 없어요")).toBeVisible();
   await captureQaScreen(adminPage, "admin-03-empty-conversation");
 
-  await adminPage.getByRole("navigation", { name: "받은 대화" }).getByText(second.name).click();
+  await adminPage.getByRole("navigation", { name: "받은 의견" }).getByText(second.name).click();
   await expect(adminPage).toHaveURL(new RegExp(secondConversation.conversationId));
-  await expect(adminPage.getByRole("region", { name: `${second.name} 님과의 대화` }).getByText("두 번째 대화 메시지")).toBeVisible();
+  const thread = adminPage.getByRole("region", { name: `${second.name} 님과의 대화` });
+  // UX-15: 새 메시지를 읽어 주도록 메시지 영역이 log(aria-live polite)다.
+  await expect(thread.getByRole("log", { name: "주고받은 메시지" }).getByText("두 번째 대화 메시지")).toBeVisible();
+  await expect(thread.getByRole("log", { name: "주고받은 메시지" })).toHaveAttribute("aria-live", "polite");
   saveDiagnostics("admin-03-select", diagnostics);
   await context.close();
 });

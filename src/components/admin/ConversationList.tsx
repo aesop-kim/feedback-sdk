@@ -34,7 +34,7 @@ export function ConversationList({ conversations, selectedConversationId, isLoad
 function ConversationListBody({ conversations, selectedConversationId, isLoading, errorMessage }: ConversationListProps) {
   if (isLoading) {
     return (
-      <ul className={styles.rows} aria-busy="true" aria-label="대화 목록을 불러오고 있어요">
+      <ul className={styles.rows} aria-busy="true" aria-label="받은 의견을 불러오고 있어요">
         {Array.from({ length: SKELETON_ROW_COUNT }, (_, index) => (
           <li key={index} className={styles.skeletonRow}>
             <span className={styles.skeletonName} />
