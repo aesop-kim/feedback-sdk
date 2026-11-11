@@ -16,7 +16,7 @@ export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "lattice-demo";
 export const SCREENS_DIRECTORY = ".screens/qa-v2/functional";
 export const WIDGET_FRAME = 'iframe[title="피드백 보내기"]';
 
-function readEnvFile(fileName: string): Record<string, string> {
+export function readEnvFile(fileName: string): Record<string, string> {
   try {
     const text = readFileSync(path.join(process.cwd(), fileName), "utf8");
     const entries: Record<string, string> = {};
