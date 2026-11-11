@@ -212,3 +212,44 @@
     opacity: 0.5;
   }
 }
+
+/* 재확인 녹화 표시: 회색 면 한 줄로 어떤 이슈를 다시 확인하는 녹화인지 알리고 원래 이슈로 잇는다. */
+.reverifyBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin: 0 var(--sp-5) var(--sp-3);
+  padding: 10px 12px;
+  border-radius: var(--r-input);
+  background: var(--grey-50);
+}
+
+.reverifyLabel {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  font-weight: var(--fw-semibold);
+  color: var(--grey-800);
+}
+
+.linkButton {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-btn-s);
+  font-size: var(--fs-t7);
+  font-weight: var(--fw-semibold);
+  color: var(--accent-weak-text);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.linkButton:hover {
+  background: var(--grey-100);
+}
+
+.linkButton:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}

@@ -293,3 +293,24 @@
   line-height: var(--lh-t8);
   color: var(--red-700);
 }
+
+.reverifyLink {
+  align-self: flex-start;
+  min-height: 32px;
+  margin-left: calc(var(--sp-2) * -1);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-btn-s);
+  font-size: var(--fs-t7);
+  font-weight: var(--fw-semibold);
+  color: var(--accent-weak-text);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.reverifyLink:hover {
+  background: var(--grey-100);
+}
+
+.reverifyLink:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}

@@ -367,6 +367,23 @@ test("반영 완료로 바꾸면 위젯에 재확인 안내가 뜨고, 그 안�
   expect(reverifyRecordings).toHaveLength(1);
   const { data: issueAfter } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
   expect(issueAfter?.status).toBe("reverify");
+
+  // V3-02 (a): 관리자는 새 녹화가 어떤 이슈의 재확인 녹화인지 보고, 원래 이슈와 오갈 수 있다.
+  await adminPage.reload();
+  await expect(adminPage.getByRole("button", { name: /다시 확인 녹화/ })).toBeVisible();
+  await expect(analysis.getByText("‘QA 이슈 제목’ 다시 확인 녹화")).toBeVisible();
+  await captureQaScreen(adminPage, "admin-09-admin-reverify-recording");
+  await analysis.getByRole("button", { name: "원래 이슈 보기" }).click();
+  await expect(analysis.getByRole("button", { name: /QA 이슈 제목/ })).toBeFocused();
+  await expect(analysis.getByText("다시 확인 중", { exact: true })).toBeVisible();
+  await analysis.getByRole("button", { name: "고객이 보낸 다시 확인 녹화 보기" }).click();
+  await expect(analysis.getByText("‘QA 이슈 제목’ 다시 확인 녹화")).toBeVisible();
+  await analysis.getByRole("button", { name: "원래 이슈 보기" }).click();
+  await analysis.getByRole("group", { name: "다시 확인 결과" }).getByRole("button", { name: "확인 끝 · 해결됨" }).click();
+  await expect(analysis.getByText("해결됨", { exact: true })).toBeVisible();
+  await captureQaScreen(adminPage, "admin-09-admin-reverify-closed");
+  const { data: closedIssue } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
+  expect(closedIssue?.status).toBe("closed");
   await adminContext.close();
   await customerContext.close();
 });

@@ -9,6 +9,7 @@ import styles from "@/components/admin/RecordingAnalysisPanel.module.css";
 import { useAdminRequest } from "@/hooks/use-admin-request";
 import { useAdminRevision } from "@/hooks/use-admin-revision";
 import { getFailureGuidance } from "@/lib/feedback/recording-failure";
+import { findLatestReverifyRecordingId, findReverifyOrigin, getReverifyRecordingLabel } from "@/lib/feedback/reverify-link";
 import type { Issue, RecordingDetail, RecordingFailureKind } from "@/types/feedback";
 
 type RecordingAnalysisPanelProps = {
@@ -20,9 +21,17 @@ type RecordingAnalysisPanelProps = {
 // API는 최신 녹화가 먼저 오지만, 번호는 보낸 순서(1이 첫 녹화)로 붙인다.
 export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSelectRecording }: RecordingAnalysisPanelProps) {
   const playerRef = useRef<RecordingPlayerHandle>(null);
+  // 재확인 녹화 ↔ 원래 이슈를 오갈 때 펼치고 초점을 줄 이슈.
+  const [focusedIssueId, setFocusedIssueId] = useState<string | null>(null);
   const orderedRecordings = [...recordings].reverse();
   const selectedIndex = orderedRecordings.findIndex((recording) => recording.id === selectedRecordingId);
   const recording = orderedRecordings[selectedIndex];
+  const reverifyOrigin = recording ? findReverifyOrigin(recordings, recording) : null;
+
+  function openRecording(recordingId: string, issueId: string | null = null) {
+    setFocusedIssueId(issueId);
+    onSelectRecording(recordingId);
+  }
 
   return (
     <div className={styles.panel}>
@@ -33,7 +42,7 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
             <button
               type="button"
               className={styles.pagerButton}
-              onClick={() => onSelectRecording(orderedRecordings[selectedIndex - 1].id)}
+              onClick={() => openRecording(orderedRecordings[selectedIndex - 1].id)}
               disabled={selectedIndex === 0}
               aria-label="이전 녹화"
             >
@@ -47,7 +56,7 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
             <button
               type="button"
               className={styles.pagerButton}
-              onClick={() => onSelectRecording(orderedRecordings[selectedIndex + 1].id)}
+              onClick={() => openRecording(orderedRecordings[selectedIndex + 1].id)}
               disabled={selectedIndex === orderedRecordings.length - 1}
               aria-label="다음 녹화"
             >
@@ -60,6 +69,20 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
       </header>
       {recording ? (
         <>
+          {recording.reverifyIssueId ? (
+            <div className={styles.reverifyBanner}>
+              <p className={styles.reverifyLabel}>{getReverifyRecordingLabel(reverifyOrigin)}</p>
+              {reverifyOrigin ? (
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  onClick={() => openRecording(reverifyOrigin.recordingId, reverifyOrigin.issueId)}
+                >
+                  원래 이슈 보기
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {/* 플레이어는 녹화가 바뀔 때만 다시 마운트해서, 분석이 끝나도 영상을 다시 받지 않는다. */}
           {canShowVideo(recording) ? <RecordingPlayer key={recording.id} ref={playerRef} recording={recording} /> : null}
           {/* 분석이 끝나 상태가 바뀌면 다시 마운트해서, 확인이 필요한 이슈가 기본으로 펼쳐지게 한다. */}
@@ -68,6 +91,9 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
             recording={recording}
             hasVideo={canShowVideo(recording)}
             onSeek={(milliseconds) => playerRef.current?.seekTo(milliseconds)}
+            focusedIssueId={focusedIssueId}
+            findReverifyRecordingId={(issueId) => findLatestReverifyRecordingId(recordings, issueId)}
+            onOpenRecording={(recordingId) => openRecording(recordingId)}
           />
         </>
       ) : (
@@ -89,7 +115,10 @@ function needsCheck(issue: Issue): boolean {
   return issue.confidence === "ambiguous" && issue.status === "open";
 }
 
-function findDefaultOpenIssueId(issues: Issue[]): string | null {
+function findDefaultOpenIssueId(issues: Issue[], focusedIssueId: string | null): string | null {
+  if (focusedIssueId && issues.some((issue) => issue.id === focusedIssueId)) {
+    return focusedIssueId;
+  }
   return (issues.find(needsCheck) ?? issues[0])?.id ?? null;
 }
 
@@ -97,10 +126,20 @@ type RecordingAnalysisProps = {
   recording: RecordingDetail;
   hasVideo: boolean;
   onSeek: (milliseconds: number) => void;
+  focusedIssueId: string | null;
+  findReverifyRecordingId: (issueId: string) => string | null;
+  onOpenRecording: (recordingId: string) => void;
 };
 
-function RecordingAnalysis({ recording, hasVideo, onSeek }: RecordingAnalysisProps) {
-  const [openIssueId, setOpenIssueId] = useState<string | null>(() => findDefaultOpenIssueId(recording.issues));
+function RecordingAnalysis({
+  recording,
+  hasVideo,
+  onSeek,
+  focusedIssueId,
+  findReverifyRecordingId,
+  onOpenRecording,
+}: RecordingAnalysisProps) {
+  const [openIssueId, setOpenIssueId] = useState<string | null>(() => findDefaultOpenIssueId(recording.issues, focusedIssueId));
 
   if (recording.status === "uploading") {
     return <AnalysisPending message="고객이 영상을 올리고 있어요. 잠시만 기다려 주세요" hasVideo={false} />;
@@ -141,6 +180,9 @@ function RecordingAnalysis({ recording, hasVideo, onSeek }: RecordingAnalysisPro
               isOpen={openIssueId === issue.id}
               onToggle={() => setOpenIssueId((current) => (current === issue.id ? null : issue.id))}
               onSeek={onSeek}
+              shouldFocus={focusedIssueId === issue.id}
+              reverifyRecordingId={findReverifyRecordingId(issue.id)}
+              onOpenRecording={onOpenRecording}
             />
           ))}
         </ol>

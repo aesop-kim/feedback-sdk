@@ -8,10 +8,11 @@ type ThreadMessageProps = {
   message: ChatMessage;
   showTime: boolean;
   isRecordingSelected: boolean;
+  isReverifyRecording: boolean;
   onSelectRecording: (recordingId: string) => void;
 };
 
-export function ThreadMessage({ message, showTime, isRecordingSelected, onSelectRecording }: ThreadMessageProps) {
+export function ThreadMessage({ message, showTime, isRecordingSelected, isReverifyRecording, onSelectRecording }: ThreadMessageProps) {
   if (message.sender === "system" || message.type === "system") {
     return <p className={styles.system}>{message.body}</p>;
   }
@@ -25,16 +26,26 @@ export function ThreadMessage({ message, showTime, isRecordingSelected, onSelect
 
   return (
     <div className={`${styles.row} ${sideClassName} ${showTime ? styles.groupEnd : ""}`}>
-      <MessageContent message={message} isRecordingSelected={isRecordingSelected} onSelectRecording={onSelectRecording} />
+      <MessageContent
+        message={message}
+        isRecordingSelected={isRecordingSelected}
+        isReverifyRecording={isReverifyRecording}
+        onSelectRecording={onSelectRecording}
+      />
       {time}
     </div>
   );
 }
 
-function MessageContent({ message, isRecordingSelected, onSelectRecording }: Omit<ThreadMessageProps, "showTime">) {
+function MessageContent({ message, isRecordingSelected, isReverifyRecording, onSelectRecording }: Omit<ThreadMessageProps, "showTime">) {
   if (message.type === "recording" && message.recording) {
     return (
-      <RecordingRow recording={message.recording} isSelected={isRecordingSelected} onSelect={onSelectRecording} />
+      <RecordingRow
+        recording={message.recording}
+        isSelected={isRecordingSelected}
+        isReverify={isReverifyRecording}
+        onSelect={onSelectRecording}
+      />
     );
   }
   if (message.type === "clarification" && message.clarification) {
@@ -46,10 +57,12 @@ function MessageContent({ message, isRecordingSelected, onSelectRecording }: Omi
 function RecordingRow({
   recording,
   isSelected,
+  isReverify,
   onSelect,
 }: {
   recording: RecordingSummary;
   isSelected: boolean;
+  isReverify: boolean;
   onSelect: (recordingId: string) => void;
 }) {
   return (
@@ -66,7 +79,7 @@ function RecordingRow({
         </svg>
       </span>
       <span className={styles.recordingLabel}>
-        화면 녹화 <span className={styles.number}>{formatDuration(recording.durationMs)}</span>
+        {isReverify ? "다시 확인 녹화" : "화면 녹화"} <span className={styles.number}>{formatDuration(recording.durationMs)}</span>
         <span className={styles.dot}>·</span>
         <span className={recording.status === "failed" ? styles.recordingFailed : undefined}>{getAdminRecordingStateLabel(recording)}</span>
       </span>

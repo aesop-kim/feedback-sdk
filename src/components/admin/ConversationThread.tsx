@@ -26,6 +26,9 @@ export function ConversationThread({ conversation, selectedRecordingId, onSelect
   }, [lastMessageId]);
 
   const { endUser } = conversation;
+  const reverifyRecordingIds = new Set(
+    conversation.recordings.filter((recording) => recording.reverifyIssueId).map((recording) => recording.id),
+  );
 
   return (
     <div className={styles.thread}>
@@ -64,6 +67,7 @@ export function ConversationThread({ conversation, selectedRecordingId, onSelect
                 message={message}
                 showTime={isGroupEnd}
                 isRecordingSelected={message.recording?.id === selectedRecordingId}
+                isReverifyRecording={Boolean(message.recording && reverifyRecordingIds.has(message.recording.id))}
                 onSelectRecording={onSelectRecording}
               />
             </Fragment>
