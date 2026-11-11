@@ -6,6 +6,7 @@ import { AdminButton } from "@/components/admin/AdminButton";
 import { ConversationList } from "@/components/admin/ConversationList";
 import { LatticeMark } from "@/components/admin/LatticeMark";
 import styles from "@/components/admin/AdminShell.module.css";
+import { AdminConversationListContext } from "@/hooks/use-admin-conversation-list";
 import { useAdminConversations } from "@/hooks/use-admin-conversations";
 import { AdminRevisionContext } from "@/hooks/use-admin-revision";
 import { useRealtimeSignal } from "@/hooks/use-realtime-signal";
@@ -23,6 +24,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   useRealtimeSignal(data?.projectId ? getAdminChannelName(data.projectId) : null, refresh);
 
   const revisionValue = useMemo(() => ({ revision, refresh }), [revision, refresh]);
+  const conversationCount = data ? data.conversations.length : null;
+  const conversationListValue = useMemo(() => ({ conversationCount }), [conversationCount]);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -55,7 +58,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               errorMessage={errorMessage}
             />
           </nav>
-          {children}
+          <AdminConversationListContext value={conversationListValue}>{children}</AdminConversationListContext>
         </div>
       </div>
     </AdminRevisionContext>

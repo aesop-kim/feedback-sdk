@@ -51,20 +51,43 @@ function ConversationListBody({ conversations, selectedConversationId, isLoading
   if (conversations.length === 0) {
     return (
       <div className={styles.empty}>
+        {/* 설치 방법은 가운데 칸이 안내한다. 같은 말을 두 번 하지 않게 여기에는 제목만 둔다. */}
         <p className={styles.emptyTitle}>아직 받은 의견이 없어요</p>
-        <p className={styles.emptyCaption}>고객이 위젯으로 의견을 보내면 여기에 바로 보여요.</p>
       </div>
     );
   }
+  const duplicateNames = findDuplicateNames(conversations);
   return (
     <ul className={styles.rows}>
       {conversations.map((conversation) => (
         <li key={conversation.id}>
-          <ConversationRow conversation={conversation} isSelected={conversation.id === selectedConversationId} />
+          <ConversationRow
+            conversation={conversation}
+            isSelected={conversation.id === selectedConversationId}
+            identifier={duplicateNames.has(conversation.endUser.name) ? getEndUserIdentifier(conversation.endUser) : null}
+          />
         </li>
       ))}
     </ul>
   );
+}
+
+function findDuplicateNames(conversations: ConversationSummary[]): Set<string> {
+  const seenNames = new Set<string>();
+  const duplicateNames = new Set<string>();
+  for (const { endUser } of conversations) {
+    if (seenNames.has(endUser.name)) {
+      duplicateNames.add(endUser.name);
+    }
+    seenNames.add(endUser.name);
+  }
+  return duplicateNames;
+}
+
+// 이름이 같은 고객을 가르는 짧은 표시: 이메일 앞부분, 없으면 외부 ID.
+function getEndUserIdentifier(endUser: ConversationSummary["endUser"]): string {
+  const emailLocalPart = endUser.email?.split("@")[0];
+  return emailLocalPart || endUser.externalId;
 }
 
 // 배지 대신 한 줄 캡션으로: "녹화 1개 · 남은 문제 3건"
@@ -79,7 +102,9 @@ function getMetaItems(conversation: ConversationSummary): string[] {
   return items;
 }
 
-function ConversationRow({ conversation, isSelected }: { conversation: ConversationSummary; isSelected: boolean }) {
+type ConversationRowProps = { conversation: ConversationSummary; isSelected: boolean; identifier: string | null };
+
+function ConversationRow({ conversation, isSelected, identifier }: ConversationRowProps) {
   const hasUnread = conversation.adminUnreadCount > 0;
   const metaItems = getMetaItems(conversation);
   return (
@@ -89,7 +114,10 @@ function ConversationRow({ conversation, isSelected }: { conversation: Conversat
       aria-current={isSelected ? "page" : undefined}
     >
       <div className={styles.topLine}>
-        <span className={styles.name}>{conversation.endUser.name}</span>
+        <span className={styles.name}>
+          {conversation.endUser.name}
+          {identifier ? <span className={styles.identifier}> · {identifier}</span> : null}
+        </span>
         <time className={styles.time} dateTime={conversation.lastMessageAt}>
           {formatRelativeTime(conversation.lastMessageAt)}
         </time>

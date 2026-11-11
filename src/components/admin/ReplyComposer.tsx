@@ -7,6 +7,10 @@ import { useAdminRequest } from "@/hooks/use-admin-request";
 import { useAdminRevision } from "@/hooks/use-admin-revision";
 
 const MAX_TEXTAREA_HEIGHT = 160;
+// 서버 검증(api-schemas의 MAX_MESSAGE_LENGTH)과 같은 한도. 한도에 가까워지면 글자 수를 보여 준다.
+// 클라이언트 번들에 zod를 끌어오지 않으려고 위젯처럼 값을 따로 둔다.
+const MAX_REPLY_LENGTH = 2000;
+const COUNTER_VISIBLE_LENGTH = 1800;
 
 export function ReplyComposer({ conversationId, customerName }: { conversationId: string; customerName: string }) {
   const request = useAdminRequest();
@@ -17,6 +21,7 @@ export function ReplyComposer({ conversationId, customerName }: { conversationId
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const canSend = body.trim().length > 0 && !isSending;
+  const isNearLimit = body.length >= COUNTER_VISIBLE_LENGTH;
 
   function resizeTextarea() {
     const textarea = textareaRef.current;
@@ -74,14 +79,29 @@ export function ReplyComposer({ conversationId, customerName }: { conversationId
             resizeTextarea();
           }}
           onKeyDown={handleKeyDown}
+          maxLength={MAX_REPLY_LENGTH}
         />
         <AdminButton size="small" onClick={() => void sendReply()} disabled={!canSend} isLoading={isSending}>
           보내기
         </AdminButton>
       </div>
-      <p className={errorMessage ? styles.error : styles.hint} role={errorMessage ? "alert" : undefined}>
-        {errorMessage ?? "Enter로 보내고, Shift + Enter로 줄을 바꿔요"}
-      </p>
+      <div className={styles.footer}>
+        <p className={errorMessage ? styles.error : styles.hint} role={errorMessage ? "alert" : undefined}>
+          {errorMessage ?? getHintText(body.length)}
+        </p>
+        {isNearLimit ? (
+          <span className={body.length >= MAX_REPLY_LENGTH ? `${styles.counter} ${styles.counterFull}` : styles.counter}>
+            {body.length}/{MAX_REPLY_LENGTH}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
+}
+
+function getHintText(length: number): string {
+  if (length >= MAX_REPLY_LENGTH) {
+    return `${MAX_REPLY_LENGTH}자까지 보낼 수 있어요`;
+  }
+  return "Enter로 보내고, Shift + Enter로 줄을 바꿔요";
 }

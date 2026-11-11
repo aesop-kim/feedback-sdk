@@ -38,7 +38,7 @@
 }
 
 .externalId {
-  color: var(--grey-500);
+  color: var(--grey-600);
   font-variant-numeric: tabular-nums;
 }
 
@@ -47,7 +47,7 @@
   margin: 0;
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
-  color: var(--grey-500);
+  color: var(--grey-600);
 }
 
 .messages {

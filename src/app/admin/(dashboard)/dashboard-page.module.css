@@ -1,30 +1,3 @@
-.placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-1);
-  padding: var(--sp-8);
-  background: var(--bg);
-  text-align: center;
-}
-
-.title {
-  margin: 0;
-  font-size: var(--fs-t6);
-  line-height: var(--lh-t6);
-  font-weight: var(--fw-semibold);
-  color: var(--grey-800);
-}
-
-.caption {
-  max-width: 320px;
-  margin: 0;
-  font-size: var(--fs-t7);
-  line-height: var(--lh-t7);
-  color: var(--grey-600);
-}
-
 .sideColumn {
   background: var(--bg);
   border-left: 1px solid var(--border-hairline);
