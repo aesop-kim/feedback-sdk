@@ -2,6 +2,7 @@ import { findAdminRejection } from "@/lib/auth/require-admin";
 import { insertMessage } from "@/lib/feedback/feedback-repository";
 import { respondError, respondJson, respondValidationError } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
+import { getFirstRelation } from "@/lib/supabase/first-relation";
 import { getServerSupabase } from "@/lib/supabase/server-client";
 import { approveClarificationSchema } from "@/lib/validation/api-schemas";
 
@@ -29,12 +30,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
   if (card.approved_at) {
     return respondJson({ cardId, alreadyApproved: true });
   }
-  const issueRelation = (Array.isArray(card.issues) ? card.issues[0] : card.issues) as {
+  const issueRelation = getFirstRelation<{
     conversation_id: string;
     conversations: { project_id: string } | { project_id: string }[];
-  };
+  }>(card.issues);
   const conversationId = issueRelation.conversation_id;
-  const projectRelation = Array.isArray(issueRelation.conversations) ? issueRelation.conversations[0] : issueRelation.conversations;
 
   // 아직 승인되지 않은 카드만 바꾼다. 동시에 두 번 눌러도 질문 메시지는 한 번만 생긴다.
   const { data: approvedRows } = await supabase
@@ -60,7 +60,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
     clarificationCardId: cardId,
     preview: "확인하고 싶은 게 있어요",
   });
-  await sendConversationSignal(conversationId, projectRelation.project_id, { type: "clarification.approved", id: cardId });
-  await sendConversationSignal(conversationId, projectRelation.project_id, { type: "message.created", id: messageId });
+  const projectId = getFirstRelation(issueRelation.conversations).project_id;
+  await sendConversationSignal(conversationId, projectId, { type: "clarification.approved", id: cardId });
+  await sendConversationSignal(conversationId, projectId, { type: "message.created", id: messageId });
   return respondJson({ cardId, messageId });
 }

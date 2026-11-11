@@ -12,7 +12,8 @@ import { buildAnalysisPrompt } from "@/lib/analysis/build-analysis-prompt";
 import { analysisResultSchema, getAnalysisJsonSchema, type AnalysisIssue } from "@/lib/analysis/issue-schema";
 import { mapIssuesToRows } from "@/lib/analysis/map-issues-to-rows";
 import { parseWhisperJson, type ParsedTranscript } from "@/lib/analysis/parse-whisper-json";
-import { REALTIME_EVENT, getAdminChannelName, getConversationChannelName } from "@/lib/realtime/realtime-signal";
+import { getAdminChannelName, getConversationChannelName } from "@/lib/realtime/realtime-signal";
+import { sendChannelSignal } from "@/lib/realtime/send-channel-signal";
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "..");
 const TEMPORARY_ROOT = path.join(PROJECT_ROOT, ".worker-tmp");
@@ -289,17 +290,6 @@ async function loadRecording(supabase: SupabaseClient, recordingId: string): Pro
   return { recording: data as unknown as RecordingRow, projectId: conversation.project_id };
 }
 
-async function sendSignal(supabase: SupabaseClient, channelName: string, recordingId: string): Promise<void> {
-  const channel = supabase.channel(channelName);
-  try {
-    await channel.httpSend(REALTIME_EVENT, { type: "recording.updated", id: recordingId });
-  } catch (error) {
-    console.warn(`[worker] ${channelName} 신호 전송 실패: ${getErrorDetail(error)}`);
-  } finally {
-    await supabase.removeChannel(channel);
-  }
-}
-
 async function markFailed(supabase: SupabaseClient, claimed: ClaimedRecording, message: string): Promise<void> {
   const { error } = await supabase
     .from("recordings")
@@ -378,12 +368,13 @@ async function processRecording(
     console.error(`[worker] ${claimed.id} 실패 · ${[...timings, message].join(" · ")}`);
     await markFailed(supabase, claimed, message);
   } finally {
+    const signal = { type: "recording.updated", id: claimed.id } as const;
     const signals: Promise<void>[] = [];
     if (conversationId) {
-      signals.push(sendSignal(supabase, getConversationChannelName(conversationId), claimed.id));
+      signals.push(sendChannelSignal(supabase, getConversationChannelName(conversationId), signal, "[worker]"));
     }
     if (projectId) {
-      signals.push(sendSignal(supabase, getAdminChannelName(projectId), claimed.id));
+      signals.push(sendChannelSignal(supabase, getAdminChannelName(projectId), signal, "[worker]"));
     }
     await Promise.all(signals);
     if (!options.keep) {

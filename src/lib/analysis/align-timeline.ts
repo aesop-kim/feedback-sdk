@@ -18,7 +18,7 @@ const RRWEB_MOUSE_INTERACTION_SOURCE = 2;
 const RRWEB_CLICK_INTERACTION = 2;
 // SDK는 클릭 요소를 rrweb에 따로 남기지 않는다. rrweb 클릭과 가장 가까운(±1초) 머무름 컨텍스트를 click으로 본다.
 // 같은 요소에 머문 뒤 클릭하면 새 컨텍스트가 생기지 않으므로 클릭 앞쪽 컨텍스트도 본다.
-export const CLICK_MATCH_WINDOW_MS = 1_000;
+const CLICK_MATCH_WINDOW_MS = 1_000;
 
 function shiftMs(value: number, offsetMs: number): number {
   return Math.max(0, Math.round(value + offsetMs));

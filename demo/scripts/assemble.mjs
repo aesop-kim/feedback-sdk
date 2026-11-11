@@ -144,7 +144,7 @@ async function loadSources(options) {
   return sources;
 }
 
-function findCue(source, cueReference) {
+function getCue(source, cueReference) {
   const names = Array.isArray(cueReference) ? cueReference : [cueReference];
   for (const name of names) {
     const cue = source.cues.find((candidate) => candidate.name === name);
@@ -156,7 +156,7 @@ function findCue(source, cueReference) {
 }
 
 function getVideoTime(source, reference) {
-  return findCue(source, reference.cue).t + (reference.offset ?? 0) - source.offset;
+  return getCue(source, reference.cue).t + (reference.offset ?? 0) - source.offset;
 }
 
 // ---------- 줌 ----------
@@ -165,7 +165,7 @@ function getFocusPoint(source, focus) {
   if (typeof focus.x === "number" && typeof focus.y === "number") {
     return { x: focus.x, y: focus.y };
   }
-  const cue = findCue(source, focus.cue);
+  const cue = getCue(source, focus.cue);
   if (typeof cue.x !== "number" || typeof cue.y !== "number") {
     throw new Error(`cue '${cue.name}'에는 가리킨 지점이 없어요`);
   }

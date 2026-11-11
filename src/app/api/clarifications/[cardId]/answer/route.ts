@@ -2,6 +2,7 @@ import { findAuthorizedConversation } from "@/lib/auth/request-auth";
 import { insertMessage } from "@/lib/feedback/feedback-repository";
 import { respondError, respondJson, respondUnauthorized, respondValidationError } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
+import { findFirstRelation } from "@/lib/supabase/first-relation";
 import { getServerSupabase } from "@/lib/supabase/server-client";
 import { answerClarificationSchema } from "@/lib/validation/api-schemas";
 
@@ -22,8 +23,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
     .select("id, issue_id, options, approved_at, answered_at, issues!inner(conversation_id)")
     .eq("id", cardId)
     .maybeSingle();
-  const issueRelation = card?.issues as { conversation_id: string } | { conversation_id: string }[] | undefined;
-  const cardConversationId = Array.isArray(issueRelation) ? issueRelation[0]?.conversation_id : issueRelation?.conversation_id;
+  const cardConversationId = findFirstRelation<{ conversation_id: string }>(card?.issues)?.conversation_id;
   if (!card || !card.approved_at || cardConversationId !== conversation.conversationId) {
     return respondError(404, "질문을 찾을 수 없어요.");
   }

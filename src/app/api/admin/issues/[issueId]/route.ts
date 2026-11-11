@@ -2,6 +2,7 @@ import { findAdminRejection } from "@/lib/auth/require-admin";
 import { insertMessage } from "@/lib/feedback/feedback-repository";
 import { respondError, respondJson, respondValidationError } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
+import { getFirstRelation } from "@/lib/supabase/first-relation";
 import { getServerSupabase } from "@/lib/supabase/server-client";
 import { updateIssueSchema } from "@/lib/validation/api-schemas";
 
@@ -29,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
     return respondJson({ issueId, changed: false });
   }
   await supabase.from("issues").update({ status: parsed.data.status }).eq("id", issueId);
-  const projectRelation = (Array.isArray(issue.conversations) ? issue.conversations[0] : issue.conversations) as { project_id: string };
+  const projectRelation = getFirstRelation<{ project_id: string }>(issue.conversations);
   const messageId = await insertMessage({
     conversationId: issue.conversation_id,
     sender: "system",

@@ -5,7 +5,7 @@ import { getBrowserSupabase } from "@/lib/supabase/browser-client";
 import type { ElementContext } from "@/types/feedback";
 
 const RECORDINGS_BUCKET = "recordings";
-export const UPLOAD_CONCURRENCY = 6;
+const UPLOAD_CONCURRENCY = 6;
 const UPLOAD_ATTEMPTS = 2;
 
 type UploadTarget = { path: string; token: string; signedUrl: string };

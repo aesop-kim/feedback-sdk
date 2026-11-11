@@ -1,4 +1,5 @@
 import "server-only";
+import { getFirstRelation } from "@/lib/supabase/first-relation";
 import { RECORDINGS_BUCKET, getServerSupabase } from "@/lib/supabase/server-client";
 import type {
   ChatMessage,
@@ -63,7 +64,7 @@ type CardRow = {
 
 type AnswerRow = { card_id: string; option_id: string | null; text: string | null; created_at: string };
 
-export async function createSignedUrlMap(paths: (string | null | undefined)[]): Promise<Map<string, string>> {
+async function createSignedUrlMap(paths: (string | null | undefined)[]): Promise<Map<string, string>> {
   const uniquePaths = [...new Set(paths.filter((path): path is string => Boolean(path)))];
   const signedUrls = new Map<string, string>();
   if (uniquePaths.length === 0) {
@@ -78,7 +79,7 @@ export async function createSignedUrlMap(paths: (string | null | undefined)[]): 
   return signedUrls;
 }
 
-async function findCardsWithAnswers(cardIds: string[]) {
+async function getCardsWithAnswers(cardIds: string[]) {
   if (cardIds.length === 0) {
     return { cards: [] as CardRow[], answers: [] as AnswerRow[] };
   }
@@ -141,7 +142,7 @@ export async function getConversationMessages(conversationId: string, audience: 
       ? supabase.from("recordings").select("id, status, duration_ms, page_url, page_title, transcript, error, created_at").in("id", recordingIds)
       : Promise.resolve({ data: [] }),
     recordingIds.length ? supabase.from("issues").select("recording_id").in("recording_id", recordingIds) : Promise.resolve({ data: [] }),
-    findCardsWithAnswers(cardIds),
+    getCardsWithAnswers(cardIds),
   ]);
 
   const { data: cardIssueRows } = cards.length
@@ -196,7 +197,7 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
   const { data: cardRows } = issues.length
     ? await supabase.from("clarification_cards").select("id").in("issue_id", issues.map((issue) => issue.id))
     : { data: [] };
-  const { cards, answers } = await findCardsWithAnswers((cardRows ?? []).map((row) => row.id as string));
+  const { cards, answers } = await getCardsWithAnswers((cardRows ?? []).map((row) => row.id as string));
   const cardsByIssue = new Map(cards.map((card) => [card.issue_id, card]));
 
   const signedUrls = await createSignedUrlMap([
@@ -242,7 +243,7 @@ export async function getConversationSummaries(conversationId?: string): Promise
     ? await baseQuery.eq("id", conversationId)
     : await baseQuery.order("last_message_at", { ascending: false }).limit(100);
   return (rows ?? []).map((row) => {
-    const endUser = (Array.isArray(row.end_users) ? row.end_users[0] : row.end_users) as { external_id: string; name: string; email: string | null };
+    const endUser = getFirstRelation<{ external_id: string; name: string; email: string | null }>(row.end_users);
     const issueRows = (row.issues ?? []) as { status: string }[];
     return {
       id: row.id,
