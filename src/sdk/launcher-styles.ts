@@ -3,9 +3,9 @@
 export const LAUNCHER_STYLES = `
 :host {
   all: initial;
-  --lattice-blue-500: #3182f6;
-  --lattice-blue-600: #2272eb;
-  --lattice-red-500: #f04452;
+  --lattice-blue-500: #1b64da;
+  --lattice-blue-600: #1957c2;
+  --lattice-red-500: #d22030;
   --lattice-white: #ffffff;
   --lattice-hairline: rgba(0, 27, 55, 0.08);
   --lattice-shadow-launcher: 0 2px 10px rgba(0, 27, 55, 0.14);
@@ -46,14 +46,14 @@ export const LAUNCHER_STYLES = `
   position: absolute;
   top: -2px;
   right: -2px;
-  min-width: 20px;
-  height: 20px;
+  min-width: 22px;
+  height: 22px;
   padding: 0 6px;
-  border-radius: 10px;
+  border-radius: 11px;
   border: 2px solid var(--lattice-white);
   background: var(--lattice-red-500);
   color: var(--lattice-white);
-  font: 700 11px/16px 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  font: 700 12px/18px 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -84,12 +84,17 @@ export const LAUNCHER_STYLES = `
 .frame[data-mode="open"] { opacity: 1; transform: none; }
 .frame[data-mode="recording"] {
   bottom: var(--lattice-inset);
-  width: 220px;
-  height: 52px;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+  height: 56px;
   max-height: none;
   border: 0;
-  border-radius: 26px;
+  border-radius: 28px;
   transition: none;
+}
+.frame[data-mode="recording"][data-warning="true"] {
+  height: 132px;
+  border-radius: 20px;
 }
 @media (max-width: 480px) {
   .frame[data-mode="open"], .frame[data-mode="closed"] {
@@ -103,7 +108,7 @@ export const LAUNCHER_STYLES = `
 }
 `;
 
-// 말풍선 + 음성 파형: "화면을 보여주며 말로 설명한다"는 이 위젯의 쓰임을 그대로 그린다.
+// 말풍선 + 음성 파형: "화면을 보여 주며 말로 설명한다"는 이 위젯의 쓰임을 그대로 그린다.
 export const LAUNCHER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5h10a3.5 3.5 0 0 1 3.5 3.5v6a3.5 3.5 0 0 1-3.5 3.5h-5l-3.5 3v-3H7A3.5 3.5 0 0 1 3.5 14V8A3.5 3.5 0 0 1 7 4.5Z"/><path d="M9 10v2M12 8.5v5M15 10v2"/></svg>`;
 
 export const CLOSE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`;

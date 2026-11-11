@@ -12,7 +12,7 @@
   margin: 0;
   max-width: 100%;
   padding: var(--sp-3) var(--page-x);
-  border-radius: var(--r-toast-multi);
+  border-radius: var(--r-toast-single);
   background: var(--grey-800);
   color: var(--bg);
   font-size: var(--fs-t6);
@@ -20,6 +20,10 @@
   font-weight: var(--fw-semibold);
   text-align: center;
   animation: enter var(--dur-fade) var(--ease-expo);
+}
+
+.toast[data-multiline="true"] {
+  border-radius: var(--r-toast-multi);
 }
 
 @keyframes enter {

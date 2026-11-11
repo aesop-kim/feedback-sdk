@@ -6,9 +6,25 @@
   background: var(--bg);
 }
 
+.header[data-compact="true"] {
+  align-items: center;
+  padding: var(--sp-3) var(--sp-3) var(--sp-3) var(--page-x);
+}
+
 .text {
   flex: 1;
   min-width: 0;
+}
+
+.compactTitle {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--fs-t5);
+  line-height: var(--lh-t5);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .caption {
@@ -31,9 +47,13 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  margin-top: -4px;
+  width: 44px;
+  height: 44px;
+  margin: -6px -4px 0 0;
+}
+
+.header[data-compact="true"] .closeButton {
+  margin: -6px -4px;
   border-radius: var(--r-btn-m);
   color: var(--grey-600);
   transition: transform var(--dur-release) var(--ease-out), background-color 150ms;

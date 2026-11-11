@@ -43,3 +43,25 @@
   line-height: var(--lh-t6);
   color: var(--text-tertiary);
 }
+
+.reloadButton {
+  width: 100%;
+  min-height: var(--h-btn-l);
+  margin-top: var(--sp-6);
+  padding: 2px var(--sp-4);
+  border-radius: var(--r-btn-l);
+  background: var(--blue-500);
+  color: var(--bg);
+  font-size: var(--fs-t5);
+  font-weight: var(--fw-semibold);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.reloadButton:hover {
+  background: var(--blue-600);
+}
+
+.reloadButton:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}

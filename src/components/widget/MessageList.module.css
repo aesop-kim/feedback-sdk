@@ -24,7 +24,7 @@
   margin-top: var(--sp-1);
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
-  color: var(--text-placeholder);
+  color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 

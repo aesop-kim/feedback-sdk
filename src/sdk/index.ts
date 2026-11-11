@@ -12,6 +12,7 @@ import type { EndUserInput } from "@/types/feedback";
 
 const SDK_ORIGIN = process.env.NEXT_PUBLIC_SDK_ORIGIN ?? "http://localhost:3000";
 const ROOT_ELEMENT_ID = "lattice-feedback-root";
+const FRAME_ELEMENT_ID = "lattice-feedback-frame";
 const MAX_BADGE_COUNT = 99;
 
 type FeedbackInitOptions = { projectKey: string; user: EndUserInput };
@@ -42,6 +43,7 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   launcher.className = "launcher";
   launcher.setAttribute("aria-label", "피드백 보내기");
   launcher.setAttribute("aria-expanded", "false");
+  launcher.setAttribute("aria-controls", FRAME_ELEMENT_ID);
   const launcherIcon = document.createElement("span");
   launcherIcon.innerHTML = LAUNCHER_ICON;
   launcherIcon.style.display = "contents";
@@ -54,6 +56,7 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   const iframeUrl = new URL("/widget", SDK_ORIGIN);
   iframeUrl.searchParams.set("projectKey", projectKey);
   const iframe = document.createElement("iframe");
+  iframe.id = FRAME_ELEMENT_ID;
   iframe.className = `frame ${RRWEB_BLOCK_CLASS}`;
   iframe.src = iframeUrl.toString();
   iframe.title = "피드백 보내기";
@@ -64,6 +67,15 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   document.body.append(host);
 
   let mode: WidgetDisplayMode = "closed";
+  let isWidgetBusy = false;
+
+  // 녹화·업로드 중에 새로고침하거나 탭을 닫으면 브라우저 확인 창을 띄운다(녹화가 조용히 사라지지 않게).
+  window.addEventListener("beforeunload", (event) => {
+    if (isWidgetBusy) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
 
   const postToWidget = (message: HostToWidgetMessage) => {
     iframe.contentWindow?.postMessage(createEnvelope(message), SDK_ORIGIN);
@@ -89,10 +101,23 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
     isInsideSdkRoot: (target) => target instanceof Node && host.contains(target),
   });
 
-  launcher.addEventListener("click", () => {
-    const isOpen = mode !== "open";
+  const setOpen = (isOpen: boolean) => {
     applyMode(isOpen ? "open" : "closed");
+    if (isOpen) {
+      // 포커스를 iframe으로 옮겨 두면 위젯이 host:visibility를 받고 입력창에 포커스를 둔다.
+      iframe.focus();
+    }
     postToWidget({ type: "host:visibility", payload: { open: isOpen } });
+  };
+
+  launcher.addEventListener("click", () => setOpen(mode !== "open"));
+
+  // 위젯 바깥(고객사 페이지)에 포커스가 있을 때도 Escape로 닫는다.
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && mode === "open") {
+      setOpen(false);
+      launcher.focus();
+    }
   });
 
   const handleWidgetMessage = (message: WidgetToHostMessage) => {
@@ -106,9 +131,19 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
         return;
       case "widget:mode":
         applyMode(message.payload.mode);
+        // 위젯 안에서 닫으면 iframe이 숨으면서 포커스가 사라지므로 런처로 돌려준다.
+        if (message.payload.mode === "closed") {
+          launcher.focus();
+        }
         return;
       case "widget:unread":
         setUnreadCount(message.payload.count);
+        return;
+      case "widget:busy":
+        isWidgetBusy = message.payload.isBusy;
+        return;
+      case "widget:warning":
+        iframe.dataset.warning = String(message.payload.isVisible);
         return;
       case "recording:start":
         domRecorder.start();
