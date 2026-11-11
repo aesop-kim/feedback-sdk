@@ -1,0 +1,104 @@
+/* Toss Design System 기반 토큰. 근거와 출처는 docs/design/tds-reference.md 참고. */
+:root {
+  /* ---- Grey [V-colors] ---- */
+  --grey-50:#f9fafb; --grey-100:#f2f4f6; --grey-200:#e5e8eb; --grey-300:#d1d6db; --grey-400:#b0b8c1;
+  --grey-500:#8b95a1; --grey-600:#6b7684; --grey-700:#4e5968; --grey-800:#333d4b; --grey-900:#191f28;
+  /* ---- Blue [V-colors] ---- */
+  --blue-50:#e8f3ff; --blue-100:#c9e2ff; --blue-200:#90c2ff; --blue-300:#64a8ff; --blue-400:#4593fc;
+  --blue-500:#3182f6; --blue-600:#2272eb; --blue-700:#1b64da; --blue-800:#1957c2; --blue-900:#194aa6;
+  /* ---- Red / Orange / Yellow / Green / Teal / Purple [V-colors] ---- */
+  --red-50:#ffeeee; --red-100:#ffd4d6; --red-200:#feafb4; --red-300:#fb8890; --red-400:#f66570;
+  --red-500:#f04452; --red-600:#e42939; --red-700:#d22030; --red-800:#bc1b2a; --red-900:#a51926;
+  --orange-50:#fff3e0; --orange-100:#ffe0b0; --orange-200:#ffcd80; --orange-300:#ffbd51; --orange-400:#ffa927;
+  --orange-500:#fe9800; --orange-600:#fb8800; --orange-700:#f57800; --orange-800:#ed6700; --orange-900:#e45600;
+  --yellow-50:#fff9e7; --yellow-100:#ffefbf; --yellow-200:#ffe69b; --yellow-300:#ffdd78; --yellow-400:#ffd158;
+  --yellow-500:#ffc342; --yellow-600:#ffb331; --yellow-700:#faa131; --yellow-800:#ee8f11; --yellow-900:#dd7d02;
+  --green-50:#f0faf6; --green-100:#aeefd5; --green-200:#76e4b8; --green-300:#3fd599; --green-400:#15c47e;
+  --green-500:#03b26c; --green-600:#02a262; --green-700:#029359; --green-800:#028450; --green-900:#027648;
+  --teal-50:#edf8f8; --teal-100:#bce9e9; --teal-200:#89d8d8; --teal-300:#58c7c7; --teal-400:#30b6b6;
+  --teal-500:#18a5a5; --teal-600:#109595; --teal-700:#0c8585; --teal-800:#097575; --teal-900:#076565;
+  --purple-50:#f9f0fc; --purple-500:#a234c7; --purple-600:#9128b4;
+
+  /* ---- Surfaces [V-colors] ---- */
+  --bg:#ffffff;
+  --bg-grey:#f2f4f6;
+  --bg-layered:#ffffff;
+  --bg-float:#ffffff;
+  --bg-screen:#f6f7f9;               /* pcScreenBg: admin body */
+  --border-hairline:#e5e8eb;
+  --dim:rgba(0,0,0,0.2);
+  --grey-alpha-100:rgba(2,32,71,0.05);
+  --grey-alpha-200:rgba(0,27,55,0.1);
+  --grey-alpha-300:rgba(0,29,58,0.18);
+  --grey-alpha-400:rgba(0,25,54,0.31);
+  --white-alpha-900:rgba(255,255,255,0.9);   /* approx */
+  --white-alpha-200:rgba(255,255,255,0.2);   /* approx */
+
+  /* ---- Semantic [mapping approx] ---- */
+  --text-primary:var(--grey-900);     /* approx */
+  --text-secondary:var(--grey-700);   /* approx */
+  --text-tertiary:var(--grey-600);    /* approx */
+  --text-placeholder:var(--grey-500); /* approx */
+  --text-disabled:var(--grey-400);    /* approx */
+  --accent:var(--blue-500);
+  --accent-pressed:var(--blue-700);
+  --accent-weak-bg:rgba(100,168,255,0.15);  /* blue300 @15% [V-mobile] */
+  --accent-weak-text:var(--blue-600);
+  --danger:var(--red-500);
+  --danger-weak-bg:rgba(251,136,144,0.15);  /* red300 @15% [V-mobile] */
+  --success:var(--green-600);
+  --warning:var(--yellow-500);
+
+  /* ---- Typography ---- */
+  --font-sans:'Toss Product Sans','Pretendard Variable',Pretendard,'SF Pro KR','SF Pro Display',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',Roboto,'Noto Sans KR','Noto Sans','Helvetica Neue',Arial,sans-serif;
+  --fs-t1:30px; --lh-t1:40px;   /* name mapping approx */
+  --fs-t2:26px; --lh-t2:35px;   /* name mapping approx */
+  --fs-t3:22px; --lh-t3:31px;   /* name mapping approx */
+  --fs-t4:20px; --lh-t4:29px;   /* name mapping approx */
+  --fs-t5:17px; --lh-t5:25.5px; /* verified t5 */
+  --fs-t6:15px; --lh-t6:22.5px; /* verified t6 */
+  --fs-t7:13px; --lh-t7:19.5px; /* verified t7 */
+  --fs-t8:12px; --lh-t8:18px;   /* name mapping approx */
+  --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+  --ls-tight:-0.01em;           /* approx */
+
+  /* ---- Radius ---- */
+  --r-btn-xl:16px; --r-btn-l:14px; --r-btn-m:10px; --r-btn-s:8px;   /* verified */
+  --r-sheet:28px;  --r-dialog:24px; --r-popover:20px;               /* verified */
+  --r-toast-single:100px; --r-toast-multi:20px;                     /* verified */
+  --r-card:20px;   /* approx */
+  --r-input:12px;  /* approx */
+  --r-pill:999px;
+
+  /* ---- Spacing ---- */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px; /* approx (4px grid) */
+  --page-x:20px;                /* verified: list/header/toast side padding */
+
+  /* ---- Control heights (verified) ---- */
+  --h-btn-xl:56px; --h-btn-l:48px; --h-btn-m:38px; --h-btn-s:32px;
+  --h-row:56px;                 /* approx */
+
+  /* ---- Shadow (use sparingly) ---- */
+  --shadow-float:0 4px 16px rgba(0,27,55,0.1);  /* approx */
+
+  /* ---- Motion ---- */
+  --ease-out:cubic-bezier(.25,.1,.25,1);   /* verified */
+  --ease-expo:cubic-bezier(.16,1,.3,1);    /* verified */
+  --ease-back:cubic-bezier(.34,1.56,.64,1);/* verified */
+  --press-scale:0.96;                      /* verified */
+  --dur-press:120ms;                       /* approx: CSS stand-in for spring rapid */
+  --dur-release:200ms;                     /* approx: stand-in for spring quick */
+  --dur-sheet:320ms;                       /* approx */
+  --dur-fade:180ms;                        /* approx */
+  --toast-ms:3000;                         /* verified default */
+}
+
+html { font-size:16px; -webkit-tap-highlight-color:transparent; }
+body {
+  font-family:var(--font-sans); font-size:1rem; font-weight:400; line-height:1.5;
+  color:var(--text-primary); background:var(--bg);
+  word-break:keep-all; overflow-wrap:break-word;          /* verified */
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+* , *::before, *::after { box-sizing:border-box; }
+.num { font-variant-numeric:tabular-nums; }
