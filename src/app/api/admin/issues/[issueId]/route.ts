@@ -41,11 +41,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   const target = parsed.data.status;
   const { issueId } = await params;
   const supabase = getServerSupabase();
-  const { data: issue } = await supabase
+  const { data: issue, error: issueError } = await supabase
     .from("issues")
     .select("id, title, conversation_id, status, conversations!inner(project_id)")
     .eq("id", issueId)
     .maybeSingle();
+  if (issueError) {
+    return respondError(500, "이슈를 불러오지 못했어요.");
+  }
   if (!issue) {
     return respondError(404, "이슈를 찾을 수 없어요.");
   }
@@ -58,12 +61,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   }
 
   // 출발 상태를 조건으로 걸어, 동시에 온 요청 중 하나만 바꾸고 메시지도 한 번만 보낸다.
-  const { data: updated } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("issues")
     .update(getIssueUpdate(target))
     .eq("id", issueId)
     .in("status", getAdminTransitionSources(target))
     .select("id");
+  // DB 오류를 changed:false로 돌려주면 관리자는 이미 바뀐 줄 안다. 실패는 실패로 알린다.
+  if (updateError) {
+    return respondError(500, "이슈 상태를 바꾸지 못했어요. 잠시 뒤 다시 해 주세요.");
+  }
   if (!updated || updated.length === 0) {
     return respondJson({ issueId, changed: false });
   }
