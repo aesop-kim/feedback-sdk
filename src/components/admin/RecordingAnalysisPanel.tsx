@@ -57,7 +57,8 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
         ) : null}
       </header>
       {recording ? (
-        <RecordingAnalysis key={recording.id} recording={recording} />
+        // 분석이 끝나 상태가 바뀌면 다시 마운트해서, 확인이 필요한 이슈가 기본으로 펼쳐지게 한다.
+        <RecordingAnalysis key={`${recording.id}:${recording.status}`} recording={recording} />
       ) : (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>아직 받은 녹화가 없어요</p>

@@ -76,12 +76,20 @@ function getContextKind(tag: string, payload: z.infer<typeof contextPayloadSchem
   return declared === "click" ? "click" : "hover";
 }
 
+// events.json은 위젯이 `{ t0, rrwebEvents, contexts }`로 올린다. 배열이나 `{ events }` 형태도 받는다.
 function getEventList(events: unknown): unknown[] {
   if (Array.isArray(events)) {
     return events;
   }
-  if (typeof events === "object" && events !== null && Array.isArray((events as { events?: unknown }).events)) {
-    return (events as { events: unknown[] }).events;
+  if (typeof events !== "object" || events === null) {
+    return [];
+  }
+  const container = events as { rrwebEvents?: unknown; events?: unknown };
+  if (Array.isArray(container.rrwebEvents)) {
+    return container.rrwebEvents;
+  }
+  if (Array.isArray(container.events)) {
+    return container.events;
   }
   return [];
 }

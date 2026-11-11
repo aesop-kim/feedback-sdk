@@ -52,3 +52,5 @@ supabase/.temp/
 /.omc/
 /fixtures/demo-recording/narration.wav
 /.screens/
+/test-results/
+/playwright-report/
