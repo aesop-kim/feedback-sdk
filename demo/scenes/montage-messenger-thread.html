@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>몽타주 2 · 메신저 요청 목록</title>
+<link rel="stylesheet" href="scene-base.css" />
+<style>
+  body {
+    background: #ffffff;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+  }
+  .sidebar {
+    background: #2b2f36;
+    color: #c9ced6;
+    padding: 28px 20px;
+    font-size: 18px;
+  }
+  .workspace {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 20px;
+    padding: 0 10px 24px;
+  }
+  .section-label {
+    font-size: 14px;
+    color: #8a919c;
+    padding: 18px 10px 8px;
+  }
+  .channel {
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+  .channel.active {
+    background: #3d4450;
+    color: #ffffff;
+    font-weight: 600;
+  }
+  .channel .unread {
+    float: right;
+    background: #e5484d;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 1px 8px;
+  }
+  .main {
+    display: flex;
+    flex-direction: column;
+    height: 1080px;
+  }
+  .header {
+    height: 76px;
+    border-bottom: 1px solid var(--grey-200);
+    display: flex;
+    align-items: center;
+    padding: 0 40px;
+    gap: 14px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .header small {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--grey-500);
+  }
+  .messages {
+    padding: 28px 56px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .day {
+    text-align: center;
+    font-size: 15px;
+    color: var(--grey-500);
+    margin: 4px 0 14px;
+  }
+  .message {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 16px;
+    padding: 10px 0;
+  }
+  .avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: #d9dee4;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    color: var(--grey-700);
+    font-size: 20px;
+  }
+  .meta {
+    font-size: 21px;
+    font-weight: 700;
+  }
+  .meta time {
+    margin-left: 10px;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--grey-500);
+  }
+  .text {
+    margin-top: 6px;
+    font-size: 24px;
+    line-height: 1.55;
+    color: var(--grey-800);
+  }
+  .attachment {
+    margin-top: 12px;
+    width: 420px;
+    height: 220px;
+    border-radius: 10px;
+    border: 1px solid var(--grey-200);
+    background: var(--grey-50);
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+  .attachment span {
+    height: 12px;
+    border-radius: 3px;
+    background: var(--grey-200);
+  }
+  .attachment span:first-child {
+    width: 40%;
+    background: var(--grey-300);
+  }
+  .attachment span:nth-child(3) {
+    width: 70%;
+  }
+  .reaction {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--grey-200);
+    font-size: 15px;
+    color: var(--grey-600);
+  }
+</style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="workspace">고객사 협업</div>
+    <div class="section-label">채널</div>
+    <div class="channel"># 공지</div>
+    <div class="channel active"># qa-요청 <span class="unread">14</span></div>
+    <div class="channel"># 일정</div>
+    <div class="channel"># 디자인</div>
+    <div class="section-label">메시지</div>
+    <div class="channel">고객사 담당자</div>
+    <div class="channel">개발팀</div>
+  </aside>
+  <main class="main">
+    <div class="header"># qa-요청 <small>계약 관리 2차 개발 수정사항</small></div>
+    <div class="messages">
+      <div class="day">11월 11일 화요일</div>
+      <div class="message">
+        <div class="avatar">고</div>
+        <div>
+          <div class="meta">고객사 담당자<time>오전 10:12</time></div>
+          <div class="text">수정사항 보이는데로 계속 말씀드리께요~</div>
+        </div>
+      </div>
+      <div class="message">
+        <div class="avatar">고</div>
+        <div>
+          <div class="meta">고객사 담당자<time>오전 10:14</time></div>
+          <div class="text">계약 목록에서 등록 버튼이 좀 이상합니다ㅎㅎㅎ</div>
+          <div class="attachment"><span></span><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <div class="message">
+        <div class="avatar">고</div>
+        <div>
+          <div class="meta">고객사 담당자<time>오전 10:31</time></div>
+          <div class="text">아 그리고 아까 그 화면에서 표 위에 글씨가 좀 이상합니다ㅎㅎㅎ</div>
+          <div class="text">제목도 뭔가 다른 것 같아요</div>
+          <span class="reaction">확인 1</span>
+        </div>
+      </div>
+      <div class="message">
+        <div class="avatar">고</div>
+        <div>
+          <div class="meta">고객사 담당자<time>오후 2:47</time></div>
+          <div class="text">어제 말씀드린 것도 같이 봐주세요~</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

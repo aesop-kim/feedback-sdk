@@ -6,6 +6,8 @@ const fakeAudioPath = process.env.E2E_FAKE_AUDIO;
 
 export default defineConfig({
   testDir: "e2e",
+  // 데모 영상 촬영(demo-recording.spec.ts)은 `npm run demo:record`(DEMO_RECORD=1)에서만 돈다.
+  testIgnore: process.env.DEMO_RECORD ? [] : ["**/demo-recording.spec.ts"],
   timeout: 6 * 60 * 1000,
   expect: { timeout: 15_000 },
   workers: 1,

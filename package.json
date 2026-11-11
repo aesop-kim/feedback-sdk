@@ -16,7 +16,10 @@
     "seed:demo": "tsx scripts/seed-demo-recording.ts",
     "demo:host": "npx -y serve ../feedback-sdk-demo-page -l 3001 --no-clipboard",
     "e2e": "playwright test",
-    "db:reset": "npx -y supabase@latest db reset"
+    "db:reset": "npx -y supabase@latest db reset",
+    "demo:record": "DEMO_RECORD=1 E2E_FAKE_AUDIO=\"${E2E_FAKE_AUDIO:-$(pwd)/fixtures/demo-recording/narration.wav}\" playwright test e2e/demo-recording.spec.ts",
+    "demo:cards": "node demo/scripts/render-cards.mjs",
+    "demo:build": "node demo/scripts/render-cards.mjs && node demo/scripts/assemble.mjs"
   },
   "dependencies": {
     "@rrweb/record": "^2.2.2",

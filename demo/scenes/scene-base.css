@@ -1,0 +1,49 @@
+/* 데모 영상 카드 공통 스타일. 1920x1080 한 장을 그대로 캡처한다. */
+@font-face {
+  font-family: "Pretendard Variable";
+  src: url("../../node_modules/pretendard/dist/web/variable/woff2/PretendardVariable.woff2") format("woff2-variations");
+  font-weight: 45 920;
+  font-display: block;
+}
+
+:root {
+  --grey-50: #f9fafb;
+  --grey-100: #f2f4f6;
+  --grey-200: #e5e8eb;
+  --grey-300: #d1d6db;
+  --grey-400: #b0b8c1;
+  --grey-500: #8b95a1;
+  --grey-600: #6b7684;
+  --grey-700: #4e5968;
+  --grey-800: #333d4b;
+  --grey-900: #191f28;
+  --blue-50: #e8f3ff;
+  --blue-500: #3182f6;
+  --blue-600: #2272eb;
+  --red-500: #f04452;
+  --yellow-200: #ffe69b;
+  --yellow-highlight: rgba(255, 221, 120, 0.75);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+}
+
+body {
+  font-family: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
+  color: var(--grey-900);
+  background: var(--grey-100);
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
