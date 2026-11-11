@@ -203,6 +203,7 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
       <WidgetHeader
         projectName={conversation.session?.projectName ?? ""}
         userName={conversation.session?.endUserName || init?.user.name || ""}
+        isCompact={isReady && hasMessages}
         onClose={handleClose}
       />
       <div className={styles.body} data-widget-scroll="">

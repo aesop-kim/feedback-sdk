@@ -257,7 +257,7 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
           token: session.conversationToken,
         });
       } catch (error) {
-        // 다른 탭에서 이미 답했으면 다시 불러와 카드를 '답변을 보냈어요'로 바꾼다.
+        // 다른 탭에서 이미 답했으면 다시 불러와 카드를 답한 상태로 바꾼다.
         if (isAlreadyAnsweredError(error)) {
           await refetch();
         }
