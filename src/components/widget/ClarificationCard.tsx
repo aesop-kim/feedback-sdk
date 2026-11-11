@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import { LoadingDots } from "@/components/widget/LoadingDots";
 import { CheckIcon } from "@/components/widget/WidgetIcons";
 import { useSceneZoom } from "@/hooks/use-scene-zoom";
 import { toHighlightStyle } from "@/lib/geometry/focus-transform";
@@ -126,7 +127,7 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
           />
         ) : null}
         <button ref={submitButtonRef} type="button" className={styles.submitButton} onClick={handleSubmit} disabled={!canSend} aria-busy={isSending}>
-          답변 보내기
+          {isSending ? <LoadingDots label="답변을 보내고 있어요" /> : "답변 보내기"}
         </button>
       </div>
     </section>

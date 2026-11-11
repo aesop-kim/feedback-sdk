@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRealtimeSignal } from "@/hooks/use-realtime-signal";
 import { getConversationChannelName } from "@/lib/realtime/realtime-signal";
+import {
+  countUnreadReplies,
+  findLatestMessageTime,
+  findStoredLastReadAt,
+  getLastReadStorageKey,
+  storeLastReadAt,
+} from "@/lib/widget/unread-replies";
 import type { HostToWidgetMessage } from "@/sdk/bridge-protocol";
 import type { ChatMessage } from "@/types/feedback";
 
@@ -28,6 +35,12 @@ export class WidgetApiError extends Error {
 }
 
 export const NETWORK_ERROR_MESSAGE = "연결이 잠깐 불안정해요. 잠시 후 다시 해볼까요?";
+
+const ALREADY_ANSWERED_STATUS = 409;
+
+export function isAlreadyAnsweredError(error: unknown): boolean {
+  return error instanceof WidgetApiError && error.status === ALREADY_ANSWERED_STATUS;
+}
 
 async function requestWidgetApi<TResponse>(path: string, init: RequestInit & { token?: string }): Promise<TResponse> {
   const { token, ...requestInit } = init;
@@ -111,7 +124,10 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [session, setSession] = useState<WidgetSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const seenMessageIdsRef = useRef<Set<string> | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const lastReadKeyRef = useRef<string | null>(null);
+  const lastReadAtRef = useRef<string | null>(null);
   const unreadCountRef = useRef(0);
   const isOpenRef = useRef(isOpen);
   const onUnreadChangeRef = useRef(onUnreadChange);
@@ -120,31 +136,48 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
     onUnreadChangeRef.current = onUnreadChange;
   }, [onUnreadChange]);
 
-  const applyMessages = useCallback((nextMessages: ChatMessage[]) => {
-    const seenIds = seenMessageIdsRef.current;
-    if (seenIds && !isOpenRef.current) {
-      const newReplies = nextMessages.filter((message) => message.sender !== "user" && !seenIds.has(message.id));
-      if (newReplies.length > 0) {
-        unreadCountRef.current += newReplies.length;
-        onUnreadChangeRef.current(unreadCountRef.current);
-      }
+  const markReadUntil = useCallback((time: string) => {
+    lastReadAtRef.current = time;
+    if (lastReadKeyRef.current) {
+      storeLastReadAt(lastReadKeyRef.current, time);
     }
-    seenMessageIdsRef.current = new Set(nextMessages.map((message) => message.id));
-    setMessages(nextMessages);
   }, []);
+
+  // 위젯이 열려 있으면 받은 메시지를 모두 읽은 것으로 보고, 닫혀 있으면 마지막으로 본 시각 뒤의 답장을 센다.
+  const updateUnread = useCallback((currentMessages: ChatMessage[]) => {
+    const latestTime = findLatestMessageTime(currentMessages);
+    if (latestTime && isOpenRef.current) {
+      markReadUntil(latestTime);
+    }
+    const unreadCount = isOpenRef.current ? 0 : countUnreadReplies(currentMessages, lastReadAtRef.current);
+    if (unreadCount !== unreadCountRef.current) {
+      unreadCountRef.current = unreadCount;
+      onUnreadChangeRef.current(unreadCount);
+    }
+  }, [markReadUntil]);
+
+  const applyMessages = useCallback(
+    (nextMessages: ChatMessage[]) => {
+      messagesRef.current = nextMessages;
+      updateUnread(nextMessages);
+      setMessages(nextMessages);
+    },
+    [updateUnread],
+  );
 
   useEffect(() => {
     isOpenRef.current = isOpen;
-    if (isOpen && unreadCountRef.current > 0) {
-      unreadCountRef.current = 0;
-      onUnreadChangeRef.current(0);
+    if (isOpen) {
+      updateUnread(messagesRef.current);
     }
-  }, [isOpen]);
+  }, [isOpen, updateUnread]);
 
   useEffect(() => {
     if (!init || !hostOrigin) {
       return;
     }
+    lastReadKeyRef.current = getLastReadStorageKey(init.projectKey, init.user.id);
+    lastReadAtRef.current = findStoredLastReadAt(lastReadKeyRef.current);
     let isCancelled = false;
     startSession(init, hostOrigin, getStorageKey(init))
       .then((result) => {
@@ -152,6 +185,10 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
           return;
         }
         setSession(result.session);
+        // 이 기기에서 처음 연 위젯이면 지금까지 온 메시지는 읽은 것으로 본다(메시지가 없으면 앞으로 오는 답장부터 센다).
+        if (lastReadAtRef.current === null) {
+          markReadUntil(findLatestMessageTime(result.messages) ?? new Date(0).toISOString());
+        }
         applyMessages(result.messages);
         setStatus("ready");
       })
@@ -165,7 +202,14 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
     return () => {
       isCancelled = true;
     };
-  }, [init, hostOrigin, applyMessages]);
+  }, [init, hostOrigin, applyMessages, markReadUntil, loadAttempt]);
+
+  // 처음 연결이 실패했을 때 "다시 불러오기". 세션 만들기부터 다시 한다.
+  const reload = useCallback(() => {
+    setStatus("loading");
+    setErrorMessage(null);
+    setLoadAttempt((attempt) => attempt + 1);
+  }, []);
 
   const refetch = useCallback(async () => {
     if (!session) {
@@ -198,15 +242,23 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
       if (!session) {
         throw new WidgetApiError(NETWORK_ERROR_MESSAGE, 0);
       }
-      await requestWidgetApi(`/api/clarifications/${cardId}/answer`, {
-        method: "POST",
-        body: JSON.stringify(answer),
-        token: session.conversationToken,
-      });
+      try {
+        await requestWidgetApi(`/api/clarifications/${cardId}/answer`, {
+          method: "POST",
+          body: JSON.stringify(answer),
+          token: session.conversationToken,
+        });
+      } catch (error) {
+        // 다른 탭에서 이미 답했으면 다시 불러와 카드를 '답변을 보냈어요'로 바꾼다.
+        if (isAlreadyAnsweredError(error)) {
+          await refetch();
+        }
+        throw error;
+      }
       await refetch();
     },
     [session, refetch],
   );
 
-  return { status, errorMessage, session, messages, refetch, sendText, answerClarification };
+  return { status, errorMessage, session, messages, refetch, reload, sendText, answerClarification };
 }

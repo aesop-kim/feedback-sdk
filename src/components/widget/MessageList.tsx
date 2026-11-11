@@ -12,13 +12,14 @@ import styles from "@/components/widget/MessageList.module.css";
 // 목록 항목 사이 간격(4px)과 같게 두어, 카드 위로 앞 말풍선 끝자락이 비치지 않게 한다.
 const CARD_SCROLL_MARGIN = 4;
 
-export type PendingText = { localId: string; body: string };
+export type PendingText = { localId: string; body: string; isFailed: boolean };
 
 type MessageListProps = {
   messages: ChatMessage[];
   pendingTexts: PendingText[];
   pendingUpload: PendingUpload | null;
   onAnswer: (cardId: string, answer: { optionId?: string; text?: string }) => Promise<void>;
+  onRetryText: (localId: string) => void;
   onRetryUpload: () => void;
 };
 
@@ -64,7 +65,7 @@ function MessageContent({ message, showSenderName, onAnswer }: { message: ChatMe
   return <MessageBubble sender={message.sender} body={message.body} showSenderName={showSenderName} />;
 }
 
-export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, onRetryUpload }: MessageListProps) {
+export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, onRetryText, onRetryUpload }: MessageListProps) {
   const listRef = useRef<HTMLOListElement>(null);
   const itemCount = messages.length + pendingTexts.length + (pendingUpload ? 1 : 0);
 
@@ -107,7 +108,13 @@ export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, o
       ))}
       {pendingTexts.map((pendingText) => (
         <li key={pendingText.localId} className={styles.item} data-sender="user">
-          <MessageBubble sender="user" body={pendingText.body} showSenderName={false} isPending />
+          <MessageBubble
+            sender="user"
+            body={pendingText.body}
+            showSenderName={false}
+            isPending={!pendingText.isFailed}
+            onRetry={pendingText.isFailed ? () => onRetryText(pendingText.localId) : undefined}
+          />
         </li>
       ))}
       {pendingUpload ? (
