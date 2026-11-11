@@ -46,7 +46,7 @@ const eslintConfig = defineConfig([
     files: ["demo/scripts/**/*.mjs"],
     rules: { "no-restricted-imports": "off" },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "public/sdk.js", "playwright-report/**", "test-results/**", "demo/raw/**", "demo/build/**", "demo/cards/**"]),
+  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", "public/sdk.js", "playwright-report/**", "test-results/**", "demo/raw/**", "demo/build/**", "demo/cards/**", ".claude/**", "demo/v2/refs/**", "demo/v2/analysis/**"]),
 ]);
 
 export default eslintConfig;
