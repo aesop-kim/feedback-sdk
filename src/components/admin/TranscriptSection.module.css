@@ -17,6 +17,12 @@
   background: var(--grey-50);
 }
 
+/* 줄 단위 토글이라 scale 대신 면 색으로 눌림을 보여 준다(TDS ListRow, IssueItem과 같은 규칙). */
+.toggle:active {
+  background: var(--grey-100);
+  transition-duration: var(--dur-press);
+}
+
 .toggle:focus-visible {
   outline-offset: -2px;
 }

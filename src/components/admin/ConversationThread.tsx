@@ -42,7 +42,8 @@ export function ConversationThread({ conversation, selectedRecordingId, onSelect
         </p>
       </header>
 
-      <div ref={scrollRef} className={styles.messages}>
+      {/* 새 메시지(고객 답장·답변)가 오면 화면 낭독기가 읽도록 log 영역으로 둔다(UX-15). */}
+      <div ref={scrollRef} className={styles.messages} role="log" aria-live="polite" aria-label="주고받은 메시지">
         {conversation.messages.length === 0 ? <p className={styles.empty}>아직 주고받은 메시지가 없어요</p> : null}
         {conversation.messages.map((message, index) => {
           const previousMessage = conversation.messages[index - 1];

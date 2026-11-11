@@ -8,7 +8,12 @@ export async function GET() {
   if (rejection) {
     return rejection;
   }
-  const { data: project } = await getServerSupabase().from("projects").select("id, name").limit(1).maybeSingle();
+  const { data: project } = await getServerSupabase().from("projects").select("id, name, project_key").limit(1).maybeSingle();
   const conversations = await getConversationSummaries();
-  return respondJson({ projectId: project?.id ?? null, projectName: project?.name ?? null, conversations });
+  return respondJson({
+    projectId: project?.id ?? null,
+    projectName: project?.name ?? null,
+    projectKey: project?.project_key ?? null,
+    conversations,
+  });
 }

@@ -50,7 +50,8 @@ export function FrameThumbnail({ frameUrl, highlight, tMs, onSeek }: FrameThumbn
         </span>
       </button>
       {highlight ? (
-        <button type="button" className={styles.zoomToggle} onClick={toggleZoom} aria-pressed={!isZoomed}>
+        // 보이는 이름이 상태에 따라 바뀌므로 aria-pressed는 두지 않는다(둘 다 두면 "전체 보기, 눌림 아님"처럼 어긋난다).
+        <button type="button" className={styles.zoomToggle} onClick={toggleZoom}>
           {isZoomed ? "전체 보기" : "크게 보기"}
         </button>
       ) : null}

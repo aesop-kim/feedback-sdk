@@ -82,7 +82,7 @@ test("고객이 말로 설명한 문제가 이슈 카드가 되고, 애매한 �
   await adminPage.goto("/admin/login");
   await adminPage.getByPlaceholder("비밀번호를 입력해 주세요").fill(ADMIN_PASSWORD);
   await adminPage.getByRole("button", { name: "로그인하기" }).click();
-  await adminPage.getByRole("navigation", { name: "받은 대화" }).getByText("김데모").first().click();
+  await adminPage.getByRole("navigation", { name: "받은 의견" }).getByText("김데모").first().click();
 
   const analysis = adminPage.getByRole("complementary", { name: "녹화 분석" });
   await expect(analysis.getByText(/문제 3건/)).toBeVisible({ timeout: ANALYSIS_TIMEOUT_MS });

@@ -25,7 +25,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const revisionValue = useMemo(() => ({ revision, refresh }), [revision, refresh]);
   const conversationCount = data ? data.conversations.length : null;
-  const conversationListValue = useMemo(() => ({ conversationCount }), [conversationCount]);
+  const projectKey = data?.projectKey ?? null;
+  const conversationListValue = useMemo(() => ({ conversationCount, projectKey }), [conversationCount, projectKey]);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -49,8 +50,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </AdminButton>
           </div>
         </header>
+        {/* 세 칸 화면은 좁은 폭에서 잘리므로, 900px 아래에서는 안내만 보여 준다(로그아웃은 위 막대에 그대로 있다). */}
+        <section className={styles.narrowNotice} aria-label="화면 폭 안내">
+          <p className={styles.narrowTitle}>관리자 화면은 PC에서 써 주세요</p>
+          <p className={styles.narrowCaption}>대화와 녹화 분석을 나란히 봐야 해서 폭이 900px 넘는 화면이 필요해요.</p>
+        </section>
         <div className={styles.body}>
-          <nav className={styles.listColumn} aria-label="받은 대화">
+          <nav className={styles.listColumn} aria-label="받은 의견">
             <ConversationList
               conversations={data?.conversations ?? []}
               selectedConversationId={params.conversationId ?? null}
