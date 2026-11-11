@@ -1,0 +1,60 @@
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--sp-8) var(--page-x);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-t5);
+  line-height: var(--lh-t5);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.description {
+  margin: var(--sp-1) 0 var(--sp-6);
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  color: var(--text-tertiary);
+}
+
+.primaryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: var(--h-btn-l);
+  padding: 2px var(--sp-4);
+  border-radius: var(--r-btn-l);
+  background: var(--blue-500);
+  color: var(--white-alpha-900);
+  font-size: var(--fs-t5);
+  font-weight: var(--fw-semibold);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms, opacity 150ms;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--blue-600);
+}
+
+.primaryButton:active:not(:disabled) {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}
+
+.primaryButton:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.hint {
+  margin: var(--sp-3) 0 0;
+  text-align: center;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--text-placeholder);
+}

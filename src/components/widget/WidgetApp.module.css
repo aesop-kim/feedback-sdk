@@ -1,0 +1,45 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.footer {
+  position: relative;
+}
+
+.footer > [role="status"] {
+  bottom: calc(100% + var(--sp-3));
+}
+
+.errorState {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  padding: var(--sp-8) var(--page-x);
+}
+
+.errorTitle {
+  margin: 0;
+  font-size: var(--fs-t5);
+  line-height: var(--lh-t5);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.errorDescription {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  color: var(--text-tertiary);
+}

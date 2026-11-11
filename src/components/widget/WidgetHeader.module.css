@@ -1,0 +1,49 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-3) var(--sp-4) var(--page-x);
+  background: var(--bg);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.caption {
+  margin: 0 0 2px;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--text-tertiary);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-t4);
+  line-height: var(--lh-t4);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-top: -4px;
+  border-radius: var(--r-btn-m);
+  color: var(--grey-600);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms;
+}
+
+.closeButton:hover {
+  background: var(--grey-100);
+}
+
+.closeButton:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}
