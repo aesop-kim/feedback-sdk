@@ -248,7 +248,7 @@ function AnalysisFailed({ recordingId, reason, failureKind, hasVideo, hasProgres
   return (
     <div className={styles.failed}>
       <p className={styles.failedTitle}>{guidance.title}</p>
-      {reason ? (
+      {reason && guidance.showReason ? (
         <p className={styles.failedReason}>
           <span className={styles.failedReasonLabel}>이유</span>
           {reason}

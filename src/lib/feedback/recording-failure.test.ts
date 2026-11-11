@@ -89,3 +89,16 @@ describe("hasProgressedIssue", () => {
     expect(hasProgressedIssue([])).toBe(false);
   });
 });
+
+describe("getFailureGuidance showReason (V4-05)", () => {
+  it("업로드 미완료는 이유 상자를 따로 보이지 않아 다시 녹화 안내가 한 번만 나온다", () => {
+    expect(getFailureGuidance("upload_incomplete", false).showReason).toBe(false);
+    expect(getFailureGuidance("upload_incomplete", false).guide).toMatch(/고객에게는 다시 녹화해 달라고 알렸어요/);
+  });
+
+  it("무음·분석 실패는 저장된 이유를 그대로 보여 준다", () => {
+    expect(getFailureGuidance("silent_audio", true).showReason).toBe(true);
+    expect(getFailureGuidance("analysis", true).showReason).toBe(true);
+    expect(getFailureGuidance(null, false).showReason).toBe(true);
+  });
+});

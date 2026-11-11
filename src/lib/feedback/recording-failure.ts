@@ -47,15 +47,17 @@ export function hasProgressedIssue(issueStatuses: IssueStatus[]): boolean {
 
 export type ReanalyzeAction = "primary" | "secondary" | "none";
 
-export type FailureGuidance = { title: string; guide: string; reanalyzeAction: ReanalyzeAction };
+// showReason: 저장된 실패 이유를 "이유" 상자로 따로 보여 줄지. 이유가 안내와 같은 말이면 한 번만 보인다(V4-05).
+export type FailureGuidance = { title: string; guide: string; reanalyzeAction: ReanalyzeAction; showReason: boolean };
 
 // 관리자 화면의 실패 안내. 오류 문구가 아니라 실패 종류로 가른다.
 export function getFailureGuidance(failureKind: RecordingFailureKind | null, hasVideo: boolean): FailureGuidance {
   if (failureKind === "upload_incomplete") {
     return {
       title: "녹화를 끝까지 받지 못했어요",
-      guide: "받은 영상이 없어서 다시 정리할 수 없어요. 고객에게 다시 녹화해 달라고 답장해 주세요.",
+      guide: "고객이 업로드 중에 페이지를 떠났을 수 있어요. 받은 영상이 없어서 다시 정리할 수 없고, 고객에게는 다시 녹화해 달라고 알렸어요.",
       reanalyzeAction: "none",
+      showReason: false,
     };
   }
   if (failureKind === "silent_audio") {
@@ -63,6 +65,7 @@ export function getFailureGuidance(failureKind: RecordingFailureKind | null, has
       title: "말한 내용을 정리하지 못했어요",
       guide: "다시 정리해도 결과가 같아요. 고객에게 마이크를 확인하고 다시 녹화해 달라고 답장해 주세요.",
       reanalyzeAction: "secondary",
+      showReason: true,
     };
   }
   if (hasVideo) {
@@ -70,11 +73,13 @@ export function getFailureGuidance(failureKind: RecordingFailureKind | null, has
       title: "말한 내용을 정리하지 못했어요",
       guide: "영상은 위에서 바로 볼 수 있어요. 다시 정리하면 보통 1분 안에 끝나요.",
       reanalyzeAction: "primary",
+      showReason: true,
     };
   }
   return {
     title: "말한 내용을 정리하지 못했어요",
     guide: "녹화는 받아 두었어요. 다시 정리하면 보통 1분 안에 끝나요.",
     reanalyzeAction: "primary",
+    showReason: true,
   };
 }

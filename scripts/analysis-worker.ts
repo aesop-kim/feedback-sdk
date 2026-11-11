@@ -12,6 +12,7 @@ import { buildAnalysisPrompt } from "@/lib/analysis/build-analysis-prompt";
 import { analysisResultSchema, getAnalysisJsonSchema, type AnalysisIssue } from "@/lib/analysis/issue-schema";
 import { mapIssuesToRows } from "@/lib/analysis/map-issues-to-rows";
 import { findMeanVolumeDb, isSilentAudio } from "@/lib/analysis/detect-silence";
+import { expireStaleUploads } from "@/lib/feedback/expire-stale-uploads";
 import { MISSING_RECORDING_FILE_ERROR, SILENT_AUDIO_ERROR } from "@/lib/feedback/recording-failure";
 import { parseWhisperJson, type ParsedTranscript } from "@/lib/analysis/parse-whisper-json";
 import { getAdminChannelName, getConversationChannelName } from "@/lib/realtime/realtime-signal";
@@ -135,23 +136,24 @@ async function claimNextRecording(supabase: SupabaseClient): Promise<ClaimedReco
   return row ?? null;
 }
 
-type ExpiredUpload = { id: string; conversation_id: string; project_id: string };
-
-// 업로드 중에 고객이 떠나 30분 넘게 'uploading'에 머문 녹화를 failed로 바꾸고 화면들에 알린다.
-async function expireStaleUploads(supabase: SupabaseClient): Promise<void> {
-  const { data, error } = await supabase.rpc("expire_stale_uploads", { p_stale_minutes: STALE_UPLOAD_MINUTES });
-  if (error) {
-    throw new Error(`expire_stale_uploads 실패: ${error.message}`);
-  }
-  const expired = (data as ExpiredUpload[] | null) ?? [];
+// 업로드 중에 고객이 떠나 30분 넘게 'uploading'에 머문 녹화를 failed로 바꾸고, 고객에게 다시 녹화를 부탁한 뒤 화면들에 알린다.
+async function expireAbandonedUploads(supabase: SupabaseClient): Promise<void> {
+  const expired = await expireStaleUploads(supabase, STALE_UPLOAD_MINUTES);
   await Promise.all(
     expired.flatMap((recording) => {
-      console.warn(`[worker] ${recording.id} 업로드가 ${STALE_UPLOAD_MINUTES}분 넘게 끝나지 않아 실패로 바꿨어요`);
+      console.warn(`[worker] ${recording.id} 업로드가 ${STALE_UPLOAD_MINUTES}분 넘게 끝나지 않아 실패로 바꾸고 고객에게 알렸어요`);
+      const conversationChannel = getConversationChannelName(recording.conversation_id);
+      const adminChannel = getAdminChannelName(recording.project_id);
       const signal = { type: "recording.updated", id: recording.id } as const;
-      return [
-        sendChannelSignal(supabase, getConversationChannelName(recording.conversation_id), signal, "[worker]"),
-        sendChannelSignal(supabase, getAdminChannelName(recording.project_id), signal, "[worker]"),
+      const signals = [
+        sendChannelSignal(supabase, conversationChannel, signal, "[worker]"),
+        sendChannelSignal(supabase, adminChannel, signal, "[worker]"),
       ];
+      if (recording.message_id) {
+        signals.push(sendChannelSignal(supabase, conversationChannel, { type: "message.created", id: recording.message_id }, "[worker]"));
+        signals.push(sendChannelSignal(supabase, adminChannel, { type: "conversation.updated", id: recording.conversation_id }, "[worker]"));
+      }
+      return signals;
     }),
   );
 }
@@ -454,7 +456,7 @@ async function main(): Promise<void> {
     if (Date.now() - lastStaleUploadCheckAt >= STALE_UPLOAD_CHECK_INTERVAL_MS) {
       lastStaleUploadCheckAt = Date.now();
       try {
-        await expireStaleUploads(supabase);
+        await expireAbandonedUploads(supabase);
       } catch (error) {
         console.error(`[worker] ${getErrorDetail(error)}`);
       }
