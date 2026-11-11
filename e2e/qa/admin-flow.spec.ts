@@ -62,7 +62,7 @@ test("받은 의견이 없으면 실제 프로젝트 키가 든 설치 코드를
   await adminPage.reload();
   // UX(#47): 목록이 비면 가운데 칸은 "골라 주세요" 대신 위젯 설치 방법을 보여 준다.
   await expect(adminPage.getByRole("navigation", { name: "받은 의견" }).getByText("아직 받은 의견이 없어요")).toBeVisible();
-  const placeholder = adminPage.locator("section").filter({ hasText: "고객사 페이지에 아래 코드를 넣으면 위젯이 떠요" });
+  const placeholder = adminPage.getByRole("main");
   await expect(placeholder.getByText("아직 받은 의견이 없어요")).toBeVisible();
   const snippet = placeholder.locator("pre code");
   await expect(snippet).toContainText("Feedback.init(");
@@ -110,7 +110,7 @@ test("메시지가 없는 대화를 고르면 빈 대화·빈 녹화 안내가 �
 
   await adminPage.getByRole("navigation", { name: "받은 의견" }).getByText(second.name).click();
   await expect(adminPage).toHaveURL(new RegExp(secondConversation.conversationId));
-  const thread = adminPage.getByRole("region", { name: `${second.name} 님과의 대화` });
+  const thread = adminPage.getByRole("main", { name: `${second.name} 님과의 대화` });
   // UX-15: 새 메시지를 읽어 주도록 메시지 영역이 log(aria-live polite)다.
   await expect(thread.getByRole("log", { name: "주고받은 메시지" }).getByText("두 번째 대화 메시지")).toBeVisible();
   await expect(thread.getByRole("log", { name: "주고받은 메시지" })).toHaveAttribute("aria-live", "polite");
@@ -468,7 +468,7 @@ for (const width of [1280, 1440]) {
     const adminPage = await loginAdmin(context);
     const diagnostics = collectDiagnostics(adminPage);
     await openConversation(adminPage, conversation.conversationId);
-    await expect(adminPage.getByRole("region", { name: `${user.name} 님과의 대화` })).toBeVisible();
+    await expect(adminPage.getByRole("main", { name: `${user.name} 님과의 대화` })).toBeVisible();
     await adminPage.waitForTimeout(800);
     await captureQaScreen(adminPage, `admin-10-layout-${width}`);
     const overflow = await adminPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

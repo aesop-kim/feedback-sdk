@@ -96,7 +96,7 @@ test("고객이 말로 설명한 문제가 이슈 카드가 되고, 애매한 �
   }
 
   // 3. 실시간 왕복(AC2: 2초 안). 15초 주기 재조회로는 통과할 수 없게 2초로 잰다.
-  const thread = adminPage.getByRole("region", { name: "김데모 님과의 대화" });
+  const thread = adminPage.getByRole("main", { name: "김데모 님과의 대화" });
   const customerSentAt = Date.now();
   await widget.getByRole("textbox", { name: "메시지" }).fill("등록 버튼이 제일 급해요");
   await widget.getByRole("button", { name: "보내기" }).click();

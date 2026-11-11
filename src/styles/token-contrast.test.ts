@@ -73,6 +73,8 @@ const TEXT_PAIRS: [string, string[], string][] = [
   ["accent-weak-text", ["accent-weak-bg", "bg"], "weak 버튼(흰 면)"],
   ["accent-weak-text", ["accent-weak-bg", "grey-100"], "다시 보내기(회색 카드)"],
   ["blue-600", ["blue-50"], "물어봤어요 배지"],
+  ["blue-700", ["blue-50"], "보내는 중 말풍선"],
+  ["accent-weak-text", ["grey-50"], "재확인 녹화 줄의 원래 이슈 보기"],
   ["danger", ["bg"], "오류 글자"],
   ["danger", ["grey-100"], "회색 카드 위 오류 글자"],
   ["bg", ["red-500"], "런처 안 읽음 배지"],
