@@ -70,12 +70,21 @@ export type Issue = {
 
 export type TranscriptSegment = { startMs: number; endMs: number; text: string };
 
+// 실패한 녹화를 어떻게 다룰지: 무음·업로드 미완료는 다시 녹화 요청, analysis는 다시 정리하기.
+export type RecordingFailureKind = "silent_audio" | "upload_incomplete" | "analysis";
+
 export type RecordingDetail = RecordingSummary & {
   videoUrl: string | null;
   transcript: TranscriptSegment[];
   issues: Issue[];
   error: string | null;
+  failureKind: RecordingFailureKind | null;
+  // 이 녹화가 어떤 이슈의 재확인 녹화인지(일반 녹화면 null).
+  reverifyIssueId: string | null;
 };
+
+// 위젯: 고객에게 재확인 녹화를 부탁하는 중인 이슈(GET /api/messages의 reverifyRequest).
+export type ReverifyRequest = { issueId: string; title: string; resolvedAt: string | null };
 
 export type ConversationSummary = {
   id: string;

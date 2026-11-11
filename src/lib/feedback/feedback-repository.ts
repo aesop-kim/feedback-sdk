@@ -1,4 +1,6 @@
 import "server-only";
+import { findRecordingFailureKind } from "@/lib/feedback/recording-failure";
+import { findOpenReverifyRequest } from "@/lib/feedback/reverify-request";
 import { getFirstRelation } from "@/lib/supabase/first-relation";
 import { RECORDINGS_BUCKET, getServerSupabase } from "@/lib/supabase/server-client";
 import type {
@@ -11,6 +13,7 @@ import type {
   Issue,
   RecordingDetail,
   RecordingSummary,
+  ReverifyRequest,
   TranscriptSegment,
 } from "@/types/feedback";
 
@@ -36,6 +39,8 @@ type RecordingRow = {
   error: string | null;
   created_at: string;
 };
+
+type RecordingDetailRow = RecordingRow & { analysis_attempt: number; reverify_issue_id: string | null };
 
 type IssueRow = {
   id: string;
@@ -179,10 +184,10 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
   const supabase = getServerSupabase();
   const { data: recordingRows } = await supabase
     .from("recordings")
-    .select("id, status, duration_ms, page_url, page_title, transcript, error, created_at")
+    .select("id, status, duration_ms, page_url, page_title, transcript, error, created_at, analysis_attempt, reverify_issue_id")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false });
-  const recordings = (recordingRows ?? []) as RecordingRow[];
+  const recordings = (recordingRows ?? []) as RecordingDetailRow[];
   if (recordings.length === 0) {
     return [];
   }
@@ -212,6 +217,12 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
       videoUrl: signedUrls.get(`${recording.id}/video.webm`) ?? null,
       transcript: recording.transcript?.segments ?? [],
       error: recording.error,
+      failureKind: findRecordingFailureKind({
+        status: recording.status,
+        error: recording.error,
+        analysisAttempt: recording.analysis_attempt,
+      }),
+      reverifyIssueId: recording.reverify_issue_id,
       issues: recordingIssues.map((issue) => {
         const card = cardsByIssue.get(issue.id);
         return {
@@ -231,6 +242,16 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
       }),
     };
   });
+}
+
+// 위젯: 고객에게 재확인 녹화를 부탁하는 중인 이슈(없으면 null).
+export async function findReverifyRequest(conversationId: string): Promise<ReverifyRequest | null> {
+  const { data } = await getServerSupabase()
+    .from("issues")
+    .select("id, title, status, resolved_at")
+    .eq("conversation_id", conversationId)
+    .eq("status", "resolved");
+  return findOpenReverifyRequest((data ?? []) as Parameters<typeof findOpenReverifyRequest>[0]);
 }
 
 // conversationId를 주면 그 대화 하나만(상세 화면), 없으면 최근 100개(목록)를 돌려준다.
