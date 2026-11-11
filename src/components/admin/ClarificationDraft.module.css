@@ -24,7 +24,7 @@
 .caption {
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
-  color: var(--grey-500);
+  color: var(--grey-600);
 }
 
 .question,
@@ -82,6 +82,26 @@
   height: 40px;
   padding: 0 var(--sp-3) 0 36px;
   font-size: var(--fs-t7);
+}
+
+.customOption {
+  height: 40px;
+  padding: 0 var(--sp-3) 0 36px;
+  border: 1px dashed var(--grey-300);
+  border-radius: var(--r-btn-m);
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+}
+
+.customOptionLabel {
+  flex: 1;
+  color: var(--grey-700);
+}
+
+.customOptionNote {
+  font-size: var(--fs-t8);
+  line-height: var(--lh-t8);
+  color: var(--grey-600);
 }
 
 .optionInput::placeholder {
@@ -148,5 +168,5 @@
 .error {
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
-  color: var(--red-500);
+  color: var(--red-700);
 }
