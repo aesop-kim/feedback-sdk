@@ -12,11 +12,13 @@
   border-radius: var(--r-btn-l);
   background: var(--grey-100);
   border: 1px solid transparent;
-  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
+/* 포커스 링은 테두리 1px + 안쪽 그림자 1px로 2px처럼 보이게 한다(UX-12). */
 .box:focus-within {
   border-color: var(--blue-500);
+  box-shadow: inset 0 0 0 1px var(--blue-500);
   background: var(--bg);
 }
 
@@ -38,19 +40,35 @@
   color: var(--grey-500);
 }
 
-.hint,
-.error {
+.footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
   margin: 6px 2px 0;
+}
+
+.hint,
+.error,
+.counter {
+  margin: 0;
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
 }
 
 .hint {
-  color: var(--grey-500);
+  color: var(--grey-600);
 }
 
-.error {
-  color: var(--red-500);
+.counter {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--grey-600);
+}
+
+.error,
+.counterFull {
+  color: var(--red-700);
 }
 
 .visuallyHidden {

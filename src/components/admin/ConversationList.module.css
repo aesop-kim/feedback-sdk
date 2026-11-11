@@ -27,7 +27,7 @@
 .count {
   font-size: var(--fs-t6);
   font-weight: var(--fw-semibold);
-  color: var(--grey-500);
+  color: var(--grey-600);
   font-variant-numeric: tabular-nums;
 }
 
@@ -48,6 +48,12 @@
 
 .row:hover {
   background: var(--grey-50);
+}
+
+/* 줄 단위 요소는 scale 대신 면 색으로 눌림을 보여 준다(TDS ListRow). */
+.row:active {
+  background: var(--grey-100);
+  transition-duration: var(--dur-press);
 }
 
 .row:focus-visible {
@@ -79,11 +85,17 @@
   color: var(--grey-900);
 }
 
+.identifier {
+  font-size: var(--fs-t7);
+  font-weight: var(--fw-regular);
+  color: var(--grey-600);
+}
+
 .time {
   flex-shrink: 0;
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
-  color: var(--grey-500);
+  color: var(--grey-600);
   font-variant-numeric: tabular-nums;
 }
 
@@ -121,7 +133,7 @@
   margin: 2px 0 0;
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
-  color: var(--grey-500);
+  color: var(--grey-600);
   font-variant-numeric: tabular-nums;
 }
 

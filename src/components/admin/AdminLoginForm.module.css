@@ -46,15 +46,17 @@
   font-size: var(--fs-t6);
   color: var(--grey-900);
   outline: none;
-  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
 .input::placeholder {
   color: var(--grey-500);
 }
 
+/* 포커스 링은 테두리 1px + 그림자 1px로 2px처럼 보이게 한다(UX-12). */
 .input:focus {
   border-color: var(--blue-500);
+  box-shadow: 0 0 0 1px var(--blue-500);
   background: var(--bg);
 }
 
@@ -67,5 +69,5 @@
   margin: var(--sp-2) 0 var(--sp-5);
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
-  color: var(--red-500);
+  color: var(--red-700);
 }
