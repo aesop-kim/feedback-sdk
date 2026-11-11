@@ -6,7 +6,7 @@ import { Caption, Sub } from "../motion/Kinetic";
 import { Camera, clampFocus, type Cam } from "../motion/Camera";
 import { Cursor, type Pt } from "../motion/Cursor";
 import { HOST, HostPage, UILayer } from "../ui/Host";
-import { EmptyState, Launcher, Panel, RecordingCard, RecordingPill, PANEL, LAUNCHER } from "../ui/Widget";
+import { EmptyState, Launcher, Panel, PILL, RecordingCard, RecordingPill, PANEL, LAUNCHER } from "../ui/Widget";
 import { NARRATION_RMS } from "../data/narration-rms";
 
 const LF = ui(LAUNCHER.x, LAUNCHER.y);
@@ -125,24 +125,23 @@ export function RecRing({ draw, reverse = false }: { draw: number; reverse?: boo
 }
 
 export const PILL_Y = 846;
-export function PillAt({ g, dy = 0, opacity = 1, wave, stopPress, stopRing }: { g: number; dy?: number; opacity?: number; wave?: number[]; stopPress?: number; stopRing?: number }) {
+export function PillAt({ g, dy = 0, opacity = 1, level = 0, stopPress, stopRing }: { g: number; dy?: number; opacity?: number; level?: number; stopPress?: number; stopRing?: number }) {
   if (opacity <= 0) return null;
   const dot = 0.65 + 0.35 * Math.cos(((g - REC_START) / 30) * 2 * Math.PI);
   return (
     <div style={{ position: "absolute", left: 0, right: 0, top: PILL_Y + dy, display: "flex", justifyContent: "center", opacity }}>
-      <RecordingPill timer={timerAt(g)} dot={dot} wave={wave} stopPress={stopPress} stopRing={stopRing} />
+      <RecordingPill timer={timerAt(g)} dot={dot} level={level} stopPress={stopPress} stopRing={stopRing} />
     </div>
   );
 }
 
-/** 대사 RMS로 24막대 파형. local = 대사 시작 기준 프레임 */
-export function waveAt(seg: string | null, local: number) {
+/** 대사 RMS로 마이크 막대 높이(0~1). 실제 알약처럼 막대 3개가 목소리 크기를 따라간다. local = 대사 시작 기준 프레임 */
+export function levelAt(seg: string | null, local: number) {
   const rms = seg ? NARRATION_RMS[seg] : undefined;
-  return Array.from({ length: 24 }, (_, j) => {
-    const idx = Math.floor(local) - (23 - j);
-    const v = rms && idx >= 0 && idx < rms.length ? rms[idx] : 0;
-    return Math.max(4, v * 48);
-  });
+  if (!rms) return 0;
+  const i = Math.floor(local);
+  const pick = (k: number) => (k >= 0 && k < rms.length ? rms[k] : 0);
+  return Math.max(pick(i), pick(i - 1) * 0.8, pick(i - 2) * 0.6);
 }
 
 // ---------- S09 · 화면을 보여 주며 말해요 ----------
@@ -210,7 +209,7 @@ export function S10() {
       overlay={
         <>
           <RecRing draw={1} />
-          <PillAt g={g} wave={waveAt("n1", f - 15)} />
+          <PillAt g={g} level={levelAt("n1", f - 15)} />
           <Sub text="새 계약서를 하나 만들려고 눌렀는데, 아무 반응이 없어요." f={f} from={15} to={134} />
         </>
       }
@@ -246,7 +245,7 @@ export function S11() {
         <Cursor f={f} start={pos} moves={[]} size={52 / 1.8} />
       </Camera>
       <RecRing draw={1} />
-      <PillAt g={g} wave={f < 93 ? waveAt("n2", f - 6) : waveAt("n3", f - 93)} />
+      <PillAt g={g} level={f < 93 ? levelAt("n2", f - 6) : levelAt("n3", f - 93)} />
       {f < 93 ? <Sub text="여기 금액 칸 제목이 계약 금액이어야 하는데," f={f} from={6} to={93} /> : <Sub text="계약 긍액이라고 오타가 나 있어요." f={f} from={93} to={164} />}
     </AbsoluteFill>
   );
@@ -281,7 +280,7 @@ export function S12() {
         <Cursor f={f} start={pos} moves={[]} size={52 / 1.8} />
       </Camera>
       <RecRing draw={1} />
-      <PillAt g={g} wave={f < 92 ? waveAt("n4", f - 12) : waveAt("n5", f - 92)} />
+      <PillAt g={g} level={f < 92 ? levelAt("n4", f - 12) : levelAt("n5", f - 92)} />
       {f < 92 ? <Sub text="이 글씨가 다른 곳이랑 좀 달라 보여요." f={f} from={12} to={91} /> : <Sub text="정확히 뭐가 문제인지는 저도 모르겠는데," f={f} from={92} to={179} />}
     </AbsoluteFill>
   );
@@ -298,7 +297,8 @@ export function S13() {
   const pillDy = tw(f, 32, 38, 0, 40, E_OUT);
   const pillO = tw(f, 32, 38, 1, 0, E_OUT);
   const ps = f < 40 ? 0 : soft(f, 40);
-  const stop: Pt = [1047, PILL_Y + 32];
+  // "끝내고 보내기" 버튼 가운데 (알약 오른쪽 끝에서 안쪽 여백 8 + 버튼 폭 절반)
+  const stop: Pt = [960 + PILL.w / 2 - 8 - PILL.stopW / 2, PILL_Y + PILL.h / 2];
   const press = f >= 30 && f < 40 ? kf(f, [[30, 1], [33, 0.94], [40, 1]], E_OUT) : 1;
   return (
     <AbsoluteFill style={{ background: C.bg }}>
@@ -314,7 +314,7 @@ export function S13() {
       <RecRing draw={ring} reverse />
       <PillAt g={Math.min(g, 1350)} dy={pillDy} opacity={pillO} stopPress={press} stopRing={tw(f, 22, 26, 0, 1) * (f < 32 ? 1 : 0)} />
       <Cursor f={f} start={[1250, 640]} moves={[{ at: 14, to: [stop[0] + 4, stop[1] + 4], dur: 16 }]} clicks={[30]} opacity={f < 46 ? 1 : tw(f, 46, 50, 1, 0, LINEAR)} />
-      <Caption text="끝내기를 누르면 바로 보내져요" f={f} />
+      <Caption text="끝내고 보내기를 누르면 바로 보내져요" f={f} />
     </AbsoluteFill>
   );
 }

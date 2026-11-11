@@ -36,6 +36,15 @@ export function NeedBadge({ size = 12.5, scale = 1, opacity = 1 }: { size?: numb
   );
 }
 
+/** 이슈 상태 배지 (IssueItem.tsx findStatusPill). 실제 색: 질문 보냄·다시 확인 중=파랑, 답변 받음=초록, 반영 완료=회색.
+ *  초록은 강조색 하나 규칙에 맞춰 영상에서만 파랑으로 쓴다. */
+export function StatusPill({ label, tone, size = 12, scale = 1, opacity = 1 }: { label: string; tone: "blue" | "grey"; size?: number; scale?: number; opacity?: number }) {
+  const blue = tone === "blue";
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", padding: `${size * 0.1}px ${size * 0.5}px`, borderRadius: size * 0.66, background: blue ? C.blue50 : C.grey100, transform: `scale(${scale})`, opacity, ...t(size, 600, blue ? C.accent : C.grey700, { lineHeight: 1.5, whiteSpace: "nowrap" }) }}>{label}</span>
+  );
+}
+
 export function DoneChip({ size = 13, draw = 1, scale = 1 }: { size?: number; draw?: number; scale?: number }) {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: size * 0.3, padding: `${size * 0.3}px ${size * 0.7}px`, borderRadius: size * 0.6, background: C.blue50, transform: `scale(${scale})`, ...t(size, 600, C.accent, { lineHeight: 1.2, whiteSpace: "nowrap" }) }}>

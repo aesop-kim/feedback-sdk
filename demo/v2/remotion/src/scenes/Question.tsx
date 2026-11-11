@@ -1,11 +1,12 @@
 // S17~S20: 질문 초안 승인 → 질문 카드가 고객에게 → 고객이 하나 고름 → 답변이 이슈에 붙음
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { C, E_INOUT, E_OUT, LINEAR, kf, pop, soft, tw, ui, UI } from "../theme";
-import { Caption, ScrambleSwap } from "../motion/Kinetic";
+import { Caption } from "../motion/Kinetic";
 import { Camera, type Cam } from "../motion/Camera";
 import { Cursor, type Pt } from "../motion/Cursor";
 import { HostPage, UILayer } from "../ui/Host";
-import { AdminShell, AnalysisHead, CustomerBubble, DEFAULT_LIST, DraftCard, ISSUES, IssueRow, NeedBadge, RecordingChip } from "../ui/Admin";
+import { AdminShell, AnalysisHead, CustomerBubble, DEFAULT_LIST, DraftCard, ISSUES, IssueRow, NeedBadge, RecordingChip, StatusPill } from "../ui/Admin";
+import { CheckIcon } from "../ui/Icons";
 import { Launcher, MyBubble, Panel, PANEL, PANEL_CONTENT_TOP, LAUNCHER, QCARD_LAYOUT, QuestionCard, QUESTION, RecordingCard, t } from "../ui/Widget";
 import { cam, camLerp } from "./Record";
 
@@ -172,8 +173,9 @@ export function S20() {
   const bub = f < 2 ? 0 : soft(f, 2);
   const badge = f < 4 ? 0 : pop(f, 4);
   const chip = f < 30 ? 0 : pop(f, 30);
-  const needO = tw(f, 34, 40, 1, 0, E_OUT);
-  const needS = tw(f, 34, 40, 1, 0.8, E_OUT);
+  // 상태 배지: 질문 보냄 → 답변 받음 (IssueItem.tsx findStatusPill)
+  const askedO = tw(f, 30, 36, 1, 0, E_OUT);
+  const swap = tw(f, 30, 38, 0, 1, E_OUT);
   const target = ui(1220, 700);
   const c = camLerp({ s: 1, fx: 960, fy: 540 }, cam(1.45, target[0], target[1], 120), tw(f, 10, 25, 0, 1, E_INOUT));
   const list = DEFAULT_LIST.map((it, i) => (i === 0 ? { ...it, preview: "답변: 글씨가 너무 굵어요", badge: 1, badgeScale: badge, time: "방금" } : it));
@@ -205,10 +207,33 @@ export function S20() {
                 </div>
                 <IssueRow n={1} title={ISSUES[0].title} summary={ISSUES[0].summary} />
                 <IssueRow n={2} title={ISSUES[1].title} summary={ISSUES[1].summary} />
-                <IssueRow n={3} title={ISSUES[2].title} right={needO > 0 ? <NeedBadge scale={needS} opacity={needO} /> : null} open>
+                <IssueRow
+                  n={3}
+                  title={ISSUES[2].title}
+                  right={f < 30 ? <StatusPill label="질문 보냄" tone="blue" opacity={askedO} /> : <StatusPill label="답변 받음" tone="blue" scale={0.9 + 0.1 * chip} />}
+                  open
+                >
                   <p style={t(13.5, 400, C.grey600)}>“{"맨 위에 있는 전체 계약서라는 제목이요."}”</p>
-                  <div style={{ marginTop: 10, display: "inline-flex", padding: "8px 12px", borderRadius: 10, background: f >= 30 ? C.blue50 : C.grey100, transform: `scale(${f >= 30 ? 0.9 + 0.1 * chip : 1})`, transformOrigin: "left center" }}>
-                    <ScrambleSwap from="‘…’ 고객 답변을 기다리고 있어요" to="고객 답변 · 글씨가 너무 굵어요" f={f} start={30} dur={12} color={f >= 36 ? C.accent : C.grey600} style={t(14, 600, C.grey600)} />
+                  <div style={{ position: "relative", marginTop: 10 }}>
+                    {/* 질문을 보내고 기다리는 줄 (IssueItem .waiting) */}
+                    {swap < 1 ? (
+                      <div style={{ padding: "10px 12px", borderRadius: 12, background: C.grey50, opacity: 1 - swap, ...t(13, 400, C.grey600, { lineHeight: 1.5 }) }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 600, color: C.accent }}>
+                          <CheckIcon size={14} color={C.accent} />
+                          고객에게 질문을 보냈어요
+                        </span>
+                        <span style={{ display: "block", fontWeight: 600, color: C.grey800 }}>{QUESTION}</span>
+                        고객 답변을 기다리고 있어요
+                      </div>
+                    ) : null}
+                    {/* 답이 오면 고객 답변 줄 (IssueItem .answer) */}
+                    {swap > 0 ? (
+                      <div style={{ position: swap < 1 ? "absolute" : "relative", left: 0, right: 0, top: 0, padding: "10px 12px", borderRadius: 12, background: C.grey50, opacity: swap, transform: `scale(${0.96 + 0.04 * chip})`, transformOrigin: "left center", ...t(15, 500, C.ink, { lineHeight: 1.5 }) }}>
+                        <span style={{ color: C.accent, fontWeight: 600 }}>고객 답변</span>
+                        <span style={{ margin: "0 6px", color: C.grey400 }}>·</span>
+                        글씨가 너무 굵어요
+                      </div>
+                    ) : null}
                   </div>
                 </IssueRow>
               </div>

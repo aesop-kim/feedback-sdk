@@ -45,6 +45,13 @@ export const ChatIcon = (p: P) => (
     <path d="M4 11.5C4 7.4 7.6 4.5 12 4.5s8 2.9 8 7-3.6 7-8 7c-1 0-2-.1-2.9-.4L5 19.5l1.1-3.3C4.8 14.9 4 13.3 4 11.5Z" />
   </Frame>
 );
+/** 런처 아이콘: 말풍선 안 음성 막대 3개 (src/sdk/launcher-styles.ts LAUNCHER_ICON) */
+export const LauncherIcon = (p: P) => (
+  <Frame {...p}>
+    <path d="M7 4.5h10a3.5 3.5 0 0 1 3.5 3.5v6a3.5 3.5 0 0 1-3.5 3.5h-5l-3.5 3v-3H7A3.5 3.5 0 0 1 3.5 14V8A3.5 3.5 0 0 1 7 4.5Z" />
+    <path d="M9 10v2M12 8.5v5M15 10v2" />
+  </Frame>
+);
 export const VideoIcon = (p: P) => (
   <Frame {...p}>
     <rect x="3" y="6" width="13" height="12" rx="2.5" />
