@@ -1,0 +1,28 @@
+{
+  "name": "lattice-demo-v2",
+  "private": true,
+  "version": "0.0.0",
+  "description": "래티스 피드백 데모 영상 v2 (Remotion). 루트 Next 앱과 의존성을 공유하지 않는다.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "sfx": "bash scripts/make-sfx.sh",
+    "narration": "bash scripts/make-narration.sh",
+    "prerender": "bash scripts/make-sfx.sh > /dev/null",
+    "render": "remotion render src/index.ts LatticeDemoV2 out/lattice-demo-v2.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=192k",
+    "draft": "remotion render src/index.ts LatticeDemoV2 out/draft.mp4 --scale=0.5 --crf=26",
+    "still": "remotion still src/index.ts LatticeDemoV2",
+    "sheet": "bash scripts/contact-sheet.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.438",
+    "@remotion/fonts": "4.0.438",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.438"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "typescript": "5.8.3"
+  }
+}
