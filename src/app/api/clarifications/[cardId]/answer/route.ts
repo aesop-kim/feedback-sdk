@@ -19,13 +19,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
 
   const { data: card } = await supabase
     .from("clarification_cards")
-    .select("id, issue_id, options, approved_at, issues!inner(conversation_id)")
+    .select("id, issue_id, options, approved_at, answered_at, issues!inner(conversation_id)")
     .eq("id", cardId)
     .maybeSingle();
   const issueRelation = card?.issues as { conversation_id: string } | { conversation_id: string }[] | undefined;
   const cardConversationId = Array.isArray(issueRelation) ? issueRelation[0]?.conversation_id : issueRelation?.conversation_id;
   if (!card || !card.approved_at || cardConversationId !== conversation.conversationId) {
     return respondError(404, "질문을 찾을 수 없어요.");
+  }
+  if (card.answered_at) {
+    return respondError(409, "이미 답한 질문이에요.");
   }
 
   const options = card.options as { id: string; label: string }[];

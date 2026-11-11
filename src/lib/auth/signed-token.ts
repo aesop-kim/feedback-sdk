@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 // `<payload>.<signature>` 형태의 HMAC 서명 토큰. payload는 base64url JSON.
 // 위젯 대화 토큰과 관리자 세션 쿠키가 같은 형식을 쓴다.
@@ -53,11 +53,9 @@ export function verifySignedToken(token: string | null | undefined, secret: stri
   }
 }
 
+// 길이가 달라도 걸리는 시간이 같도록 해시(고정 32바이트)끼리 비교한다.
 export function isSamePassword(received: string, expected: string): boolean {
-  const receivedBuffer = Buffer.from(received);
-  const expectedBuffer = Buffer.from(expected);
-  if (receivedBuffer.length !== expectedBuffer.length) {
-    return false;
-  }
-  return timingSafeEqual(receivedBuffer, expectedBuffer);
+  const receivedDigest = createHash("sha256").update(received).digest();
+  const expectedDigest = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(receivedDigest, expectedDigest);
 }
