@@ -5,27 +5,43 @@ import { Caption, Roll, ScrambleOut, SylType, springPop } from "../motion/Kineti
 import { Camera, type Cam } from "../motion/Camera";
 import { Cursor } from "../motion/Cursor";
 import { HostPage, UILayer } from "../ui/Host";
-import { DoneChip, ISSUES } from "../ui/Admin";
+import { ISSUES, StatusPill } from "../ui/Admin";
 import { LatticeMark } from "../ui/Icons";
-import { Launcher, MyBubble, Panel, PANEL, LAUNCHER, RecordingCard, SystemMessage, t } from "../ui/Widget";
+import { Launcher, MyBubble, Panel, PANEL, LAUNCHER, RecordingCard, ReverifyCard, SystemMessage, t } from "../ui/Widget";
 import { CARD, IssueCard, IssuesHeader } from "./Ai";
 import { cam, camLerp } from "./Record";
 
 const LF = ui(LAUNCHER.x, LAUNCHER.y);
 
 // ---------- S21 · 고치고 나면 반영 완료로 바꿔요 ----------
-const CHIP_AT = [52, 96, 106];
+// 실제 관리자 흐름(IssueItem.tsx ResolveButton): "반영 완료로 바꾸기" → 제자리 확인 "고객에게 확인을 부탁할까요? [부탁하기] [닫기]" → 회색 "반영 완료" 배지
+const CHIP_AT = [70, 96, 106];
+const CONFIRM_AT = 52;
+const ASK_CLICK = 66;
 function StatusButton() {
   return <span style={{ display: "inline-flex", padding: "10px 18px", borderRadius: 12, background: C.blue50, ...t(22, 600, C.accent, { lineHeight: 1.2, whiteSpace: "nowrap" }) }}>반영 완료로 바꾸기</span>;
+}
+function ConfirmRow({ k, askScale }: { k: number; askScale: number }) {
+  return (
+    <div style={{ position: "absolute", left: 84, right: 268, top: 74, height: 56, display: "flex", alignItems: "center", gap: 14, background: C.surface, opacity: k, transform: `translateY(${8 * (1 - k)}px)` }}>
+      <span style={t(22, 600, C.ink, { whiteSpace: "nowrap" })}>고객에게 확인을 부탁할까요?</span>
+      <span style={{ display: "inline-flex", padding: "8px 16px", borderRadius: 10, background: C.accent, transform: `scale(${askScale})`, ...t(21, 600, "#fff", { lineHeight: 1.2, whiteSpace: "nowrap" }) }}>부탁하기</span>
+      <span style={t(21, 600, C.grey600, { whiteSpace: "nowrap" })}>닫기</span>
+    </div>
+  );
 }
 export function S21() {
   const f = useCurrentFrame();
   const inK = soft(f, 0);
   const card1 = { x: CARD.x + CARD.w / 2, y: CARD.ys[0] + 75 };
-  let c: Cam = camLerp({ s: 1, fx: 960, fy: 520 }, { s: 1.3, fx: card1.x + 120, fy: card1.y + 60 }, tw(f, 0, 15, 0, 1, E_INOUT));
-  if (f >= 80) c = camLerp({ s: 1.3, fx: card1.x + 120, fy: card1.y + 60 }, { s: 1, fx: 960, fy: 520 }, tw(f, 80, 95, 0, 1, E_INOUT));
+  let c: Cam = camLerp({ s: 1, fx: 960, fy: 520 }, { s: 1.3, fx: card1.x + 60, fy: card1.y + 60 }, tw(f, 0, 15, 0, 1, E_INOUT));
+  if (f >= 80) c = camLerp({ s: 1.3, fx: card1.x + 60, fy: card1.y + 60 }, { s: 1, fx: 960, fy: 520 }, tw(f, 80, 95, 0, 1, E_INOUT));
   // 버튼 위치(프레임): 카드 오른쪽 268px 안쪽에 오른쪽 정렬
   const btn: [number, number] = [CARD.x + CARD.w - 268 - 110, CARD.ys[0] + 30 + 24];
+  // "부탁하기" 버튼 위치: 확인 문구(약 290px) 오른쪽
+  const ask: [number, number] = [CARD.x + 84 + 290 + 14 + 50, CARD.ys[0] + 74 + 28];
+  const confirmK = f >= CONFIRM_AT && f < CHIP_AT[0] ? tw(f, CONFIRM_AT, CONFIRM_AT + 5, 0, 1) : 0;
+  const askScale = f < ASK_CLICK ? 1 : kf(f, [[ASK_CLICK, 1], [ASK_CLICK + 3, 0.94], [ASK_CLICK + 9, 1]], E_OUT);
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       <Camera cam={c}>
@@ -33,15 +49,28 @@ export function S21() {
         {CARD.ys.map((y, i) => {
           const at = CHIP_AT[i];
           const done = f >= at;
-          const chipS = done ? pop(f, at) : 1;
-          const titleC = f >= at + 4 ? mixT(tw(f, at + 4, at + 10, 0, 1)) : C.ink;
+          const pillS = done ? 0.7 + 0.3 * pop(f, at) : 1;
+          const titleC = f >= at ? mixT(tw(f, at, at + 6, 0, 1)) : C.ink;
+          const confirming = i === 0 && confirmK > 0;
           return (
             <div key={i} style={{ position: "absolute", left: CARD.x, top: y + 30 * (1 - inK), opacity: Math.min(1, inK * 1.5) }}>
-              <IssueCard i={i} titleColor={titleC} right={done ? <DoneChip size={22} draw={tw(f, at, at + 12, 0, 1)} scale={0.6 + 0.4 * chipS} /> : <StatusButton />} />
+              <IssueCard i={i} titleColor={titleC} right={done ? <StatusPill label="반영 완료" tone="grey" size={20} scale={pillS} /> : confirming ? null : <StatusButton />}>
+                {confirming ? <ConfirmRow k={confirmK} askScale={askScale} /> : null}
+              </IssueCard>
             </div>
           );
         })}
-        <Cursor f={f} start={[btn[0] + 300, btn[1] + 360]} moves={[{ at: 20, to: [btn[0] + 10, btn[1] + 8], dur: 22 }, { at: 70, to: [btn[0] + 160, btn[1] + 240], dur: 18 }]} clicks={[CHIP_AT[0] - 3]} size={52 / 1.3} />
+        <Cursor
+          f={f}
+          start={[btn[0] + 300, btn[1] + 360]}
+          moves={[
+            { at: 20, to: [btn[0] + 10, btn[1] + 8], dur: 22 },
+            { at: 54, to: [ask[0] + 6, ask[1] + 4], dur: 12 },
+            { at: 82, to: [ask[0] + 300, ask[1] + 300], dur: 18 },
+          ]}
+          clicks={[CONFIRM_AT - 3, ASK_CLICK]}
+          size={52 / 1.3}
+        />
       </Camera>
       <Caption text="고치고 나면 반영 완료로 바꿔요" f={f} />
     </AbsoluteFill>
@@ -49,20 +78,20 @@ export function S21() {
 }
 function mixT(k: number) {
   const a = [0x19, 0x1f, 0x28];
-  const b = [0x4e, 0x59, 0x68];
+  const b = [0x6b, 0x76, 0x84];
   return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(",")})`;
 }
 
 // ---------- S22 · 고객에게 같은 화면에서 다시 확인을 부탁해요 ----------
+// 실제 위젯(MessageList.tsx): "수정을 반영했어요" 안내는 회색 캡션이고, 열린 재확인 요청(가장 최근) 하나에만 ReverifyCard가 붙는다.
 const MSG_AT = [34, 42, 50];
 export function S22() {
   const f = useCurrentFrame();
   const badge = f < 6 ? 0 : pop(f, 6);
   const ps = f < 22 ? 0 : soft(f, 22);
-  const contentTop = PANEL.y + 92;
-  const msg1 = ui(PANEL.x + PANEL.w / 2, contentTop + 72 + 14 + 44 + 18 + 34);
-  const c = camLerp({ s: 1, fx: 960, fy: 540 }, cam(1.6, msg1[0], msg1[1] + 40, 220), tw(f, 30, 48, 0, 1, E_INOUT));
-  const line = tw(f, 60, 70, 0, 1);
+  const card = ui(PANEL.x + PANEL.w / 2, PANEL.y + 92 + 347);
+  const c = camLerp({ s: 1, fx: 960, fy: 540 }, cam(1.6, card[0], card[1] + 30, 220), tw(f, 30, 48, 0, 1, E_INOUT));
+  const btnPulse = f < 72 ? 1 : kf(f, [[72, 1], [78, 1.03], [86, 1]], E_INOUT);
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       <Camera cam={c}>
@@ -72,11 +101,12 @@ export function S22() {
             <RecordingCard sub="문제 3건을 정리했어요" />
             <div style={{ height: 14 }} />
             <MyBubble text="글씨가 너무 굵어요" />
-            <div style={{ height: 18 }} />
+            <div style={{ height: 10 }} />
             {ISSUES.map((is, i) => {
               const a = MSG_AT[i];
               const k = tw(f, a, a + 10, 0, 1, E_OUT);
-              return <SystemMessage key={i} title={is.title} line={i === 0 ? line : 0} style={{ marginBottom: 8, opacity: k, transform: `translateY(${24 * (1 - k)}px)` }} />;
+              const style = { opacity: k, transform: `translateY(${24 * (1 - k)}px)` };
+              return i < 2 ? <SystemMessage key={i} title={is.title} style={style} /> : <ReverifyCard key={i} title={is.title} btnScale={btnPulse} style={style} />;
             })}
           </Panel>
         </UILayer>

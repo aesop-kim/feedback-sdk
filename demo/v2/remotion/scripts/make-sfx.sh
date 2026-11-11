@@ -21,7 +21,7 @@ noise() { # name duration envelope-expr filter
   local name=$1 dur=$2 env=$3 filt=$4 st
   st=$(minus "$dur" 0.005)
   ffmpeg -hide_banner -loglevel error -y \
-    -f lavfi -i "anoisesrc=c=white:r=$SR:a=0.9:d=$dur" \
+    -f lavfi -i "anoisesrc=c=white:r=$SR:a=0.9:d=$dur:s=7" \
     -af "volume='$env':eval=frame,$filt,afade=t=out:st=$st:d=0.005" \
     -ac 1 -c:a pcm_s16le "$OUT/$name.wav"
 }

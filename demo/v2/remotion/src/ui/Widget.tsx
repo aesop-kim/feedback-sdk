@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { C, FONT, mix } from "../theme";
 import { HostCrop } from "./Host";
-import { ChatIcon, CheckIcon, CloseIcon, ScreenIcon, ScreenMicIcon, SendIcon } from "./Icons";
+import { CheckIcon, CloseIcon, LauncherIcon, ScreenIcon, ScreenMicIcon, SendIcon } from "./Icons";
 
 export const PANEL = { x: 1037, y: 165, w: 378, h: 638 };
 export const LAUNCHER = { x: 1388, y: 848, r: 28 };
@@ -24,10 +24,10 @@ export function Launcher({ x = LAUNCHER.x, y = LAUNCHER.y, size = 56, open = 0, 
   return (
     <div style={{ position: "absolute", left: x - size / 2, top: y - size / 2, width: size, height: size, transform: `scale(${scale})` }}>
       <div style={{ width: size, height: size, borderRadius: "50%", background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
-        <div style={{ transform: `rotate(${open * 90}deg)` }}>{open < 0.5 ? <ChatIcon size={icon} stroke={2} /> : <CloseIcon size={icon} stroke={2} />}</div>
+        <div style={{ transform: `rotate(${open * 90}deg)` }}>{open < 0.5 ? <LauncherIcon size={size * 0.5} /> : <CloseIcon size={size * 0.5} />}</div>
       </div>
       {badge ? (
-        <div style={{ position: "absolute", right: -size * 0.08, top: -size * 0.08, minWidth: size * 0.42, height: size * 0.42, padding: "0 5px", borderRadius: 999, background: C.surface, border: `2px solid ${C.accent}`, display: "flex", alignItems: "center", justifyContent: "center", transform: `scale(${badgeScale})`, ...t(size * 0.24, 700, C.accent, { lineHeight: 1 }) }}>
+        <div style={{ position: "absolute", right: -size * 0.08, top: -size * 0.08, minWidth: size * 0.42, height: size * 0.42, padding: "0 5px", borderRadius: 999, background: C.accent, border: "2px solid #fff", display: "flex", alignItems: "center", justifyContent: "center", transform: `scale(${badgeScale})`, ...t(size * 0.22, 700, "#fff", { lineHeight: 1, fontVariantNumeric: "tabular-nums" }) }}>
           {badge}
         </div>
       ) : null}
@@ -95,17 +95,18 @@ function Composer() {
   );
 }
 
-export const STEPS = ["녹화를 누르고 ‘이 탭’을 골라요", "문제가 있는 곳을 가리키며 말해요", "끝내기를 누르면 저희가 정리해서 확인해요"];
+// src/components/widget/WidgetEmptyState.tsx RECORDING_STEPS
+export const STEPS = ["녹화를 누르고 ‘이 탭’을 골라요", "문제가 있는 곳을 가리키며 말해요", "‘끝내고 보내기’를 누르면 저희가 정리해서 확인해요"];
 
 /** 빈 상태: 소개 + 단계 3줄 + "화면 녹화로 설명하기" 버튼 */
 export function EmptyState({ stepIn = [1, 1, 1], stepColor, ctaRing = 0, ctaScale = 1 }: { stepIn?: number[]; stepColor?: string[]; ctaRing?: number; ctaScale?: number }) {
   return (
     <div style={{ position: "relative", height: 540 }}>
-      <p style={t(16, 700, C.ink, { marginTop: 14 })}>화면을 보여주며 말로 알려주세요</p>
+      <p style={t(16, 700, C.ink, { marginTop: 14 })}>말로 설명하면 저희가 정리할게요</p>
       <p style={t(14, 400, C.grey600, { marginTop: 4 })}>어느 화면의 어떤 버튼인지 따로 적지 않아도 돼요</p>
       <div style={{ marginTop: 22 }}>
         {STEPS.map((s, i) => (
-          <div key={s} style={{ display: "flex", gap: 18, alignItems: "center", height: 35, opacity: stepIn[i], transform: `translateY(${(1 - stepIn[i]) * 12}px)` }}>
+          <div key={s} style={{ display: "flex", gap: 18, alignItems: "flex-start", minHeight: 35, paddingTop: 6, opacity: stepIn[i], transform: `translateY(${(1 - stepIn[i]) * 12}px)` }}>
             <span style={t(14, 500, C.grey400, { width: 10 })}>{i + 1}</span>
             <span style={t(15, 500, stepColor?.[i] ?? C.grey700)}>{s}</span>
           </div>
@@ -166,15 +167,27 @@ export function MyBubble({ text, style }: { text: string; style?: CSSProperties 
   );
 }
 
-/** 시스템 메시지(반영 완료 알림). 가운데 회색 글자. line 0~1이면 왼쪽 accent 세로선이 그려진다. */
-export function SystemMessage({ title, line = 0, style }: { title: string; line?: number; style?: CSSProperties }) {
+/** 시스템 메시지(반영 완료 알림). 실제 위젯처럼 가운데 회색 캡션. */
+export function SystemMessage({ title, style }: { title: string; style?: CSSProperties }) {
   return (
-    <div style={{ position: "relative", padding: "10px 12px 10px 16px", borderRadius: 12, background: C.grey50, ...style }}>
-      <div style={{ position: "absolute", left: 0, top: 0, width: 3, height: `${line * 100}%`, background: C.accent, borderRadius: 2 }} />
-      <p style={t(13.5, 500, C.grey700, { lineHeight: 1.5 })}>
-        ‘{title}’ 수정을 반영했어요. 같은 화면에서 한 번 더 확인해 주세요.
-      </p>
-    </div>
+    <p style={t(13, 400, C.grey600, { textAlign: "center", lineHeight: 1.5, margin: "8px 0", ...style })}>
+      ‘{title}’ 수정을 반영했어요. 같은 화면에서 한 번 더 확인해 주세요.
+    </p>
+  );
+}
+
+/** 재확인 요청 카드 (src/components/widget/ReverifyCard.tsx). 가장 최근 요청 하나에만 붙는다. */
+export function ReverifyCard({ title, btnScale = 1, style }: { title: string; btnScale?: number; style?: CSSProperties }) {
+  return (
+    <section style={{ margin: "8px 0", padding: 16, borderRadius: 20, border: `1px solid ${C.grey200}`, background: C.surface, ...style }}>
+      <p style={t(15, 700, C.ink, { lineHeight: 1.5 })}>고쳤어요. 한 번 확인해 주세요</p>
+      <p style={t(15, 400, C.grey700, { marginTop: 4, lineHeight: 1.5 })}>‘{title}’</p>
+      <p style={t(13, 400, C.grey600, { marginTop: 4, lineHeight: 1.5 })}>같은 화면에서 다시 해 보고, 말로 알려 주세요</p>
+      <div style={{ marginTop: 12, height: 48, borderRadius: 14, background: C.accent, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#fff", transform: `scale(${btnScale})`, ...t(15, 600, "#fff") }}>
+        <ScreenMicIcon size={22} />
+        다시 녹화해서 확인하기
+      </div>
+    </section>
   );
 }
 
@@ -246,25 +259,28 @@ export function AnsweredCard() {
   );
 }
 
-/** 녹화 알약(화면 공간). 실제 RecordingPill과 같은 grey-900 바탕. 점은 강조색 하나 규칙에 맞춰 accent. */
-export function RecordingPill({ timer, dot = 1, wave, stopPress = 1, stopRing = 0 }: { timer: string; dot?: number; wave?: number[]; stopPress?: number; stopRing?: number }) {
+/** 녹화 알약(화면 공간). src/components/widget/RecordingPill.tsx와 같은 순서:
+ *  [취소] ● [마이크 막대 3개] 0:00 / 3:00 [끝내고 보내기]. 340x56 알약을 영상에서 읽히게 1.35배로 그린다.
+ *  녹화 점은 실제 red-500 대신 강조색 하나 규칙에 맞춰 accent. */
+export const PILL = { w: 460, h: 76, stopW: 168 };
+const LEVEL_WEIGHTS = [0.6, 1, 0.6];
+export function RecordingPill({ timer, dot = 1, level = 0, stopPress = 1, stopRing = 0 }: { timer: string; dot?: number; level?: number; stopPress?: number; stopRing?: number }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, height: 64, padding: "0 10px 0 26px", borderRadius: 32, background: C.ink }}>
-      <div style={{ width: 12, height: 12, borderRadius: "50%", background: C.accent, opacity: dot }} />
-      <span style={t(22, 700, "#fff", { fontVariantNumeric: "tabular-nums", lineHeight: 1 })}>
+    <div style={{ display: "flex", alignItems: "center", gap: 11, width: PILL.w, height: PILL.h, padding: "0 8px", borderRadius: PILL.h / 2, background: C.ink, boxSizing: "border-box" }}>
+      <div style={{ height: 59, padding: "0 16px", borderRadius: 30, display: "flex", alignItems: "center", ...t(18, 600, "#fff", { lineHeight: 1 }) }}>취소</div>
+      <div style={{ width: 11, height: 11, borderRadius: "50%", background: C.accent, opacity: dot, flexShrink: 0 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 3, height: 22 }}>
+        {LEVEL_WEIGHTS.map((w, i) => (
+          <div key={i} style={{ width: 4, height: 22, borderRadius: 2, background: C.grey400, transform: `scaleY(${Math.max(0.2, level * w)})` }} />
+        ))}
+      </div>
+      <span style={t(20, 600, "#fff", { flex: 1, fontVariantNumeric: "tabular-nums", lineHeight: 1, whiteSpace: "nowrap" })}>
         {timer}
         <span style={{ fontWeight: 400, color: C.grey400 }}> / 3:00</span>
       </span>
-      {wave ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 4, height: 48, marginLeft: 6 }}>
-          {wave.map((h, i) => (
-            <div key={i} style={{ width: 4, height: h, borderRadius: 2, background: C.accent }} />
-          ))}
-        </div>
-      ) : null}
-      <div style={{ position: "relative", marginLeft: 8, transform: `scale(${stopPress})` }}>
-        <div style={{ height: 46, padding: "0 22px", borderRadius: 23, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", ...t(18, 600, "#fff", { lineHeight: 1 }) }}>끝내기</div>
-        {stopRing > 0 ? <div style={{ position: "absolute", inset: -5, borderRadius: 28, border: `2px solid ${C.accent}`, opacity: stopRing }} /> : null}
+      <div style={{ position: "relative", transform: `scale(${stopPress})` }}>
+        <div style={{ width: PILL.stopW, height: 59, borderRadius: 30, background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", ...t(18, 600, "#fff", { lineHeight: 1, whiteSpace: "nowrap" }) }}>끝내고 보내기</div>
+        {stopRing > 0 ? <div style={{ position: "absolute", inset: -5, borderRadius: 34, border: `2px solid ${C.accent}`, opacity: stopRing }} /> : null}
       </div>
     </div>
   );
