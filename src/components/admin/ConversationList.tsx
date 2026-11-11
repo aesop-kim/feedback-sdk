@@ -67,8 +67,21 @@ function ConversationListBody({ conversations, selectedConversationId, isLoading
   );
 }
 
+// 배지 대신 한 줄 캡션으로: "녹화 1개 · 남은 문제 3건"
+function getMetaItems(conversation: ConversationSummary): string[] {
+  const items: string[] = [];
+  if (conversation.recordingCount > 0) {
+    items.push(`녹화 ${conversation.recordingCount}개`);
+  }
+  if (conversation.openIssueCount > 0) {
+    items.push(`남은 문제 ${conversation.openIssueCount}건`);
+  }
+  return items;
+}
+
 function ConversationRow({ conversation, isSelected }: { conversation: ConversationSummary; isSelected: boolean }) {
   const hasUnread = conversation.adminUnreadCount > 0;
+  const metaItems = getMetaItems(conversation);
   return (
     <Link
       href={`/admin/${conversation.id}`}
@@ -91,14 +104,7 @@ function ConversationRow({ conversation, isSelected }: { conversation: Conversat
           </span>
         ) : null}
       </div>
-      {conversation.recordingCount > 0 || conversation.openIssueCount > 0 ? (
-        <div className={styles.metaLine}>
-          {conversation.recordingCount > 0 ? <span className={styles.chip}>녹화 {conversation.recordingCount}</span> : null}
-          {conversation.openIssueCount > 0 ? (
-            <span className={`${styles.chip} ${styles.chipAttention}`}>남은 문제 {conversation.openIssueCount}</span>
-          ) : null}
-        </div>
-      ) : null}
+      {metaItems.length > 0 ? <p className={styles.metaLine}>{metaItems.join(" · ")}</p> : null}
     </Link>
   );
 }

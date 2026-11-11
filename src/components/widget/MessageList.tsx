@@ -9,6 +9,9 @@ import type { PendingUpload } from "@/hooks/use-widget-recording";
 import type { ChatMessage } from "@/types/feedback";
 import styles from "@/components/widget/MessageList.module.css";
 
+// 목록 항목 사이 간격(4px)과 같게 두어, 카드 위로 앞 말풍선 끝자락이 비치지 않게 한다.
+const CARD_SCROLL_MARGIN = 4;
+
 export type PendingText = { localId: string; body: string };
 
 type MessageListProps = {
@@ -31,9 +34,23 @@ function isGroupStart(messages: ChatMessage[], index: number): boolean {
   return !previous || previous.sender !== messages[index].sender;
 }
 
+// 마지막 메시지가 아직 답하지 않은 질문 카드면 그 id.
+function findWaitingCardMessageId(messages: ChatMessage[]): string | null {
+  const lastMessage = messages.at(-1);
+  if (lastMessage?.type !== "clarification" || !lastMessage.clarification || lastMessage.clarification.answeredAt) {
+    return null;
+  }
+  return lastMessage.id;
+}
+
 function MessageContent({ message, showSenderName, onAnswer }: { message: ChatMessage; showSenderName: boolean } & Pick<MessageListProps, "onAnswer">) {
   if (message.type === "clarification" && message.clarification) {
-    return <ClarificationCard card={message.clarification} onAnswer={onAnswer} />;
+    return (
+      <>
+        {showSenderName && message.sender === "admin" ? <span className={styles.senderName}>래티스</span> : null}
+        <ClarificationCard card={message.clarification} onAnswer={onAnswer} />
+      </>
+    );
   }
   if (message.type === "recording" && message.recording) {
     return (
@@ -51,18 +68,35 @@ export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, o
   const listRef = useRef<HTMLOListElement>(null);
   const itemCount = messages.length + pendingTexts.length + (pendingUpload ? 1 : 0);
 
+  const waitingCardMessageId = findWaitingCardMessageId(messages);
+
   useEffect(() => {
-    // scrollIntoView는 고객사 페이지까지 스크롤할 수 있어서, 감싼 스크롤 영역만 직접 내린다.
-    const scrollContainer = listRef.current?.parentElement;
-    if (scrollContainer) {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+    // scrollIntoView는 고객사 페이지까지 스크롤할 수 있어서, 감싼 스크롤 영역만 직접 움직인다.
+    const list = listRef.current;
+    const scrollContainer = list?.parentElement;
+    if (!list || !scrollContainer) {
+      return;
     }
-  }, [itemCount]);
+    // 새 질문 카드는 패널보다 길 수 있다. 맨 아래가 아니라 카드 윗부분(장면과 질문)이 보이게 맞춘다.
+    const waitingCard = waitingCardMessageId ? list.querySelector<HTMLElement>(`[data-message-id="${waitingCardMessageId}"]`) : null;
+    if (waitingCard) {
+      const offset = waitingCard.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top;
+      scrollContainer.scrollTop += offset - CARD_SCROLL_MARGIN;
+      return;
+    }
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }, [itemCount, waitingCardMessageId]);
 
   return (
     <ol ref={listRef} className={styles.list}>
       {messages.map((message, index) => (
-        <li key={message.id} className={styles.item} data-sender={message.sender} data-group-start={isGroupStart(messages, index)}>
+        <li
+          key={message.id}
+          className={styles.item}
+          data-message-id={message.id}
+          data-sender={message.sender}
+          data-group-start={isGroupStart(messages, index)}
+        >
           <MessageContent message={message} showSenderName={isGroupStart(messages, index)} onAnswer={onAnswer} />
           {message.sender !== "system" && isGroupEnd(messages, index) ? (
             <time className={styles.time} dateTime={message.createdAt}>

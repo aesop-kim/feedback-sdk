@@ -31,3 +31,11 @@
 .item[data-sender="user"] .time {
   align-self: flex-end;
 }
+
+.senderName {
+  margin: 0 0 var(--sp-1) 2px;
+  font-size: var(--fs-t8);
+  line-height: var(--lh-t8);
+  font-weight: var(--fw-semibold);
+  color: var(--text-tertiary);
+}

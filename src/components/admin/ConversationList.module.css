@@ -42,7 +42,7 @@
   flex-direction: column;
   gap: 2px;
   padding: var(--sp-3);
-  border-radius: var(--r-btn-l);
+  border-radius: var(--r-input);
   transition: background-color 150ms var(--ease-out);
 }
 
@@ -118,30 +118,11 @@
 }
 
 .metaLine {
-  display: flex;
-  gap: var(--sp-1);
-  margin-top: 6px;
-}
-
-.chip {
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--grey-100);
-  color: var(--grey-600);
+  margin: 2px 0 0;
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
-  font-weight: var(--fw-semibold);
+  color: var(--grey-500);
   font-variant-numeric: tabular-nums;
-}
-
-.selected .chip {
-  background: var(--bg);
-}
-
-.chipAttention,
-.selected .chipAttention {
-  background: var(--orange-50);
-  color: var(--orange-700);
 }
 
 .skeletonRow {
@@ -158,7 +139,7 @@
   height: 12px;
   border-radius: 6px;
   background: var(--grey-100);
-  animation: pulse 1.2s var(--ease-out) infinite alternate;
+  animation: pulse var(--dur-skeleton) var(--ease-out) infinite alternate;
 }
 
 .skeletonName {

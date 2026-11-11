@@ -1,41 +1,11 @@
+/* 설명은 위, 녹화 버튼은 입력창 바로 위(엄지 닿는 곳). 가운데 빈 곳은 그대로 둔다. */
 .emptyState {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-8);
   min-height: 100%;
-  padding: var(--sp-6) var(--page-x) var(--sp-5);
-}
-
-.steps {
-  list-style: none;
-  margin: 0 0 var(--sp-5);
-  padding: var(--sp-1) 0;
-  border-top: 1px solid var(--border-hairline);
-}
-
-.step {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: var(--sp-3) 0;
-  font-size: var(--fs-t6);
-  line-height: var(--lh-t6);
-  color: var(--text-secondary);
-}
-
-.stepNumber {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--r-pill);
-  background: var(--grey-100);
-  color: var(--grey-700);
-  font-size: var(--fs-t8);
-  font-weight: var(--fw-bold);
-  font-variant-numeric: tabular-nums;
+  padding: var(--sp-2) var(--page-x) var(--sp-5);
 }
 
 .title {
@@ -47,10 +17,44 @@
 }
 
 .description {
-  margin: var(--sp-1) 0 var(--sp-6);
+  margin: var(--sp-1) 0 0;
   font-size: var(--fs-t6);
   line-height: var(--lh-t6);
   color: var(--text-tertiary);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  list-style: none;
+  margin: var(--sp-6) 0 0;
+  padding: 0;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  color: var(--text-secondary);
+}
+
+.stepNumber {
+  flex: none;
+  width: 22px;
+  margin-top: 0.5px;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  font-weight: var(--fw-semibold);
+  color: var(--grey-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.action {
+  display: flex;
+  flex-direction: column;
 }
 
 .primaryButton {
@@ -66,7 +70,7 @@
   color: var(--white-alpha-900);
   font-size: var(--fs-t5);
   font-weight: var(--fw-semibold);
-  transition: transform var(--dur-release) var(--ease-out), background-color 150ms, opacity 150ms;
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out), opacity 150ms var(--ease-out);
 }
 
 .primaryButton:hover:not(:disabled) {

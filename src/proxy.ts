@@ -16,7 +16,10 @@ async function findAllowedOrigins(projectKey: string): Promise<string[]> {
   const response = await fetch(url, { headers: { apikey: serviceRoleKey, authorization: `Bearer ${serviceRoleKey}` } });
   const rows = response.ok ? ((await response.json()) as { allowed_origins: string[] }[]) : [];
   const origins = rows[0]?.allowed_origins ?? [];
-  allowedOriginsCache.set(projectKey, { origins, expiresAt: Date.now() + ALLOWED_ORIGINS_CACHE_MS });
+  // DB가 잠깐 응답하지 않았을 때의 빈 결과를 1분 동안 붙잡지 않도록, 찾은 경우에만 캐시한다.
+  if (origins.length > 0) {
+    allowedOriginsCache.set(projectKey, { origins, expiresAt: Date.now() + ALLOWED_ORIGINS_CACHE_MS });
+  }
   return origins;
 }
 

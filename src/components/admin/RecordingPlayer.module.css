@@ -2,38 +2,66 @@
   position: sticky;
   top: 52px;
   z-index: 2;
-  padding: 0 var(--sp-5) var(--sp-3);
+  padding: 0 var(--sp-5) var(--sp-4);
   background: var(--bg);
   border-bottom: 1px solid var(--border-hairline);
 }
 
 .frame {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   aspect-ratio: 16 / 10;
-  border-radius: 12px;
+  border-radius: var(--r-input);
   overflow: hidden;
-  background: var(--grey-900);
+  background: var(--grey-100);
+  box-shadow: inset 0 0 0 1px var(--grey-alpha-100);
+}
+
+/* 불러오는 동안은 스피너 대신 숨 쉬듯 옅게 깜빡이는 면 하나만 둔다. */
+.frame[data-state="loading"] {
+  animation: breathe var(--dur-skeleton) var(--ease-out) infinite alternate;
 }
 
 .video {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 12px;
-  background: var(--grey-900);
 }
 
-.frame:has(.video) {
-  background: transparent;
+.playButton {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: var(--white-alpha-900);
+  color: var(--grey-900);
+  box-shadow: var(--shadow-float);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.playButton:hover {
+  background: var(--bg);
+}
+
+.playButton:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
 }
 
 .placeholder {
   margin: 0;
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
-  color: var(--grey-400);
+  color: var(--grey-500);
 }
 
 .caption {
@@ -41,7 +69,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-3);
-  margin-top: 10px;
+  margin-top: var(--sp-3);
 }
 
 .page {
@@ -75,4 +103,13 @@
   line-height: var(--lh-t7);
   color: var(--grey-600);
   font-variant-numeric: tabular-nums;
+}
+
+@keyframes breathe {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
 }

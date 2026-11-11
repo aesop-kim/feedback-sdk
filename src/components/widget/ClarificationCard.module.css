@@ -1,25 +1,17 @@
+/* 질문 카드: 장면(16:9) → 고객이 한 말 → 질문 → 보기. 640px 패널에서 장면과 질문이 한 화면에 보이도록 촘촘하게 둔다. */
 .card {
-  padding: var(--sp-4);
+  overflow: hidden;
   border-radius: var(--r-card);
   border: 1px solid var(--border-hairline);
   background: var(--bg);
-}
-
-.eyebrow {
-  margin: 0 0 var(--sp-3);
-  font-size: var(--fs-t7);
-  line-height: var(--lh-t7);
-  font-weight: var(--fw-semibold);
-  color: var(--blue-600);
 }
 
 .frame {
   position: relative;
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: var(--r-btn-m);
   background: var(--grey-100);
   cursor: zoom-out;
 }
@@ -28,25 +20,34 @@
   cursor: zoom-in;
 }
 
+.frame:disabled {
+  cursor: default;
+}
+
+.frame:focus-visible {
+  outline-offset: -2px;
+}
+
 .frameCanvas {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
   transform-origin: 0 0;
-  transition: transform 280ms var(--ease-expo);
+  transition: transform var(--dur-sheet) var(--ease-expo);
 }
 
 .frameImage {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: top left;
 }
 
+/* 확대해도 테두리 굵기는 그대로 보이게 배율로 나눈다. */
 .highlight {
   position: absolute;
-  border: 2px solid var(--blue-500);
-  border-radius: 4px;
-  box-shadow: 0 0 0 9999px rgba(25, 31, 40, 0.28);
+  border: calc(2px / var(--focus-scale, 1)) solid var(--focus-ring);
+  border-radius: calc(4px / var(--focus-scale, 1));
+  box-shadow: 0 0 0 9999px var(--scrim-focus);
   pointer-events: none;
 }
 
@@ -55,23 +56,31 @@
   right: var(--sp-2);
   bottom: var(--sp-2);
   padding: 2px var(--sp-2);
-  border-radius: var(--r-pill);
-  background: rgba(25, 31, 40, 0.72);
+  border-radius: var(--r-btn-s);
+  background: var(--scrim-chip);
   color: var(--white-alpha-900);
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
   font-weight: var(--fw-semibold);
 }
 
+.content {
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+
 .quote {
-  margin: var(--sp-3) 0 0;
+  display: -webkit-box;
+  margin: 0 0 var(--sp-1);
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
   color: var(--text-tertiary);
 }
 
 .question {
-  margin: var(--sp-2) 0 var(--sp-3);
+  margin: 0 0 var(--sp-2);
   font-size: var(--fs-t6);
   line-height: var(--lh-t6);
   font-weight: var(--fw-bold);
@@ -89,14 +98,14 @@
   align-items: center;
   gap: var(--sp-3);
   width: 100%;
-  min-height: 48px;
-  padding: var(--sp-2);
+  min-height: 44px;
+  padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r-btn-m);
   text-align: left;
   font-size: var(--fs-t6);
   line-height: var(--lh-t6);
-  color: var(--text-primary);
-  transition: transform var(--dur-release) var(--ease-out), background-color 150ms;
+  color: var(--text-secondary);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out), color 150ms var(--ease-out);
 }
 
 .option:hover {
@@ -109,22 +118,30 @@
   transition-duration: var(--dur-press);
 }
 
+.option:focus-visible {
+  outline-offset: -2px;
+}
+
+.option[data-selected="true"] {
+  color: var(--text-primary);
+}
+
 .option[data-selected="true"] .optionLabel {
   font-weight: var(--fw-semibold);
 }
 
 .radio {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1.75px solid var(--grey-300);
   background: var(--bg);
-  transition: border-color 150ms, border-width 150ms var(--ease-out);
+  transition: border-color 150ms var(--ease-out), border-width 150ms var(--ease-out);
 }
 
 .option[data-selected="true"] .radio {
-  border: 7px solid var(--blue-500);
+  border: 6px solid var(--blue-500);
 }
 
 .optionLabel {
@@ -135,8 +152,8 @@
 .customInput {
   display: block;
   width: 100%;
-  margin-top: var(--sp-2);
-  padding: var(--sp-3) 14px;
+  margin-top: var(--sp-1);
+  padding: 10px 14px;
   border: 1px solid transparent;
   border-radius: var(--r-input);
   background: var(--grey-100);
@@ -144,6 +161,7 @@
   line-height: var(--lh-t6);
   resize: none;
   outline: none;
+  transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out);
 }
 
 .customInput:focus {
@@ -158,14 +176,14 @@
 .submitButton {
   width: 100%;
   min-height: var(--h-btn-m);
-  margin-top: var(--sp-4);
+  margin-top: var(--sp-3);
   padding: 2px var(--sp-4);
   border-radius: var(--r-btn-m);
   background: var(--blue-500);
   color: var(--white-alpha-900);
   font-size: var(--fs-t6);
   font-weight: var(--fw-semibold);
-  transition: transform var(--dur-release) var(--ease-out), background-color 150ms, opacity 150ms;
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out), opacity 150ms var(--ease-out);
 }
 
 .submitButton:hover:not(:disabled) {
@@ -182,22 +200,21 @@
   cursor: default;
 }
 
+/* 답한 뒤: 어떤 질문에 답했는지만 작게 남긴다. 고른 답은 아래 고객 말풍선에 있다. */
 .answered {
+  align-self: flex-start;
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  background: var(--grey-50);
+  border: 1px solid var(--border-hairline);
+}
+
+.answeredTitle {
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  align-self: flex-start;
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--r-btn-m);
-  background: var(--grey-50);
-}
-
-.answeredIcon {
-  display: flex;
-  color: var(--blue-500);
-}
-
-.answeredText {
+  gap: var(--sp-1);
   margin: 0;
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
@@ -205,7 +222,14 @@
   color: var(--text-secondary);
 }
 
-.answeredChoice {
-  font-weight: var(--fw-regular);
+.answeredIcon {
+  display: flex;
+  color: var(--blue-500);
+}
+
+.answeredQuestion {
+  margin: 2px 0 0;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
   color: var(--text-tertiary);
 }

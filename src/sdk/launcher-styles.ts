@@ -7,7 +7,9 @@ export const LAUNCHER_STYLES = `
   --lattice-blue-600: #2272eb;
   --lattice-red-500: #f04452;
   --lattice-white: #ffffff;
-  --lattice-shadow-float: 0 4px 16px rgba(0, 27, 55, 0.1);
+  --lattice-hairline: rgba(0, 27, 55, 0.08);
+  --lattice-shadow-launcher: 0 2px 10px rgba(0, 27, 55, 0.14);
+  --lattice-shadow-panel: 0 8px 28px rgba(0, 27, 55, 0.1);
   --lattice-ease-expo: cubic-bezier(.16, 1, .3, 1);
   --lattice-ease-out: cubic-bezier(.25, .1, .25, 1);
   --lattice-inset: 24px;
@@ -30,7 +32,7 @@ export const LAUNCHER_STYLES = `
   margin: 0;
   background: var(--lattice-blue-500);
   color: var(--lattice-white);
-  box-shadow: var(--lattice-shadow-float);
+  box-shadow: var(--lattice-shadow-launcher);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 200ms var(--lattice-ease-out), background-color 150ms;
@@ -38,7 +40,7 @@ export const LAUNCHER_STYLES = `
 .launcher:hover { background: var(--lattice-blue-600); }
 .launcher:active { transform: scale(0.96); transition-duration: 120ms; }
 .launcher:focus-visible { outline: 2px solid var(--lattice-blue-500); outline-offset: 3px; }
-.launcher svg { width: 26px; height: 26px; }
+.launcher svg { width: 28px; height: 28px; }
 .launcher[data-hidden="true"] { display: none; }
 .badge {
   position: absolute;
@@ -64,10 +66,10 @@ export const LAUNCHER_STYLES = `
   width: 380px;
   height: 640px;
   max-height: calc(100vh - var(--lattice-inset) - var(--lattice-launcher-size) - 32px);
-  border: 0;
+  border: 1px solid var(--lattice-hairline);
   border-radius: 20px;
   background: var(--lattice-white);
-  box-shadow: var(--lattice-shadow-float);
+  box-shadow: var(--lattice-shadow-panel);
   color-scheme: light;
   transform-origin: bottom right;
   transition: opacity 200ms var(--lattice-ease-expo), transform 200ms var(--lattice-ease-expo);
@@ -85,6 +87,7 @@ export const LAUNCHER_STYLES = `
   width: 220px;
   height: 52px;
   max-height: none;
+  border: 0;
   border-radius: 26px;
   transition: none;
 }
@@ -100,6 +103,7 @@ export const LAUNCHER_STYLES = `
 }
 `;
 
-export const LAUNCHER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5c0 4.14-3.58 7.5-8 7.5-1.1 0-2.15-.21-3.1-.59L4 19.5l1.2-3.6A7.17 7.17 0 0 1 4 11.5C4 7.36 7.58 4 12 4s8 3.36 8 7.5Z"/></svg>`;
+// 말풍선 + 음성 파형: "화면을 보여주며 말로 설명한다"는 이 위젯의 쓰임을 그대로 그린다.
+export const LAUNCHER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5h10a3.5 3.5 0 0 1 3.5 3.5v6a3.5 3.5 0 0 1-3.5 3.5h-5l-3.5 3v-3H7A3.5 3.5 0 0 1 3.5 14V8A3.5 3.5 0 0 1 7 4.5Z"/><path d="M9 10v2M12 8.5v5M15 10v2"/></svg>`;
 
 export const CLOSE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`;

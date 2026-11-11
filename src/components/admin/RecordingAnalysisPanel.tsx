@@ -98,12 +98,13 @@ function RecordingAnalysis({ recording }: { recording: RecordingDetail }) {
     <>
       <RecordingPlayer ref={playerRef} recording={recording} />
       <div className={styles.summaryLine}>
-        <span>
-          문제 <strong className={styles.summaryNumber}>{recording.issues.length}</strong>건
-        </span>
+        <h3 className={styles.summaryTitle}>
+          문제 <span className={styles.summaryNumber}>{recording.issues.length}</span>건
+        </h3>
         {checkCount > 0 ? (
           <span className={styles.summaryAttention}>
-            확인 필요 <strong className={styles.summaryNumber}>{checkCount}</strong>건
+            <span className={styles.attentionDot} aria-hidden="true" />
+            확인 필요 {checkCount}건
           </span>
         ) : null}
       </div>

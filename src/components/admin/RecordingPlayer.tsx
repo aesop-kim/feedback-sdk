@@ -1,6 +1,6 @@
 "use client";
 
-import { useImperativeHandle, useRef, type Ref } from "react";
+import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import styles from "@/components/admin/RecordingPlayer.module.css";
 import { useAdminVideoBlob } from "@/hooks/use-admin-video-blob";
 import { formatDuration } from "@/lib/format/duration-format";
@@ -28,10 +28,22 @@ function getReadablePageUrl(pageUrl: string | null): string | null {
 export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pendingSeekRef = useRef<number | null>(null);
+  // 재생 전에는 기본 컨트롤(로딩 스피너·어두운 그라데이션)을 숨기고 첫 장면만 차분히 보여 준다.
+  const [hasStarted, setHasStarted] = useState(false);
   const { blobUrl, hasFailed, isLoading } = useAdminVideoBlob(recording.id, recording.videoUrl);
 
   function playFrom(video: HTMLVideoElement, milliseconds: number) {
+    setHasStarted(true);
     video.currentTime = milliseconds / 1000;
+    void video.play().catch(() => null);
+  }
+
+  function startPlaying() {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+    setHasStarted(true);
     void video.play().catch(() => null);
   }
 
@@ -50,24 +62,34 @@ export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
 
   return (
     <div className={styles.player}>
-      <div className={styles.frame}>
+      <div className={styles.frame} data-state={getFrameState(Boolean(blobUrl), isLoading)}>
         {blobUrl ? (
-          <video
-            ref={videoRef}
-            className={styles.video}
-            src={blobUrl}
-            controls
-            playsInline
-            preload="auto"
-            onLoadedMetadata={(event) => {
-              if (pendingSeekRef.current !== null) {
-                playFrom(event.currentTarget, pendingSeekRef.current);
-                pendingSeekRef.current = null;
-              }
-            }}
-          />
+          <>
+            <video
+              ref={videoRef}
+              className={styles.video}
+              src={blobUrl}
+              controls={hasStarted}
+              playsInline
+              preload="auto"
+              onPlay={() => setHasStarted(true)}
+              onLoadedMetadata={(event) => {
+                if (pendingSeekRef.current !== null) {
+                  playFrom(event.currentTarget, pendingSeekRef.current);
+                  pendingSeekRef.current = null;
+                }
+              }}
+            />
+            {hasStarted ? null : (
+              <button type="button" className={styles.playButton} onClick={startPlaying} aria-label="영상 재생하기">
+                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M6 3.9v12.2a.9.9 0 0 0 1.37.77l9.75-6.1a.9.9 0 0 0 0-1.54L7.37 3.13A.9.9 0 0 0 6 3.9Z" fill="currentColor" />
+                </svg>
+              </button>
+            )}
+          </>
         ) : (
-          <p className={styles.placeholder}>
+          <p className={styles.placeholder} role={isLoading ? "status" : undefined}>
             <VideoPlaceholderText hasVideo={Boolean(recording.videoUrl)} isLoading={isLoading} hasFailed={hasFailed} />
           </p>
         )}
@@ -81,6 +103,16 @@ export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
       </div>
     </div>
   );
+}
+
+function getFrameState(hasBlob: boolean, isLoading: boolean): "ready" | "loading" | "empty" {
+  if (hasBlob) {
+    return "ready";
+  }
+  if (isLoading) {
+    return "loading";
+  }
+  return "empty";
 }
 
 function VideoPlaceholderText({ hasVideo, isLoading, hasFailed }: { hasVideo: boolean; isLoading: boolean; hasFailed: boolean }) {

@@ -137,7 +137,7 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
         userName={conversation.session?.endUserName || init?.user.name || ""}
         onClose={handleClose}
       />
-      <div className={styles.body}>
+      <div className={styles.body} data-widget-scroll="">
         {conversation.status === "loading" ? <MessageSkeleton /> : null}
         {conversation.status === "error" ? (
           <section className={styles.errorState}>
