@@ -1,11 +1,13 @@
 import { findAdminRejection } from "@/lib/auth/require-admin";
 import { respondError, respondJson } from "@/lib/http/api-response";
+import { findReanalyzeRejection, findRecordingFailureKind } from "@/lib/feedback/recording-failure";
 import { getServerSupabase } from "@/lib/supabase/server-client";
+import type { RecordingStatus } from "@/types/feedback";
 
 const REANALYZE_INTERVAL_MS = 60_000;
 
 // 재분석 = status를 uploaded로 되돌려 로컬 워커가 다시 가져가게 한다.
-// 승인된 질문 카드가 있으면 거부(고객이 본 카드가 바뀌지 않도록), 1분 안에 다시 누르면 무시.
+// 승인된 질문 카드가 있거나 업로드가 끝나지 않은 녹화(녹음 파일 없음)는 거부하고, 1분 안에 다시 누르면 무시.
 export async function POST(_request: Request, { params }: { params: Promise<{ recordingId: string }> }) {
   const rejection = await findAdminRejection();
   if (rejection) {
@@ -13,6 +15,27 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
   }
   const { recordingId } = await params;
   const supabase = getServerSupabase();
+
+  const { data: recording } = await supabase
+    .from("recordings")
+    .select("status, error, analysis_attempt")
+    .eq("id", recordingId)
+    .maybeSingle();
+  if (!recording) {
+    return respondError(404, "녹화를 찾을 수 없어요.");
+  }
+  const { data: audioFiles } = await supabase.storage.from("recordings").list(recordingId, { search: "audio.webm" });
+  const uploadRejection = findReanalyzeRejection({
+    failureKind: findRecordingFailureKind({
+      status: recording.status as RecordingStatus,
+      error: recording.error as string | null,
+      analysisAttempt: recording.analysis_attempt as number,
+    }),
+    hasAudio: (audioFiles ?? []).some((file) => file.name === "audio.webm"),
+  });
+  if (uploadRejection) {
+    return respondError(409, uploadRejection);
+  }
 
   const { count: approvedCardCount } = await supabase
     .from("clarification_cards")

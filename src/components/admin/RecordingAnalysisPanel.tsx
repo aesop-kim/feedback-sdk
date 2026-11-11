@@ -8,7 +8,8 @@ import { TranscriptSection } from "@/components/admin/TranscriptSection";
 import styles from "@/components/admin/RecordingAnalysisPanel.module.css";
 import { useAdminRequest } from "@/hooks/use-admin-request";
 import { useAdminRevision } from "@/hooks/use-admin-revision";
-import type { Issue, RecordingDetail } from "@/types/feedback";
+import { getFailureGuidance } from "@/lib/feedback/recording-failure";
+import type { Issue, RecordingDetail, RecordingFailureKind } from "@/types/feedback";
 
 type RecordingAnalysisPanelProps = {
   recordings: RecordingDetail[];
@@ -108,7 +109,9 @@ function RecordingAnalysis({ recording, hasVideo, onSeek }: RecordingAnalysisPro
     return <AnalysisPending message="말한 내용을 정리하고 있어요. 보통 1분 안에 끝나요" hasVideo={hasVideo} />;
   }
   if (recording.status === "failed") {
-    return <AnalysisFailed recordingId={recording.id} reason={recording.error} hasVideo={hasVideo} />;
+    return (
+      <AnalysisFailed recordingId={recording.id} reason={recording.error} failureKind={recording.failureKind} hasVideo={hasVideo} />
+    );
   }
 
   const checkCount = recording.issues.filter(needsCheck).length;
@@ -160,22 +163,16 @@ function AnalysisPending({ message, hasVideo }: { message: string; hasVideo: boo
   );
 }
 
-// 무음 녹화는 다시 정리해도 같은 이유로 실패한다. 이때는 고객에게 다시 녹화를 부탁하라고 안내한다.
-const SILENT_RECORDING_ERROR = "목소리가 녹음되지 않았어요";
+type AnalysisFailedProps = {
+  recordingId: string;
+  reason: string | null;
+  failureKind: RecordingFailureKind | null;
+  hasVideo: boolean;
+};
 
-function getFailedGuide(reason: string | null, hasVideo: boolean): string {
-  if (reason?.includes(SILENT_RECORDING_ERROR)) {
-    return "다시 정리해도 결과가 같아요. 고객에게 마이크를 확인하고 다시 녹화해 달라고 답장해 주세요.";
-  }
-  if (hasVideo) {
-    return "영상은 위에서 바로 볼 수 있어요. 다시 정리하면 보통 1분 안에 끝나요.";
-  }
-  return "영상은 안전하게 받아 두었어요. 다시 정리하면 보통 1분 안에 끝나요.";
-}
-
-type AnalysisFailedProps = { recordingId: string; reason: string | null; hasVideo: boolean };
-
-function AnalysisFailed({ recordingId, reason, hasVideo }: AnalysisFailedProps) {
+// 안내와 버튼은 실패 종류로 가른다. 업로드 미완료는 다시 정리할 수 없고, 무음은 다시 녹화 요청이 먼저다.
+function AnalysisFailed({ recordingId, reason, failureKind, hasVideo }: AnalysisFailedProps) {
+  const guidance = getFailureGuidance(failureKind, hasVideo);
   const request = useAdminRequest();
   const { refresh } = useAdminRevision();
   const [isRequesting, setIsRequesting] = useState(false);
@@ -199,17 +196,24 @@ function AnalysisFailed({ recordingId, reason, hasVideo }: AnalysisFailedProps) 
 
   return (
     <div className={styles.failed}>
-      <p className={styles.failedTitle}>말한 내용을 정리하지 못했어요</p>
+      <p className={styles.failedTitle}>{guidance.title}</p>
       {reason ? (
         <p className={styles.failedReason}>
           <span className={styles.failedReasonLabel}>이유</span>
           {reason}
         </p>
       ) : null}
-      <p className={styles.caption}>{getFailedGuide(reason, hasVideo)}</p>
-      <AdminButton variant="weak" size="small" onClick={() => void reanalyze()} isLoading={isRequesting}>
-        다시 정리하기
-      </AdminButton>
+      <p className={styles.caption}>{guidance.guide}</p>
+      {guidance.reanalyzeAction === "primary" ? (
+        <AdminButton variant="weak" size="small" onClick={() => void reanalyze()} isLoading={isRequesting}>
+          다시 정리하기
+        </AdminButton>
+      ) : null}
+      {guidance.reanalyzeAction === "secondary" ? (
+        <AdminButton variant="text" size="small" onClick={() => void reanalyze()} isLoading={isRequesting}>
+          그래도 다시 정리하기
+        </AdminButton>
+      ) : null}
       {message ? (
         <p className={styles.failedMessage} role="alert">
           {message}
