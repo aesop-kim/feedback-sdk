@@ -15,7 +15,7 @@
 | `widget-recording.spec.ts` | 시작/끝내기, 취소, 화면 공유·마이크 거부, 공유 중지 자동 종료, 3분 자동 종료, 업로드 실패→다시 보내기, 녹화/업로드 중 새로고침 | `npx playwright test e2e/qa/widget-recording.spec.ts` |
 | `worker-analysis.spec.ts` | 실제 워커: 무음 녹화(실패+이유), 대본 녹화(이슈→되묻기→답변→재분석 409) | `QA_AUDIO=silent E2E_FAKE_AUDIO=<무음.wav>` / `QA_AUDIO=narration E2E_FAKE_AUDIO=$(pwd)/fixtures/demo-recording/narration.wav` |
 | `admin-flow.spec.ts` | 로그인/로그아웃, 빈 상태, 대화 선택, 긴 답장, 분석 상태, 승인→카드→답변, 409, 반영 완료→재확인, 늦은 답변, 1280/1440 레이아웃, 부하 중 상세 열기 | `npx playwright test e2e/qa/admin-flow.spec.ts` |
-| `security-api.spec.ts` | 401(토큰 없음/위조), 타 대화 카드 404, 재확인 이슈 404, 동시 답변, hostOrigin 403, CSP, 관리자 API 401, 로그인 시도 제한 | `npx playwright test e2e/qa/security-api.spec.ts` |
+| `security-api.spec.ts` | 401(토큰 없음/위조/만료), 타 대화 카드 404, 재확인 이슈 404, 동시 답변, hostOrigin 403, CSP, 관리자 API 401, 로그인 시도 제한 | `npx playwright test e2e/qa/security-api.spec.ts` |
 
 배포 대상으로 돌리려면 앞에 `QA_TARGET=deployed`를 붙인다. 실패로 남아 있는 테스트는 **아래 버그를 재현하는 회귀 테스트**다(버그를 고치면 초록이 된다).
 
@@ -111,6 +111,7 @@
 | 흐름 | 로컬 | 배포 | 근거 | 메모 |
 |---|---|---|---|---|
 | 위젯 API 5종, 토큰 없음/`Token`/쓰레기/위조 서명 → 401 | ✅ | ✅ | `security-api` "…토큰을 401로" (20/20 응답 401) | |
+| 서명은 맞지만 만료된 대화 토큰(위젯 API 4종)·관리자 쿠키 → 401 | ✅ | — | `security-api` "서명은 맞지만 만료된…" (#98에서 추가) | 운영 서명 비밀값이 러너에 없어 배포는 건너뜀 |
 | 다른 대화 토큰으로 cardId 답변 → 404 | ✅ | ✅ | "다른 대화의 토큰으로" | |
 | 승인 전 카드 답변 → 404 | ✅ | ✅ | "승인 전 질문 카드" | |
 | 다른 대화 이슈를 reverifyIssueId로 → 404 | ✅ | ✅ | "재확인 녹화로 연결하면 404" | |
@@ -150,6 +151,32 @@
 | 위젯 녹화 메시지 "문제 n건을 정리했어요" | ✅ | ✅ | 같은 테스트 | |
 | 확인 필요 이슈 승인 → 장면 위 질문 카드 → 답변 → 관리자 "고객 답변" | ✅ | ✅ | `*-wrk-02-widget-card.png`, `*-wrk-02-admin-answered.png` | |
 | 질문 보낸 녹화 재분석 API → 409 | ✅ | ✅ | 같은 테스트 | |
+
+## Re-test (local / deployed)
+
+BUG-01..18을 고친 뒤 다시 돌린 결과다. 근거는 [verification-v2.md](verification-v2.md)(2026-11-12 02:45 KST, `main` @ `63f0fb5`)와 [verification-v3.md](verification-v3.md)(03:55 KST, `main` @ `b9d8675`)다. 위 결과 표의 ❌는 고치기 전 기록으로 그대로 둔다.
+
+| ID | 고친 PR | 로컬 | 배포 | 근거 |
+|---|---|---|---|---|
+| BUG-01 | #39, #58 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (녹화 1건만 남음, 스펙 L/D) |
+| BUG-02 | #39, #65, #68 | PASS | PASS (업로드 중 이탈 경고) · 오래된 업로드 만료 시험은 배포에서 건너뜀 | [v3 §2](verification-v3.md#2-re-verified-items-all-non-verified-items-from-v2) (NEW-01과 함께 VERIFIED), [v3 §1](verification-v3.md#1-suite-results-fresh-runs) |
+| BUG-03 | #43 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §3](verification-v3.md) (`[200,409,409,409]`, 답변 1건) |
+| BUG-04 | #43 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (스펙 L/D) |
+| BUG-05 | #48, #60 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §3](verification-v3.md) (배포 1440·360) |
+| BUG-06 | #39, #40, #48 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §1](verification-v3.md#1-suite-results-fresh-runs) (배포 무음 워커 스펙) |
+| BUG-07 | #58 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (워커 무음 스펙 L/D, 토스트 1회) |
+| BUG-08 | #54 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §3](verification-v3.md) (배포 426 ms / 503 ms) |
+| BUG-09 | #43, #50 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) ("이미 답한 질문이에요" 토스트) |
+| BUG-10 | #50, #65 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v2 §1](verification-v2.md#1-suite-results) |
+| BUG-11 | #58 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v2 §1](verification-v2.md#1-suite-results) |
+| BUG-12 | #58 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v2 §1](verification-v2.md#1-suite-results) |
+| BUG-13 | #50, #78 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §3](verification-v3.md) (다시 찾아온 고객의 배지) |
+| BUG-14 | #47, #52 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (관리자·위젯 API 400 한국어 오류) |
+| BUG-15 | #47 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (스펙 L/D) |
+| BUG-16 | #54 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §3](verification-v3.md) (운영 `frame-ancestors`에 localhost 없음) |
+| BUG-17 | #52 | PASS | skipped by design | [v2 §2](verification-v2.md#2-per-item-status) (로컬 `[401×5, 429]`). 배포에서 돌리면 QA 러너 IP가 5분 동안 막혀서 스펙이 건너뜀 |
+| BUG-18 | #58, #65 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (스펙 L/D) |
+| 만료 토큰 → 401 | #98 | PASS | skipped by design | `security-api.spec.ts` "서명은 맞지만 만료된 대화 토큰과 관리자 쿠키는 401". 운영 서명 비밀값이 QA 러너에 없어서 배포에서는 건너뜀 |
 
 ## Bugs
 
