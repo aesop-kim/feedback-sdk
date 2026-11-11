@@ -146,13 +146,18 @@ export async function loginAdmin(context: BrowserContext): Promise<Page> {
   return adminPage;
 }
 
-// 위젯 iframe의 localStorage에 저장된 대화 토큰을 꺼낸다(API 직접 호출용).
-export async function readWidgetSession(page: Page, userId: string): Promise<{ conversationId: string; conversationToken: string }> {
+// 위젯 iframe(Frame). 그 안에서 evaluate하거나 axe를 돌릴 때 쓴다.
+export function getWidgetFrame(page: Page): Frame {
   const frame = page.frames().find((candidate) => candidate.url().startsWith(`${SDK_ORIGIN}/widget`));
   if (!frame) {
     throw new Error("위젯 iframe을 찾지 못했어요");
   }
-  const raw = await frame.evaluate((key) => window.localStorage.getItem(key), `lattice-feedback:lattice-demo:${userId}`);
+  return frame;
+}
+
+// 위젯 iframe의 localStorage에 저장된 대화 토큰을 꺼낸다(API 직접 호출용).
+export async function readWidgetSession(page: Page, userId: string): Promise<{ conversationId: string; conversationToken: string }> {
+  const raw = await getWidgetFrame(page).evaluate((key) => window.localStorage.getItem(key), `lattice-feedback:lattice-demo:${userId}`);
   if (!raw) {
     throw new Error("저장된 위젯 세션이 없어요");
   }

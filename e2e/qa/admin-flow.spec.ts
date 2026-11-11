@@ -189,7 +189,6 @@ test("분석 실패는 다시 정리하기를 누르면 대기열로 돌아간�
   await analysis.getByRole("button", { name: "다시 정리하기", exact: true }).click();
   await expect(analysis.getByText(/말한 내용을 정리하고 있어요|말한 내용을 정리하지 못했어요/)).toBeVisible();
   const { data: requeued } = await getQaDatabase().from("recordings").select("status").eq("id", failed.recordingId).single();
-  console.log(`[qa] after reanalyze status=${requeued?.status}`);
   expect(["uploaded", "analyzing", "failed"]).toContain(requeued?.status);
   await context.close();
 });
