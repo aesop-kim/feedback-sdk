@@ -121,7 +121,7 @@ export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, o
         <li className={styles.item} data-sender="user" data-group-start="true">
           <RecordingMessage
             durationMs={pendingUpload.durationMs}
-            status={pendingUpload.isFailed ? "failed" : "uploading"}
+            status={pendingUpload.isFailed ? "upload_failed" : "uploading"}
             issueCount={0}
             uploadProgress={pendingUpload.progress}
             onRetry={pendingUpload.isFailed ? onRetryUpload : undefined}

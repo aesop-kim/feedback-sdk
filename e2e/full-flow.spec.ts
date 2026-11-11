@@ -72,7 +72,7 @@ test("고객이 말로 설명한 문제가 이슈 카드가 되고, 애매한 �
   await moveMouseTo(customerPage, registerButton);
   await waitUntil(customerPage, recordingStartedAt, NARRATION_LEAD_MS + 66_000);
 
-  await widget.getByRole("button", { name: "끝내기" }).click();
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   await expect(widget.getByText(/화면 녹화 · \d+:\d{2}/)).toBeVisible({ timeout: 60_000 });
   await captureScreen(customerPage, "04-widget-uploaded");
 

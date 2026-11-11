@@ -20,6 +20,8 @@ export type WidgetToHostMessage =
   | { type: "widget:ready"; payload: Record<string, never> }
   | { type: "widget:mode"; payload: { mode: WidgetDisplayMode } }
   | { type: "widget:unread"; payload: { count: number } }
+  | { type: "widget:busy"; payload: { isBusy: boolean } }
+  | { type: "widget:warning"; payload: { isVisible: boolean } }
   | { type: "recording:start"; payload: { t0: number } }
   | { type: "recording:stop"; payload: Record<string, never> };
 

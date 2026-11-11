@@ -84,12 +84,17 @@ export const LAUNCHER_STYLES = `
 .frame[data-mode="open"] { opacity: 1; transform: none; }
 .frame[data-mode="recording"] {
   bottom: var(--lattice-inset);
-  width: 220px;
-  height: 52px;
+  width: 340px;
+  max-width: calc(100vw - 16px);
+  height: 56px;
   max-height: none;
   border: 0;
-  border-radius: 26px;
+  border-radius: 28px;
   transition: none;
+}
+.frame[data-mode="recording"][data-warning="true"] {
+  height: 132px;
+  border-radius: 20px;
 }
 @media (max-width: 480px) {
   .frame[data-mode="open"], .frame[data-mode="closed"] {

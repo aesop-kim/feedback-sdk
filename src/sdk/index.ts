@@ -67,6 +67,15 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   document.body.append(host);
 
   let mode: WidgetDisplayMode = "closed";
+  let isWidgetBusy = false;
+
+  // 녹화·업로드 중에 새로고침하거나 탭을 닫으면 브라우저 확인 창을 띄운다(녹화가 조용히 사라지지 않게).
+  window.addEventListener("beforeunload", (event) => {
+    if (isWidgetBusy) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
 
   const postToWidget = (message: HostToWidgetMessage) => {
     iframe.contentWindow?.postMessage(createEnvelope(message), SDK_ORIGIN);
@@ -129,6 +138,12 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
         return;
       case "widget:unread":
         setUnreadCount(message.payload.count);
+        return;
+      case "widget:busy":
+        isWidgetBusy = message.payload.isBusy;
+        return;
+      case "widget:warning":
+        iframe.dataset.warning = String(message.payload.isVisible);
         return;
       case "recording:start":
         domRecorder.start();

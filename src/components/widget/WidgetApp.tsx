@@ -15,11 +15,14 @@ import {
   useWidgetConversation,
   type HostInit,
 } from "@/hooks/use-widget-conversation";
-import { useWidgetRecording } from "@/hooks/use-widget-recording";
+import { MICROPHONE_SILENT_MESSAGE, useWidgetRecording } from "@/hooks/use-widget-recording";
 import type { HostToWidgetMessage } from "@/sdk/bridge-protocol";
 import styles from "@/components/widget/WidgetApp.module.css";
 
 const TOAST_DURATION_MS = 3_000;
+// 해결 방법까지 적은 긴 안내는 3초 안에 다 읽기 어렵다.
+const LONG_TOAST_DURATION_MS = 5_000;
+const LONG_TOAST_LENGTH = 25;
 const SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요. 말풍선 아래 ‘다시 보내기’를 눌러 주세요";
 const ALREADY_ANSWERED_MESSAGE = "이미 답한 질문이에요";
 const LOAD_FAILED_DESCRIPTION = "연결이 잠깐 끊겼어요. 다시 불러와 볼게요";
@@ -49,7 +52,8 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
     if (toastTimerRef.current !== null) {
       window.clearTimeout(toastTimerRef.current);
     }
-    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+    const duration = message.length > LONG_TOAST_LENGTH ? LONG_TOAST_DURATION_MS : TOAST_DURATION_MS;
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), duration);
   }, []);
 
   const handleHostMessage = useCallback(
@@ -179,7 +183,10 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
         elapsedMs={recording.elapsedMs}
         maxDurationMs={recording.maxDurationMs}
         isStopping={recording.phase === "stopping"}
+        microphoneLevel={recording.microphoneLevel}
+        warning={recording.isMicrophoneSilent ? MICROPHONE_SILENT_MESSAGE : null}
         onStop={() => void recording.stopRecording()}
+        onCancel={() => void recording.cancelRecording()}
       />
     );
   }

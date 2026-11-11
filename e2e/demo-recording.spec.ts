@@ -182,7 +182,7 @@ test("데모 영상 촬영: 고객 녹화부터 반영 완료 후 다시 확인 
   await glideTo(customerPage, "customer", registerButton, "summary-hover");
   await waitUntil(customerPage, recordingStartedAt, NARRATION_LEAD_MS + 66_000);
 
-  await glideAndClick(customerPage, "customer", widget.getByRole("button", { name: "끝내기" }), "finish");
+  await glideAndClick(customerPage, "customer", widget.getByRole("button", { name: "끝내고 보내기" }), "finish");
   await expect(widget.getByText(/화면 녹화 · \d+:\d{2}/)).toBeVisible({ timeout: 60_000 });
   markCue("customer", "upload-done");
   const analyzingVisible = await widget

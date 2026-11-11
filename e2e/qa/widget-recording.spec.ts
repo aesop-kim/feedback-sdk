@@ -52,9 +52,9 @@ test("녹화를 시작하고 끝내면 업로드되고 '정리하고 있어요' 
   await captureQaScreen(page, "rec-01-recording-pill");
   await page.getByRole("button", { name: "계약서 등록" }).click();
   await page.waitForTimeout(4_000);
-  await widget.getByRole("button", { name: "끝내기" }).click();
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   await expect(widget.getByText(/화면 녹화 · 0:0[3-9]/)).toBeVisible({ timeout: 60_000 });
-  await expect(widget.getByText(/정리하고 있어요|정리를 마쳤어요|문제 \d+건을 정리했어요|정리하지 못했어요/)).toBeVisible();
+  await expect(widget.getByText(/정리하고 있어요|정리를 마쳤어요|문제 \d+건을 정리했어요|받았어요. 담당자가 직접 볼게요/)).toBeVisible();
   await captureQaScreen(page, "rec-01-uploaded");
   const recordings = await countRecordings(user.id);
   expect(recordings).toHaveLength(1);
@@ -68,7 +68,7 @@ test("녹화 중에는 취소(올리지 않고 버리기) 버튼이 있다", asy
   await startRecording(widget);
   const pillButtons = await widget.getByRole("status", { name: "화면 녹화 중" }).getByRole("button").allTextContents();
   console.log(`[qa] recording pill buttons: ${JSON.stringify(pillButtons)}`);
-  await widget.getByRole("button", { name: "끝내기" }).click();
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   await expect(widget.getByText(/화면 녹화 · /)).toBeVisible({ timeout: 60_000 });
   expect(pillButtons.some((label) => /취소|버리기/.test(label)), "녹화 취소 수단이 없다").toBe(true);
 });
@@ -167,10 +167,10 @@ test("업로드가 실패하면 다시 보내기 버튼이 뜨고, 다시 보내
   await page.route(STORAGE_UPLOAD_PATTERN, (route) => route.abort("failed"));
   await startRecording(widget);
   await page.waitForTimeout(3_000);
-  await widget.getByRole("button", { name: "끝내기" }).click();
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   const retryButton = widget.getByRole("button", { name: "다시 보내기" });
   await expect(retryButton).toBeVisible({ timeout: 30_000 });
-  await expect(widget.getByText("정리하지 못했어요")).toBeVisible();
+  await expect(widget.getByText("보내지 못했어요")).toBeVisible();
   await captureQaScreen(page, "rec-06-upload-failed");
 
   await page.unroute(STORAGE_UPLOAD_PATTERN);
@@ -199,9 +199,9 @@ test("업로드 실패 카드는 '정리하지 못했어요'가 아니라 '보�
   await page.route(STORAGE_UPLOAD_PATTERN, (route) => route.abort("failed"));
   await startRecording(widget);
   await page.waitForTimeout(2_000);
-  await widget.getByRole("button", { name: "끝내기" }).click();
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   await expect(widget.getByRole("button", { name: "다시 보내기" })).toBeVisible({ timeout: 30_000 });
-  const statusText = await widget.locator('[data-status="failed"]').textContent();
+  const statusText = await widget.locator('[data-status="upload_failed"]').textContent();
   console.log(`[qa] upload-failed status copy: ${statusText}`);
   expect(statusText).not.toBe("정리하지 못했어요");
 });
@@ -234,7 +234,7 @@ test("업로드 중 새로고침하면 고아 'uploading' 녹화가 관리자에
   await page.route(STORAGE_UPLOAD_PATTERN, () => undefined);
   await startRecording(widget);
   await page.waitForTimeout(2_000);
-  await widget.getByRole("button", { name: "끝내기" }).click();
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   await expect(widget.getByText(/보내는 중/)).toBeVisible({ timeout: 30_000 });
   await captureQaScreen(page, "rec-08-uploading");
   await page.unroute(STORAGE_UPLOAD_PATTERN);
