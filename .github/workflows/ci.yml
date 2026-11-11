@@ -14,5 +14,7 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npm run lint
+      # PageProps·LayoutProps 같은 라우트 타입은 next dev/build가 만들기 때문에 CI에서는 먼저 생성한다.
+      - run: npx next typegen
       - run: npm run typecheck
       - run: npm test
