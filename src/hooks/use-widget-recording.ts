@@ -11,8 +11,8 @@ const DOM_STOP_TIMEOUT_MS = 2_000;
 const TIMER_TICK_MS = 250;
 const RRWEB_META_EVENT_TYPE = 4;
 
-export const SCREEN_DENIED_MESSAGE = "화면 공유를 시작하지 않았어요";
-export const MICROPHONE_DENIED_MESSAGE = "마이크 권한이 필요해요";
+const SCREEN_DENIED_MESSAGE = "화면 공유를 시작하지 않았어요";
+const MICROPHONE_DENIED_MESSAGE = "마이크 권한이 필요해요";
 const UPLOAD_FAILED_MESSAGE = "연결이 잠깐 불안정해요. 잠시 후 다시 해볼까요?";
 
 export type RecordingPhase = "idle" | "recording" | "stopping";

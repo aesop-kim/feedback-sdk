@@ -5,9 +5,9 @@ export type FrameReason = "interval" | "click";
 
 export const MAX_FRAME_COUNT = 120;
 export const CLICK_FRAME_RESERVE = 20;
-export const FRAME_LONG_SIDE = 1280;
+const FRAME_LONG_SIDE = 1280;
 export const FRAME_JPEG_QUALITY = 0.7;
-export const MIN_CLICK_FRAME_GAP_MS = 250;
+const MIN_CLICK_FRAME_GAP_MS = 250;
 
 export type FrameRecord = { tMs: number; reason: FrameReason };
 

@@ -16,7 +16,7 @@ export type AnalysisSegment = TranscriptSegment & {
 
 export type AnalysisContext = { segments: AnalysisSegment[]; frames: FrameReference[] };
 
-export const CONTEXT_WINDOW_MS = 1_000;
+const CONTEXT_WINDOW_MS = 1_000;
 export const MAX_ANALYSIS_FRAMES = 12;
 
 function findNearestFrame(frames: FrameReference[], anchorMs: number): FrameReference | null {

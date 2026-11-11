@@ -5,14 +5,14 @@ import { z } from "zod";
 
 // 프롬프트는 20자 이내를 요구하고, 검증은 조금 넘친 제목 때문에 재시도하지 않도록 여유를 둔다.
 export const TITLE_TARGET_LENGTH = 20;
-export const MAX_TITLE_LENGTH = 30;
+const MAX_TITLE_LENGTH = 30;
 
-export const clarificationDraftSchema = z.object({
+const clarificationDraftSchema = z.object({
   question: z.string().trim().min(1).max(300),
   options: z.array(z.string().trim().min(1).max(100)).min(2).max(4),
 });
 
-export const analysisIssueSchema = z
+const analysisIssueSchema = z
   .object({
     tMs: z.number().min(0),
     quote: z.string().trim().min(1),
@@ -32,7 +32,6 @@ export const analysisIssueSchema = z
 export const analysisResultSchema = z.object({ issues: z.array(analysisIssueSchema) });
 
 export type AnalysisIssue = z.infer<typeof analysisIssueSchema>;
-export type AnalysisResult = z.infer<typeof analysisResultSchema>;
 
 // claude CLI의 스키마 검증기는 draft 2020-12 메타 스키마를 몰라서 "$schema" 키를 빼고 넘긴다.
 export function getAnalysisJsonSchema(): Record<string, unknown> {

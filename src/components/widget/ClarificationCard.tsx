@@ -2,14 +2,12 @@
 
 import { useRef, useState } from "react";
 import { CheckIcon } from "@/components/widget/WidgetIcons";
-import { getFitTransform, getFocusTransform, toCssTransform, toHighlightStyle } from "@/lib/geometry/focus-transform";
+import { useSceneZoom } from "@/hooks/use-scene-zoom";
+import { toHighlightStyle } from "@/lib/geometry/focus-transform";
 import type { ClarificationCard as ClarificationCardData } from "@/types/feedback";
 import styles from "@/components/widget/ClarificationCard.module.css";
 
 const CUSTOM_OPTION_ID = "__custom__";
-// 장면 창은 카드 폭에 맞춘 16:9. 장면 이미지 비율은 불러온 뒤에 알 수 있어 그 전에는 녹화 화면에 흔한 16:10으로 둔다.
-const FRAME_ASPECT = 16 / 9;
-const DEFAULT_IMAGE_ASPECT = 16 / 10;
 const SUBMIT_SCROLL_MARGIN = 16;
 
 // 보기를 고르면 "답변 보내기"가 패널 아래로 숨어 있지 않게, 위젯 스크롤 영역만 필요한 만큼 내린다.
@@ -120,39 +118,24 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
 
 // 고객이 가리킨 장면. 기본은 가리킨 곳을 크게, 누르면 화면 전체를 보여 준다.
 function SceneFrame({ frameUrl, highlight }: { frameUrl: string; highlight: ClarificationCardData["highlight"] }) {
-  const [isZoomed, setIsZoomed] = useState(true);
-  const [imageAspect, setImageAspect] = useState(DEFAULT_IMAGE_ASPECT);
-  const aspect = { image: imageAspect, container: FRAME_ASPECT };
-  const transform = isZoomed && highlight ? getFocusTransform(highlight, aspect) : getFitTransform(aspect);
+  const { isZoomed, toggleZoom, canvasStyle, handleImageLoad } = useSceneZoom(highlight);
 
   return (
     <button
       type="button"
       className={styles.frame}
       data-zoomed={isZoomed}
-      onClick={() => setIsZoomed((current) => !current)}
+      onClick={toggleZoom}
       aria-label={isZoomed ? "화면 전체 보기" : "가리킨 곳 크게 보기"}
       disabled={!highlight}
     >
-      <span
-        className={styles.frameCanvas}
-        style={{
-          aspectRatio: String(imageAspect),
-          transform: toCssTransform(transform),
-          ["--focus-scale" as string]: String(transform.scale),
-        }}
-      >
+      <span className={styles.frameCanvas} style={canvasStyle}>
         {/* eslint-disable-next-line @next/next/no-img-element -- signed URL이라 next/image 최적화를 거치지 않는다 */}
         <img
           className={styles.frameImage}
           src={frameUrl}
           alt="녹화 속 해당 장면"
-          onLoad={(event) => {
-            const { naturalWidth, naturalHeight } = event.currentTarget;
-            if (naturalWidth > 0 && naturalHeight > 0) {
-              setImageAspect(naturalWidth / naturalHeight);
-            }
-          }}
+          onLoad={handleImageLoad}
         />
         {highlight ? <span className={styles.highlight} style={toHighlightStyle(highlight)} /> : null}
       </span>

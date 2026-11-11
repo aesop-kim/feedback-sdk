@@ -22,8 +22,8 @@ const clockFormatter = new Intl.DateTimeFormat("en-US", {
 
 function getCalendarDate(date: Date): CalendarDate {
   const parts = calendarFormatter.formatToParts(date);
-  const findPart = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
-  return { year: findPart("year"), month: findPart("month"), day: findPart("day") };
+  const getPart = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
+  return { year: getPart("year"), month: getPart("month"), day: getPart("day") };
 }
 
 function getDayNumber({ year, month, day }: CalendarDate): number {

@@ -1,7 +1,7 @@
 // 고객사 페이지(sdk.js)와 위젯(iframe) 사이 postMessage 규약. 양쪽이 같은 타입을 import 한다.
 import type { ElementContext, EndUserInput } from "@/types/feedback";
 
-export const BRIDGE_NAMESPACE = "lattice-feedback";
+const BRIDGE_NAMESPACE = "lattice-feedback";
 
 export type WidgetDisplayMode = "closed" | "open" | "recording";
 
