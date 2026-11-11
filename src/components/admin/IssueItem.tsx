@@ -1,0 +1,198 @@
+"use client";
+
+import { useId, useState } from "react";
+import { AdminButton } from "@/components/admin/AdminButton";
+import { ClarificationDraft } from "@/components/admin/ClarificationDraft";
+import { FrameThumbnail } from "@/components/admin/FrameThumbnail";
+import styles from "@/components/admin/IssueItem.module.css";
+import { useAdminRequest } from "@/hooks/use-admin-request";
+import { useAdminRevision } from "@/hooks/use-admin-revision";
+import type { ClarificationCard, HighlightBox, Issue } from "@/types/feedback";
+
+type IssueItemProps = {
+  issue: Issue;
+  index: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  onSeek: (milliseconds: number) => void;
+};
+
+type StatusPill = { label: string; tone: "grey" | "orange" | "blue" | "green" };
+
+function getStatusPill(issue: Issue): StatusPill {
+  switch (issue.status) {
+    case "resolved":
+      return { label: "반영 완료", tone: "grey" };
+    case "answered":
+      return { label: "답변 받음", tone: "green" };
+    case "asked":
+      return { label: "물어봤어요", tone: "blue" };
+    case "reverify":
+      return { label: "다시 확인 중", tone: "blue" };
+    case "open":
+      return issue.confidence === "ambiguous" ? { label: "확인 필요", tone: "orange" } : { label: "명확", tone: "grey" };
+  }
+}
+
+// 강조 영역: 질문 카드에 지정된 영역을 먼저 쓰고, 없으면 요소 위치를 화면 크기로 나눠 0~1로 바꾼다.
+function findHighlight(issue: Issue): HighlightBox | null {
+  if (issue.clarification?.highlight) {
+    return issue.clarification.highlight;
+  }
+  const element = issue.element;
+  if (!element || element.viewport.width <= 0 || element.viewport.height <= 0) {
+    return null;
+  }
+  return {
+    x: element.rect.x / element.viewport.width,
+    y: element.rect.y / element.viewport.height,
+    width: element.rect.width / element.viewport.width,
+    height: element.rect.height / element.viewport.height,
+  };
+}
+
+function findAnswerText(card: ClarificationCard): string | null {
+  if (!card.answer) {
+    return null;
+  }
+  const optionLabel = card.options.find((option) => option.id === card.answer?.optionId)?.label;
+  return [optionLabel, card.answer.text].filter(Boolean).join(" · ") || null;
+}
+
+export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemProps) {
+  const bodyId = useId();
+  const pill = getStatusPill(issue);
+  const toneClassName = styles[`pill${pill.tone[0].toUpperCase()}${pill.tone.slice(1)}`];
+
+  return (
+    <li className={issue.status === "resolved" ? `${styles.item} ${styles.resolved}` : styles.item}>
+      <button type="button" className={styles.summaryRow} onClick={onToggle} aria-expanded={isOpen} aria-controls={bodyId}>
+        <span className={styles.index}>{index}</span>
+        <span className={styles.heading}>
+          <span className={styles.title}>{issue.title}</span>
+          {isOpen ? null : <span className={styles.collapsedSummary}>{issue.summary}</span>}
+        </span>
+        <span className={`${styles.pill} ${toneClassName}`}>{pill.label}</span>
+        <svg
+          className={isOpen ? `${styles.chevron} ${styles.chevronOpen}` : styles.chevron}
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="m3.5 6 4.5 4.5L12.5 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {isOpen ? (
+        <div id={bodyId} className={styles.body}>
+          <FrameThumbnail frameUrl={issue.frameUrl} highlight={findHighlight(issue)} tMs={issue.tMs} onSeek={onSeek} />
+          {issue.quote ? <blockquote className={styles.quote}>“{issue.quote}”</blockquote> : null}
+          <p className={styles.summary}>{issue.summary}</p>
+          {issue.suggestion ? (
+            <div className={styles.suggestion}>
+              <span className={styles.label}>수정 제안</span>
+              <p className={styles.suggestionText}>{issue.suggestion}</p>
+            </div>
+          ) : null}
+          {issue.element?.selector ? <SelectorChip selector={issue.element.selector} /> : null}
+          <IssueClarification issue={issue} />
+          {issue.status === "resolved" ? null : <ResolveButton issueId={issue.id} />}
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function IssueClarification({ issue }: { issue: Issue }) {
+  const card = issue.clarification;
+  if (!card || issue.status === "resolved") {
+    return null;
+  }
+  const answerText = findAnswerText(card);
+  if (answerText) {
+    return (
+      <p className={styles.answer}>
+        <span className={styles.answerLabel}>고객 답변</span>
+        <span className={styles.answerDot}>·</span>
+        {answerText}
+      </p>
+    );
+  }
+  if (card.approvedAt) {
+    return (
+      <p className={styles.waiting}>
+        <span className={styles.waitingQuestion}>{card.question}</span>
+        고객 답변을 기다리고 있어요
+      </p>
+    );
+  }
+  if (issue.confidence === "ambiguous") {
+    return <ClarificationDraft card={card} />;
+  }
+  return null;
+}
+
+function SelectorChip({ selector }: { selector: string }) {
+  const [isCopied, setIsCopied] = useState(false);
+
+  async function copySelector() {
+    try {
+      await navigator.clipboard.writeText(selector);
+      setIsCopied(true);
+      window.setTimeout(() => setIsCopied(false), 1500);
+    } catch {
+      setIsCopied(false);
+    }
+  }
+
+  return (
+    <div className={styles.selector}>
+      <code className={styles.selectorCode} title={selector}>
+        {selector}
+      </code>
+      <button type="button" className={styles.copyButton} onClick={() => void copySelector()} aria-label="선택자 복사하기">
+        {isCopied ? (
+          "복사했어요"
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="5.5" y="5.5" width="8" height="8" rx="2" stroke="currentColor" strokeWidth="1.75" />
+            <path d="M10.5 3.5v-.25A1.75 1.75 0 0 0 8.75 1.5h-5.5A1.75 1.75 0 0 0 1.5 3.25v5.5c0 .97.78 1.75 1.75 1.75h.25" stroke="currentColor" strokeWidth="1.75" />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
+}
+
+function ResolveButton({ issueId }: { issueId: string }) {
+  const request = useAdminRequest();
+  const { refresh } = useAdminRevision();
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function resolveIssue() {
+    setIsSaving(true);
+    setErrorMessage(null);
+    const result = await request(`/api/admin/issues/${issueId}`, { method: "PATCH", body: { status: "resolved" } });
+    setIsSaving(false);
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+    refresh();
+  }
+
+  return (
+    <div className={styles.actions}>
+      <AdminButton variant="weak" size="small" onClick={() => void resolveIssue()} isLoading={isSaving}>
+        반영 완료로 바꾸기
+      </AdminButton>
+      {errorMessage ? (
+        <span className={styles.actionError} role="alert">
+          {errorMessage}
+        </span>
+      ) : null}
+    </div>
+  );
+}

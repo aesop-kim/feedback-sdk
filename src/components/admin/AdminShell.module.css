@@ -1,0 +1,60 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-width: 1280px;
+  background: var(--bg-screen);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 56px;
+  padding: 0 var(--sp-5) 0 var(--sp-5);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  font-weight: var(--fw-semibold);
+  color: var(--grey-900);
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.projectName {
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--grey-700);
+}
+
+.divider {
+  width: 1px;
+  height: 12px;
+  background: var(--grey-200);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) 440px;
+  flex: 1;
+  min-height: 0;
+}
+
+.listColumn {
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg);
+  border-right: 1px solid var(--border-hairline);
+}
