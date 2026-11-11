@@ -15,6 +15,7 @@ describe("findRecordingFailureKind", () => {
   it("무음 문구가 들어 있으면 무음", () => {
     const error = `음성을 받아쓰지 못했어요: ${SILENT_AUDIO_ERROR}`;
     expect(findRecordingFailureKind({ status: "failed", error, analysisAttempt: 1 })).toBe("silent_audio");
+    expect(findRecordingFailureKind({ status: "failed", error: SILENT_AUDIO_ERROR, analysisAttempt: 0 })).toBe("silent_audio");
   });
 
   it("그 밖의 분석 실패", () => {

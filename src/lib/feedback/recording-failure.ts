@@ -14,11 +14,11 @@ export function findRecordingFailureKind(recording: {
   if (recording.status !== "failed") {
     return null;
   }
-  if (recording.analysisAttempt === 0) {
-    return "upload_incomplete";
-  }
   if (recording.error?.includes(SILENT_AUDIO_ERROR)) {
     return "silent_audio";
+  }
+  if (recording.analysisAttempt === 0) {
+    return "upload_incomplete";
   }
   return "analysis";
 }
