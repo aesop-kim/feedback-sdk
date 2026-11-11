@@ -9,6 +9,7 @@ vi.mock("@/lib/feedback/feedback-repository", () => ({ insertMessage: vi.fn(asyn
 vi.mock("@/lib/realtime/send-signal", () => ({ sendConversationSignal: vi.fn(async () => undefined) }));
 
 const { PATCH } = await import("@/app/api/admin/issues/[issueId]/route");
+const { insertMessage } = await import("@/lib/feedback/feedback-repository");
 
 const ISSUE_ROW = { id: "issue-1", title: "버튼이 안 눌려요", conversation_id: "conversation-1", status: "open", conversations: { project_id: "project-1" } };
 
@@ -20,6 +21,7 @@ function patchIssue(status: string) {
 describe("PATCH /api/admin/issues/[issueId]", () => {
   beforeEach(() => {
     supabaseHolder.client = null;
+    vi.mocked(insertMessage).mockClear();
   });
 
   it("이슈를 읽다가 DB 오류가 나면 500", async () => {
@@ -45,5 +47,31 @@ describe("PATCH /api/admin/issues/[issueId]", () => {
     supabaseHolder.client = createFakeSupabase({ issues: [{ data: ISSUE_ROW }, { data: [{ id: "issue-1" }] }] });
     const response = await patchIssue("resolved");
     expect(await response.json()).toEqual({ issueId: "issue-1", changed: true });
+  });
+
+  it("재확인 이슈를 해결됨으로 닫으면 고객에게 끝났다고 한 번 알린다 (V4-02)", async () => {
+    supabaseHolder.client = createFakeSupabase({ issues: [{ data: { ...ISSUE_ROW, status: "reverify" } }, { data: [{ id: "issue-1" }] }] });
+    const response = await patchIssue("closed");
+    expect(await response.json()).toEqual({ issueId: "issue-1", changed: true });
+    expect(insertMessage).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(insertMessage).mock.calls[0][0]).toMatchObject({
+      sender: "system",
+      body: "‘버튼이 안 눌려요’ 확인해 주셔서 고마워요. 해결로 정리했어요.",
+    });
+  });
+
+  it("닫은 이슈를 다시 열면 고객에게 다시 고친다고 알린다", async () => {
+    supabaseHolder.client = createFakeSupabase({ issues: [{ data: { ...ISSUE_ROW, status: "closed" } }, { data: [{ id: "issue-1" }] }] });
+    const response = await patchIssue("open");
+    expect(await response.json()).toEqual({ issueId: "issue-1", changed: true });
+    expect(vi.mocked(insertMessage).mock.calls[0][0]).toMatchObject({ body: "‘버튼이 안 눌려요’ 아직 남아 있는 걸 확인했어요. 다시 고칠게요." });
+  });
+
+  it("이미 닫힌 이슈를 또 닫거나, 다른 요청이 먼저 바꿨으면 메시지를 보내지 않는다", async () => {
+    supabaseHolder.client = createFakeSupabase({ issues: [{ data: { ...ISSUE_ROW, status: "closed" } }] });
+    expect(await (await patchIssue("closed")).json()).toEqual({ issueId: "issue-1", changed: false });
+    supabaseHolder.client = createFakeSupabase({ issues: [{ data: { ...ISSUE_ROW, status: "reverify" } }, { data: [] }] });
+    expect(await (await patchIssue("closed")).json()).toEqual({ issueId: "issue-1", changed: false });
+    expect(insertMessage).not.toHaveBeenCalled();
   });
 });

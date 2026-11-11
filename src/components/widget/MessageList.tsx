@@ -82,6 +82,7 @@ function MessageContent({ message, showSenderName, onAnswer, onRerecord }: Messa
         status={message.recording.status}
         failureKind={message.recording.failureKind}
         issueCount={message.recording.issueCount}
+        reverifyIssueTitle={message.recording.reverifyIssueTitle}
         onRerecord={onRerecord}
       />
     );

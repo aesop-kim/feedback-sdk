@@ -3,6 +3,7 @@ import { getFailureGuidance } from "@/lib/feedback/recording-failure";
 import {
   getAdminRecordingStateLabel,
   getWidgetRecordingStatusText,
+  getWidgetRecordingTitle,
   needsRerecord,
 } from "@/lib/feedback/recording-status-label";
 
@@ -28,6 +29,28 @@ describe("getWidgetRecordingStatusText", () => {
     expect(getWidgetRecordingStatusText({ ...base, status: "analyzed", issueCount: 3 })).toBe("문제 3건을 정리했어요");
     expect(getWidgetRecordingStatusText({ ...base, status: "analyzed" })).toBe("정리를 마쳤어요");
     expect(getWidgetRecordingStatusText({ ...base, status: "upload_failed" })).toBe("보내지 못했어요");
+  });
+});
+
+describe("재확인 녹화 카드 (V4-02)", () => {
+  const base = { issueCount: 0, uploadProgress: 0, failureKind: null };
+
+  it("제목에 원래 이슈를 붙인다", () => {
+    expect(getWidgetRecordingTitle("버튼 무반응")).toBe("‘버튼 무반응’ 다시 확인 녹화");
+    expect(getWidgetRecordingTitle(null)).toBe("화면 녹화");
+  });
+
+  it("정리가 끝나도 문제 건수를 말하지 않는다", () => {
+    for (const issueCount of [0, 2]) {
+      const text = getWidgetRecordingStatusText({ ...base, status: "analyzed", issueCount, isReverify: true });
+      expect(text).toBe("받았어요. 확인하고 알려 드릴게요");
+    }
+  });
+
+  it("업로드 미완료는 재확인 녹화여도 그대로 알린다", () => {
+    expect(getWidgetRecordingStatusText({ ...base, status: "failed", failureKind: "upload_incomplete", isReverify: true })).toBe(
+      "녹화가 끝까지 올라가지 않았어요",
+    );
   });
 });
 

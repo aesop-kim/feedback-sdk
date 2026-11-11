@@ -41,9 +41,8 @@ type RecordingRow = {
   error: string | null;
   created_at: string;
   analysis_attempt: number;
+  reverify_issue_id: string | null;
 };
-
-type RecordingDetailRow = RecordingRow & { reverify_issue_id: string | null };
 
 type IssueRow = {
   id: string;
@@ -120,7 +119,7 @@ function toClarificationCard(
   };
 }
 
-function toRecordingSummary(row: RecordingRow, issueCount: number): RecordingSummary {
+function toRecordingSummary(row: RecordingRow, issueCount: number, reverifyIssueTitle: string | null): RecordingSummary {
   return {
     id: row.id,
     status: row.status,
@@ -130,6 +129,7 @@ function toRecordingSummary(row: RecordingRow, issueCount: number): RecordingSum
     issueCount,
     createdAt: row.created_at,
     failureKind: findRecordingFailureKind({ status: row.status, error: row.error, analysisAttempt: row.analysis_attempt }),
+    reverifyIssueTitle,
   };
 }
 
@@ -150,7 +150,7 @@ export async function getConversationMessages(conversationId: string, audience: 
     recordingIds.length
       ? supabase
           .from("recordings")
-          .select("id, status, duration_ms, page_url, page_title, transcript, error, created_at, analysis_attempt")
+          .select("id, status, duration_ms, page_url, page_title, transcript, error, created_at, analysis_attempt, reverify_issue_id")
           .in("id", recordingIds)
       : Promise.resolve({ data: [] }),
     recordingIds.length ? supabase.from("issues").select("recording_id").in("recording_id", recordingIds) : Promise.resolve({ data: [] }),
@@ -164,6 +164,12 @@ export async function getConversationMessages(conversationId: string, audience: 
   const signedUrls = await createSignedUrlMap([...cardIssues.values()].map((issue) => issue.frame_path));
 
   const recordings = new Map(((recordingRows ?? []) as RecordingRow[]).map((row) => [row.id, row]));
+  // 재확인 녹화는 위젯 카드에 원래 이슈 제목을 붙인다.
+  const reverifyIssueIds = [...recordings.values()].map((row) => row.reverify_issue_id).filter((id): id is string => Boolean(id));
+  const { data: reverifyIssueRows } = reverifyIssueIds.length
+    ? await supabase.from("issues").select("id, title").in("id", reverifyIssueIds)
+    : { data: [] };
+  const reverifyIssueTitles = new Map((reverifyIssueRows ?? []).map((row) => [row.id as string, row.title as string]));
   const issueCounts = new Map<string, number>();
   for (const row of (issueCountRows ?? []) as { recording_id: string }[]) {
     issueCounts.set(row.recording_id, (issueCounts.get(row.recording_id) ?? 0) + 1);
@@ -180,7 +186,13 @@ export async function getConversationMessages(conversationId: string, audience: 
         type: message.type,
         body: message.body,
         createdAt: message.created_at,
-        recording: recordingRow ? toRecordingSummary(recordingRow, issueCounts.get(recordingRow.id) ?? 0) : null,
+        recording: recordingRow
+          ? toRecordingSummary(
+              recordingRow,
+              issueCounts.get(recordingRow.id) ?? 0,
+              recordingRow.reverify_issue_id ? reverifyIssueTitles.get(recordingRow.reverify_issue_id) ?? null : null,
+            )
+          : null,
         clarification: cardRow ? toClarificationCard(cardRow, cardIssues.get(cardRow.issue_id), answers, signedUrls) : null,
       };
     })
@@ -194,7 +206,7 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
     .select("id, status, duration_ms, page_url, page_title, transcript, error, created_at, analysis_attempt, reverify_issue_id")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false });
-  const recordings = (recordingRows ?? []) as RecordingDetailRow[];
+  const recordings = (recordingRows ?? []) as RecordingRow[];
   if (recordings.length === 0) {
     return [];
   }
@@ -217,10 +229,12 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
     ...recordings.map((recording) => `${recording.id}/video.webm`),
   ]);
 
+  const issueTitles = new Map(issues.map((issue) => [issue.id, issue.title]));
   return recordings.map((recording) => {
     const recordingIssues = issues.filter((issue) => issue.recording_id === recording.id);
+    const reverifyIssueTitle = recording.reverify_issue_id ? issueTitles.get(recording.reverify_issue_id) ?? null : null;
     return {
-      ...toRecordingSummary(recording, recordingIssues.length),
+      ...toRecordingSummary(recording, recordingIssues.length, reverifyIssueTitle),
       videoUrl: signedUrls.get(`${recording.id}/video.webm`) ?? null,
       transcript: recording.transcript?.segments ?? [],
       error: recording.error,
