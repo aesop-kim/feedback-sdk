@@ -219,7 +219,7 @@ function ReverifyActions({ issueId }: { issueId: string }) {
         <AdminButton variant="text" size="small" onClick={() => setIsConfirmingClose(false)} disabled={savingStatus === "closed"}>
           다음에
         </AdminButton>
-        <span className={styles.actionCaption}>닫은 뒤에도 다시 열 수 있어요</span>
+        <span className={styles.actionCaption}>고객에게 해결로 정리했다고 알려요. 닫은 뒤에도 다시 열 수 있어요</span>
         <ActionError message={errorMessage} />
       </div>
     );
@@ -227,7 +227,7 @@ function ReverifyActions({ issueId }: { issueId: string }) {
 
   return (
     <div className={styles.actions} role="group" aria-label="다시 확인 결과">
-      <span className={styles.actionCaption}>고객이 다시 녹화해 보냈어요. 고쳐졌으면 닫고, 아직 남아 있으면 다시 열어 주세요</span>
+      <span className={styles.actionCaption}>고객이 다시 녹화해 보냈어요. 고쳐졌으면 닫고, 아직 남아 있으면 다시 열어 주세요. 어느 쪽이든 고객에게 알려요</span>
       <div className={styles.actionButtons}>
         <AdminButton variant="weak" size="small" onClick={() => setIsConfirmingClose(true)} disabled={savingStatus === "open"}>
           해결됨으로 닫기
@@ -251,7 +251,7 @@ function ClosedActions({ issueId }: { issueId: string }) {
         <AdminButton variant="text" size="small" onClick={() => void changeStatus("open")} isLoading={savingStatus === "open"}>
           다시 열기
         </AdminButton>
-        <span className={styles.actionCaption}>문제가 남아 있으면 다시 열어 반영 완료부터 다시 해요</span>
+        <span className={styles.actionCaption}>문제가 남아 있으면 다시 열어요. 고객에게 다시 고친다고 알려요</span>
       </div>
       <ActionError message={errorMessage} />
     </div>

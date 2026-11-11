@@ -7,11 +7,13 @@ export type WidgetRecordingStatus = RecordingStatus | "upload_failed";
 // 위젯 녹화 카드의 상태 문구. 실패는 종류로 가른다.
 // 업로드 미완료는 받은 영상이 없으니 사실대로 알리고 다시 녹화를 권한다(관리자 안내와 같은 이야기).
 // 그 밖의 실패는 영상을 받았고 담당자가 직접 볼 수 있으니 고객에게 오류로 보이지 않게 한다.
+// 재확인 녹화는 "문제 N건"이 "고친 게 실패했다"로 읽혀서, 받았다고만 하고 결과는 담당자 메시지로 알린다(V4-02).
 export function getWidgetRecordingStatusText(input: {
   status: WidgetRecordingStatus;
   failureKind: RecordingFailureKind | null;
   issueCount: number;
   uploadProgress: number;
+  isReverify?: boolean;
 }): string {
   switch (input.status) {
     case "uploading":
@@ -20,12 +22,20 @@ export function getWidgetRecordingStatusText(input: {
     case "analyzing":
       return "정리하고 있어요";
     case "analyzed":
+      if (input.isReverify) {
+        return "받았어요. 확인하고 알려 드릴게요";
+      }
       return input.issueCount > 0 ? `문제 ${input.issueCount}건을 정리했어요` : "정리를 마쳤어요";
     case "failed":
       return input.failureKind === "upload_incomplete" ? "녹화가 끝까지 올라가지 않았어요" : "받았어요. 담당자가 직접 볼게요";
     case "upload_failed":
       return "보내지 못했어요";
   }
+}
+
+// 위젯 녹화 카드 제목. 재확인 녹화는 관리자 칩처럼 어떤 이슈를 다시 확인한 녹화인지 붙인다.
+export function getWidgetRecordingTitle(reverifyIssueTitle: string | null | undefined): string {
+  return reverifyIssueTitle ? `‘${reverifyIssueTitle}’ 다시 확인 녹화` : "화면 녹화";
 }
 
 // 고객이 다시 녹화해야 하는 녹화인지. 위젯 카드에 "다시 녹화하기"를 단다.

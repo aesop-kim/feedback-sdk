@@ -44,6 +44,8 @@ export type RecordingSummary = {
   createdAt: string;
   // 실패한 녹화의 종류(실패가 아니면 null). 위젯과 관리자가 같은 이야기를 하도록 둘 다 받는다.
   failureKind: RecordingFailureKind | null;
+  // 재확인 녹화면 원래 이슈 제목(일반 녹화면 null). 위젯 카드에 "‘제목’ 다시 확인 녹화"로 붙인다.
+  reverifyIssueTitle: string | null;
 };
 
 export type ChatMessage = {

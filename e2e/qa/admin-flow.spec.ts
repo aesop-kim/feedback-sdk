@@ -427,6 +427,11 @@ test("반영 완료로 바꾸면 위젯에 재확인 안내가 뜨고, 그 안�
   await captureQaScreen(adminPage, "admin-09-admin-reverify-closed");
   const { data: closedIssue } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
   expect(closedIssue?.status).toBe("closed");
+
+  // V4-02: 고객은 재확인 녹화 카드에서 어떤 이슈를 다시 확인했는지 보고, 닫힌 결과를 메시지로 듣는다.
+  await expect(widget.getByText("‘QA 이슈 제목’ 다시 확인 녹화")).toBeVisible();
+  await expect(widget.getByText("‘QA 이슈 제목’ 확인해 주셔서 고마워요. 해결로 정리했어요.")).toBeVisible({ timeout: 5_000 });
+  await captureQaScreen(customerPage, "admin-09-widget-reverify-closed");
   await adminContext.close();
   await customerContext.close();
 });
@@ -464,13 +469,17 @@ test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 �
   await expect(listRow).not.toContainText("남은 문제");
   await captureQaScreen(adminPage, "admin-12-reverify-closed");
 
-  // API는 멱등이다. 다시 닫으면 그대로, 닫힌 이슈를 반영 완료로 되돌리면 409, 고객에게 메시지는 가지 않는다.
+  // API는 멱등이다. 다시 닫으면 그대로, 닫힌 이슈를 반영 완료로 되돌리면 409.
+  // V4-02: 고객에게는 실제로 닫힌 한 번만 메시지가 간다.
   const issueUrl = `${SDK_ORIGIN}/api/admin/issues/${seeded.issueId}`;
   const closeAgain = await adminPage.request.patch(issueUrl, { data: { status: "closed" } });
   expect(await closeAgain.json()).toEqual({ issueId: seeded.issueId, changed: false });
   expect((await adminPage.request.patch(issueUrl, { data: { status: "resolved" } })).status()).toBe(409);
-  const { data: systemMessages } = await database.from("messages").select("id").eq("conversation_id", conversationId).eq("type", "system");
-  expect(systemMessages).toHaveLength(0);
+  const readSystemMessages = async () =>
+    (await database.from("messages").select("body").eq("conversation_id", conversationId).eq("type", "system").order("created_at")).data?.map(
+      (row) => row.body,
+    );
+  expect(await readSystemMessages()).toEqual(["‘QA 이슈 제목’ 확인해 주셔서 고마워요. 해결로 정리했어요."]);
   const { data: closedIssue } = await database.from("issues").select("status").eq("id", seeded.issueId).single();
   expect(closedIssue?.status).toBe("closed");
 
@@ -480,6 +489,7 @@ test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 �
   await expect(listRow).toContainText("남은 문제 1건");
   const { data: reopenedFromClosed } = await database.from("issues").select("status, resolved_at").eq("id", seeded.issueId).single();
   expect(reopenedFromClosed).toEqual({ status: "open", resolved_at: null });
+  expect((await readSystemMessages())?.at(-1)).toBe("‘QA 이슈 제목’ 아직 남아 있는 걸 확인했어요. 다시 고칠게요.");
 
   // 아직 안 고쳐졌으면 다시 열어 반영 완료 버튼을 되찾는다.
   await database.from("issues").update({ status: "reverify" }).eq("id", seeded.issueId);
@@ -489,6 +499,7 @@ test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 �
   await expect(listRow).toContainText("남은 문제 1건");
   const { data: reopenedIssue } = await database.from("issues").select("status, resolved_at").eq("id", seeded.issueId).single();
   expect(reopenedIssue).toEqual({ status: "open", resolved_at: null });
+  expect(await readSystemMessages()).toHaveLength(3);
   await adminContext.close();
 });
 

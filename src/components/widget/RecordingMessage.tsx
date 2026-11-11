@@ -1,6 +1,10 @@
 import { ScreenIcon } from "@/components/widget/WidgetIcons";
 import { formatRecordingDuration } from "@/lib/recording/format-recording-time";
-import { getWidgetRecordingStatusText, type WidgetRecordingStatus } from "@/lib/feedback/recording-status-label";
+import {
+  getWidgetRecordingStatusText,
+  getWidgetRecordingTitle,
+  type WidgetRecordingStatus,
+} from "@/lib/feedback/recording-status-label";
 import type { RecordingFailureKind } from "@/types/feedback";
 import styles from "@/components/widget/RecordingMessage.module.css";
 
@@ -9,6 +13,8 @@ type RecordingMessageProps = {
   status: WidgetRecordingStatus;
   failureKind?: RecordingFailureKind | null;
   issueCount: number;
+  // 재확인 녹화면 원래 이슈 제목.
+  reverifyIssueTitle?: string | null;
   uploadProgress?: number;
   onRetry?: () => void;
   // 있으면 받은 영상이 없는 녹화: 아래에 '다시 녹화하기'를 단다.
@@ -20,6 +26,7 @@ export function RecordingMessage({
   status,
   failureKind = null,
   issueCount,
+  reverifyIssueTitle = null,
   uploadProgress = 0,
   onRetry,
   onRerecord,
@@ -32,10 +39,10 @@ export function RecordingMessage({
         </span>
         <div className={styles.text}>
           <p className={styles.title}>
-            화면 녹화 · <span className={styles.duration}>{formatRecordingDuration(durationMs)}</span>
+            {getWidgetRecordingTitle(reverifyIssueTitle)} · <span className={styles.duration}>{formatRecordingDuration(durationMs)}</span>
           </p>
           <p className={styles.status} data-status={status} data-failure-kind={failureKind ?? undefined}>
-            {getWidgetRecordingStatusText({ status, failureKind, issueCount, uploadProgress })}
+            {getWidgetRecordingStatusText({ status, failureKind, issueCount, uploadProgress, isReverify: Boolean(reverifyIssueTitle) })}
           </p>
           {status === "uploading" ? (
             <span className={styles.progressTrack} aria-hidden="true">

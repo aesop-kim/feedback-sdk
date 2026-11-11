@@ -1,6 +1,7 @@
 import { findAdminRejection } from "@/lib/auth/require-admin";
 import { insertMessage } from "@/lib/feedback/feedback-repository";
 import { findIssueTransition, getAdminTransitionSources, type AdminIssueStatus } from "@/lib/feedback/issue-status";
+import { getIssueStatusMessage } from "@/lib/feedback/issue-status-message";
 import { respondError, respondJson, respondValidationError } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
 import { getFirstRelation } from "@/lib/supabase/first-relation";
@@ -28,7 +29,8 @@ const REJECTED_MESSAGES: Record<AdminIssueStatus, string> = {
 // 이슈 상태 바꾸기. 같은 요청을 두 번 보내도 두 번째는 changed:false라서 메시지가 두 번 가지 않는다.
 // - resolved(반영 완료): 고객에게 다시 확인해 달라는 메시지를 보낸다. 위젯은 GET /api/messages의
 //   reverifyRequest로 이 이슈를 알고, 재확인 녹화에 reverifyIssueId를 붙여 보낸다.
-// - closed(해결됨) / open(다시 열기): 재확인 녹화를 본 관리자가 고르는 마무리. 고객에게는 알리지 않는다.
+// - closed(해결됨) / open(다시 열기): 재확인 녹화를 본 관리자가 고르는 마무리. 재확인 녹화를 보낸 고객이
+//   결과를 알 수 있게 짧은 메시지를 보낸다(V4-02). 닫은 이슈를 다시 열 때도 같은 메시지가 간다.
 export async function PATCH(request: Request, { params }: { params: Promise<{ issueId: string }> }) {
   const rejection = await findAdminRejection();
   if (rejection) {
@@ -76,15 +78,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   }
 
   const projectRelation = getFirstRelation<{ project_id: string }>(issue.conversations);
-  if (target === "resolved") {
-    const messageId = await insertMessage({
-      conversationId: issue.conversation_id,
-      sender: "system",
-      type: "system",
-      body: `‘${issue.title}’ 수정을 반영했어요. 같은 화면에서 한 번 더 확인해 주세요.`,
-      preview: "수정을 반영했어요",
-    });
-    await sendConversationSignal(issue.conversation_id, projectRelation.project_id, { type: "message.created", id: messageId });
-  }
+  const message = getIssueStatusMessage(target, issue.title);
+  const messageId = await insertMessage({
+    conversationId: issue.conversation_id,
+    sender: "system",
+    type: "system",
+    body: message.body,
+    preview: message.preview,
+  });
+  await sendConversationSignal(issue.conversation_id, projectRelation.project_id, { type: "message.created", id: messageId });
   return respondJson({ issueId, changed: true });
 }
