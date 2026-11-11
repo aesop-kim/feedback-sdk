@@ -50,7 +50,7 @@
 }
 
 .input::placeholder {
-  color: var(--grey-500);
+  color: var(--text-placeholder);
 }
 
 /* 포커스 링은 테두리 1px + 그림자 1px로 2px처럼 보이게 한다(UX-12). */

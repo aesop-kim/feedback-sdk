@@ -1,10 +1,14 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 // tokens.css의 실제 값으로 글자/면 조합의 WCAG 대비를 계산한다. 토큰 값을 바꾸면 여기서 바로 걸린다.
 const TOKENS_CSS = readFileSync(fileURLToPath(new URL("./tokens.css", import.meta.url)), "utf8");
 const MIN_TEXT_CONTRAST = 4.5;
+// placeholder는 필수 글자가 아니라서 3:1을 지킨다(tds-reference.md 1.7절 "placeholder 위계").
+const MIN_PLACEHOLDER_CONTRAST = 3;
+// placeholder가 보조 글자처럼 보이지 않도록 같은 면에서 이만큼은 대비가 낮아야 한다.
+const MIN_PLACEHOLDER_GAP = 1.5;
 
 type Rgba = { red: number; green: number; blue: number; alpha: number };
 
@@ -62,9 +66,6 @@ const TEXT_PAIRS: [string, string[], string][] = [
   ["text-tertiary", ["grey-50"], "옅은 면 위 캡션"],
   ["text-tertiary", ["grey-100"], "녹화 카드 상태, 회색 배지"],
   ["text-tertiary", ["bg-screen"], "관리자 바탕 위 캡션"],
-  ["text-placeholder", ["bg"], "입력창 placeholder(흰 면)"],
-  ["text-placeholder", ["grey-50"], "질문 초안 캡션"],
-  ["text-placeholder", ["grey-100"], "입력창 placeholder(회색 면)"],
   ["bg", ["blue-500"], "고객 말풍선, 보내기, 런처 배지 외 주 버튼"],
   ["white-alpha-900", ["blue-500"], "주 버튼 글자"],
   ["bg", ["blue-600"], "주 버튼 hover"],
@@ -83,6 +84,13 @@ const TEXT_PAIRS: [string, string[], string][] = [
   ["bg", ["white-alpha-200", "grey-900"], "녹화 알약 버튼"],
 ];
 
+// [placeholder가 놓이는 면(위에서 아래 순서), 쓰는 곳]
+const PLACEHOLDER_SURFACES: [string[], string][] = [
+  [["bg"], "입력창 placeholder(흰 면)"],
+  [["grey-50"], "관리자 로그인·답장 입력"],
+  [["grey-100"], "위젯 입력창·직접 입력(회색 면)"],
+];
+
 function getLayeredBackground(layers: string[]): Rgba {
   return layers.reduceRight<Rgba | null>((below, name) => {
     const color = getTokenColor(name);
@@ -95,6 +103,32 @@ describe("토큰 글자 대비", () => {
     const background = getLayeredBackground(backgroundLayers);
     const foreground = flatten(getTokenColor(foregroundName), background);
     expect(getContrastRatio(foreground, background)).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  it.each(PLACEHOLDER_SURFACES)("placeholder / %j (%s)는 3:1 이상이고 보조 글자보다 분명히 옅다", (backgroundLayers) => {
+    const background = getLayeredBackground(backgroundLayers);
+    const placeholder = getContrastRatio(flatten(getTokenColor("text-placeholder"), background), background);
+    const tertiary = getContrastRatio(flatten(getTokenColor("text-tertiary"), background), background);
+    expect(placeholder).toBeGreaterThanOrEqual(MIN_PLACEHOLDER_CONTRAST);
+    expect(tertiary - placeholder).toBeGreaterThanOrEqual(MIN_PLACEHOLDER_GAP);
+  });
+
+  it("placeholder 색(grey-500)은 ::placeholder 규칙에서만 쓴다", () => {
+    const componentsDirectory = fileURLToPath(new URL("../components", import.meta.url));
+    const misuses: string[] = [];
+    for (const entry of readdirSync(componentsDirectory, { recursive: true, encoding: "utf8" })) {
+      if (!entry.endsWith(".module.css")) {
+        continue;
+      }
+      const css = readFileSync(`${componentsDirectory}/${entry}`, "utf8");
+      for (const rule of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const [, selector, body] = rule;
+        if (/color:\s*var\(--(grey-500|text-placeholder)\)/.test(body) && !selector.includes("::placeholder")) {
+          misuses.push(`${entry}: ${selector.trim()}`);
+        }
+      }
+    }
+    expect(misuses).toEqual([]);
   });
 
   it("계산식은 WCAG 예시와 같다", () => {

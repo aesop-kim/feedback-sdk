@@ -39,7 +39,7 @@
   font-size: var(--fs-t6);
   line-height: var(--lh-t6);
   font-weight: var(--fw-semibold);
-  color: var(--grey-500);
+  color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 
