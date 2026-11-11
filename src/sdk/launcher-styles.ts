@@ -108,7 +108,7 @@ export const LAUNCHER_STYLES = `
 }
 `;
 
-// 말풍선 + 음성 파형: "화면을 보여주며 말로 설명한다"는 이 위젯의 쓰임을 그대로 그린다.
+// 말풍선 + 음성 파형: "화면을 보여 주며 말로 설명한다"는 이 위젯의 쓰임을 그대로 그린다.
 export const LAUNCHER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5h10a3.5 3.5 0 0 1 3.5 3.5v6a3.5 3.5 0 0 1-3.5 3.5h-5l-3.5 3v-3H7A3.5 3.5 0 0 1 3.5 14V8A3.5 3.5 0 0 1 7 4.5Z"/><path d="M9 10v2M12 8.5v5M15 10v2"/></svg>`;
 
 export const CLOSE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`;

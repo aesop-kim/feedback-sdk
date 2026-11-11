@@ -177,6 +177,10 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
     void recording.startRecording();
   };
 
+  const handleStartReverify = (issueId: string | null) => {
+    void recording.startRecording({ reverifyIssueId: issueId });
+  };
+
   if (recording.phase !== "idle") {
     return (
       <RecordingPill
@@ -199,6 +203,7 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
       <WidgetHeader
         projectName={conversation.session?.projectName ?? ""}
         userName={conversation.session?.endUserName || init?.user.name || ""}
+        isCompact={isReady && hasMessages}
         onClose={handleClose}
       />
       <div className={styles.body} data-widget-scroll="">
@@ -216,10 +221,12 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
         {isReady && hasMessages ? (
           <MessageList
             messages={conversation.messages}
+            reverifyRequest={conversation.reverifyRequest}
             pendingTexts={pendingTexts}
             pendingUpload={recording.pendingUpload}
             onAnswer={handleAnswer}
             onRetryText={handleRetryText}
+            onStartReverify={handleStartReverify}
             onRetryUpload={recording.retryUpload}
           />
         ) : null}

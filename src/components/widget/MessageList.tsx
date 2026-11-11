@@ -4,9 +4,11 @@ import { useEffect, useRef } from "react";
 import { ClarificationCard } from "@/components/widget/ClarificationCard";
 import { MessageBubble } from "@/components/widget/MessageBubble";
 import { RecordingMessage } from "@/components/widget/RecordingMessage";
+import { ReverifyCard } from "@/components/widget/ReverifyCard";
 import { formatMessageTime, getMinuteKey } from "@/lib/recording/format-recording-time";
 import type { PendingUpload } from "@/hooks/use-widget-recording";
-import type { ChatMessage } from "@/types/feedback";
+import { findReverifyPrompt } from "@/lib/widget/reverify-prompt";
+import type { ChatMessage, ReverifyRequest } from "@/types/feedback";
 import styles from "@/components/widget/MessageList.module.css";
 
 // 목록 항목 사이 간격(4px)과 같게 두어, 카드 위로 앞 말풍선 끝자락이 비치지 않게 한다.
@@ -16,10 +18,12 @@ export type PendingText = { localId: string; body: string; isFailed: boolean };
 
 type MessageListProps = {
   messages: ChatMessage[];
+  reverifyRequest: ReverifyRequest | null | undefined;
   pendingTexts: PendingText[];
   pendingUpload: PendingUpload | null;
   onAnswer: (cardId: string, answer: { optionId?: string; text?: string }) => Promise<void>;
   onRetryText: (localId: string) => void;
+  onStartReverify: (issueId: string | null) => void;
   onRetryUpload: () => void;
 };
 
@@ -65,11 +69,21 @@ function MessageContent({ message, showSenderName, onAnswer }: { message: ChatMe
   return <MessageBubble sender={message.sender} body={message.body} showSenderName={showSenderName} />;
 }
 
-export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, onRetryText, onRetryUpload }: MessageListProps) {
+export function MessageList({
+  messages,
+  reverifyRequest,
+  pendingTexts,
+  pendingUpload,
+  onAnswer,
+  onRetryText,
+  onStartReverify,
+  onRetryUpload,
+}: MessageListProps) {
   const listRef = useRef<HTMLOListElement>(null);
   const itemCount = messages.length + pendingTexts.length + (pendingUpload ? 1 : 0);
 
   const waitingCardMessageId = findWaitingCardMessageId(messages);
+  const reverifyPrompt = findReverifyPrompt(messages, reverifyRequest);
 
   useEffect(() => {
     // scrollIntoView는 고객사 페이지까지 스크롤할 수 있어서, 감싼 스크롤 영역만 직접 움직인다.
@@ -98,7 +112,11 @@ export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, o
           data-sender={message.sender}
           data-group-start={isGroupStart(messages, index)}
         >
-          <MessageContent message={message} showSenderName={isGroupStart(messages, index)} onAnswer={onAnswer} />
+          {reverifyPrompt?.messageId === message.id ? (
+            <ReverifyCard title={reverifyPrompt.title} onStart={() => onStartReverify(reverifyPrompt.issueId)} />
+          ) : (
+            <MessageContent message={message} showSenderName={isGroupStart(messages, index)} onAnswer={onAnswer} />
+          )}
           {message.sender !== "system" && isGroupEnd(messages, index) ? (
             <time className={styles.time} dateTime={message.createdAt}>
               {formatMessageTime(message.createdAt)}

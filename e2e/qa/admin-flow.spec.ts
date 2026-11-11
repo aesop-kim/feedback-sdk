@@ -196,7 +196,7 @@ test("질문을 고쳐 승인하면 위젯에 고친 질문 카드가 뜨고, �
 
   await card.getByRole("radio", { name: "QA 보기 C" }).click();
   await card.getByRole("button", { name: "답변 보내기" }).click();
-  await expect(widget.getByText("답변을 보냈어요")).toBeVisible();
+  await expect(widget.getByText("답변 고마워요")).toBeVisible();
   await expect(analysis.getByText("고객 답변", { exact: true })).toBeVisible({ timeout: 5_000 });
   await expect(analysis.getByText("QA 보기 C")).toBeVisible();
   await captureQaScreen(adminPage, "admin-07-answer-reflected");
@@ -238,7 +238,7 @@ test("다른 탭에서 이미 답한 질문에 다시 답하면 409를 알아듣
 
   await firstCard.getByRole("radio").first().click();
   await firstCard.getByRole("button", { name: "답변 보내기" }).click();
-  await expect(firstWidget.getByText("답변을 보냈어요")).toBeVisible();
+  await expect(firstWidget.getByText("답변 고마워요")).toBeVisible();
 
   const answerResponse = secondTab.waitForResponse((response) => response.url().includes("/answer"));
   await secondCard.getByRole("radio").nth(1).click();
@@ -250,7 +250,7 @@ test("다른 탭에서 이미 답한 질문에 다시 답하면 409를 알아듣
   const toastText = await secondWidget.getByText(/이미 답한 질문|연결이 잠깐 불안정해요/).allTextContents();
   console.log(`[qa] 409 toast: ${JSON.stringify(toastText)}`);
   expect.soft(toastText.join(" "), "409인데 '연결 불안정' 안내를 보여 주면 안 된다").not.toContain("연결이 잠깐 불안정해요");
-  await expect.soft(secondWidget.getByText("답변을 보냈어요"), "409를 받으면 카드가 답한 상태로 바뀌어야 한다").toBeVisible({ timeout: 3_000 });
+  await expect.soft(secondWidget.getByText("답변 고마워요"), "409를 받으면 카드가 답한 상태로 바뀌어야 한다").toBeVisible({ timeout: 3_000 });
   await context.close();
 });
 
