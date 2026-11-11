@@ -64,21 +64,40 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
     return respondError(500, "답변을 저장하지 못했어요.");
   }
 
+  // 여기부터는 답변이 이미 저장된 뒤다. 이후 단계가 실패해도 500을 돌려주면 고객은 답이 안 간 줄 알고
+  // 다시 눌러 409를 받는다. 그래서 실패는 로그만 남기고 성공으로 돌려준다.
+  // 위젯은 성공하면 다시 불러오고, 카드의 answered_at으로 답한 상태를 보여 준다(텍스트 메시지와 무관).
+  // 관리자 화면도 카드의 답변(clarification_answers)을 읽으므로 메시지가 빠져도 답은 보인다.
   // 관리자가 그사이 반영 완료로 바꿨다면 eq(status) 조건에 걸려 바뀌지 않는다.
   const nextStatus = getStatusAfterAnswer(cardIssue.status);
   if (nextStatus !== cardIssue.status) {
-    await supabase.from("issues").update({ status: nextStatus }).eq("id", card.issue_id).eq("status", cardIssue.status);
+    const { error: statusError } = await supabase
+      .from("issues")
+      .update({ status: nextStatus })
+      .eq("id", card.issue_id)
+      .eq("status", cardIssue.status);
+    if (statusError) {
+      console.error(`[answer] ${cardId} 이슈 상태를 바꾸지 못했어요`, statusError.message);
+    }
   }
 
   const answerText = [selectedOption?.label, parsed.data.text].filter(Boolean).join(" · ");
-  const messageId = await insertMessage({
-    conversationId: conversation.conversationId,
-    sender: "user",
-    type: "text",
-    body: answerText,
-    preview: `답변: ${answerText}`,
-  });
+  let messageId: string | null = null;
+  try {
+    messageId = await insertMessage({
+      conversationId: conversation.conversationId,
+      sender: "user",
+      type: "text",
+      body: answerText,
+      preview: `답변: ${answerText}`,
+    });
+  } catch (error) {
+    console.error(`[answer] ${cardId} 답변 메시지를 남기지 못했어요`, error);
+  }
+  // 신호 실패는 sendChannelSignal이 로그만 남기고 삼킨다.
   await sendConversationSignal(conversation.conversationId, conversation.projectId, { type: "clarification.answered", id: cardId });
-  await sendConversationSignal(conversation.conversationId, conversation.projectId, { type: "message.created", id: messageId });
+  if (messageId) {
+    await sendConversationSignal(conversation.conversationId, conversation.projectId, { type: "message.created", id: messageId });
+  }
   return respondJson({ cardId, answeredAt });
 }
