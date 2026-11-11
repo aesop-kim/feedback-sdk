@@ -2,7 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import {
   ADMIN_PASSWORD,
-  IS_DEPLOYED,
   SDK_ORIGIN,
   approveCardInDatabase,
   captureQaScreen,
@@ -245,7 +244,7 @@ test("반영 완료한 이슈가 있는 녹화는 다시 정리하기 대신 이
 });
 
 test("replace_recording_issues는 반영 완료한 이슈가 있으면 지우지 않고 거절한다", async ({ request }) => {
-  test.skip(IS_DEPLOYED, "운영 DB 마이그레이션은 배포 때 적용해서, RPC 가드는 로컬 DB에서만 직접 확인한다");
+  // 배포에서는 클라우드 service role로 RPC를 직접 불러, 마이그레이션이 빠진 배포를 잡는다(V4-04).
   const conversation = await startConversationViaApi(request, createQaUser("adm-progressed-rpc"));
   const seeded = await seedFailedRecordingWithResolvedIssue(conversation.conversationId);
   const { error } = await getQaDatabase().rpc("replace_recording_issues", {

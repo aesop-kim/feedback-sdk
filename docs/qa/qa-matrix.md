@@ -111,7 +111,7 @@
 | 흐름 | 로컬 | 배포 | 근거 | 메모 |
 |---|---|---|---|---|
 | 위젯 API 5종, 토큰 없음/`Token`/쓰레기/위조 서명 → 401 | ✅ | ✅ | `security-api` "…토큰을 401로" (20/20 응답 401) | |
-| 서명은 맞지만 만료된 대화 토큰(위젯 API 4종)·관리자 쿠키 → 401 | ✅ | — | `security-api` "서명은 맞지만 만료된…" (#98에서 추가) | 운영 서명 비밀값이 러너에 없어 배포는 건너뜀 |
+| 서명은 맞지만 만료된 대화 토큰(위젯 API 4종)·관리자 쿠키 → 401 | ✅ | ✅ | `security-api` "서명은 맞지만 만료된…" (#98에서 추가) | 배포는 `.env.cloud`의 `CLOUD_WIDGET_TOKEN_SECRET`·`CLOUD_ADMIN_SESSION_SECRET`로 서명한다(#109). 처음에는 "운영 비밀값이 러너에 없다"며 건너뛰었는데, 사실이 아니었다 |
 | 다른 대화 토큰으로 cardId 답변 → 404 | ✅ | ✅ | "다른 대화의 토큰으로" | |
 | 승인 전 카드 답변 → 404 | ✅ | ✅ | "승인 전 질문 카드" | |
 | 다른 대화 이슈를 reverifyIssueId로 → 404 | ✅ | ✅ | "재확인 녹화로 연결하면 404" | |
@@ -176,7 +176,8 @@ BUG-01..18을 고친 뒤 다시 돌린 결과다. 근거는 [verification-v2.md]
 | BUG-16 | #54 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status), [v3 §3](verification-v3.md) (운영 `frame-ancestors`에 localhost 없음) |
 | BUG-17 | #52 | PASS | skipped by design | [v2 §2](verification-v2.md#2-per-item-status) (로컬 `[401×5, 429]`). 배포에서 돌리면 QA 러너 IP가 5분 동안 막혀서 스펙이 건너뜀 |
 | BUG-18 | #58, #65 | PASS | PASS | [v2 §2](verification-v2.md#2-per-item-status) (스펙 L/D) |
-| 만료 토큰 → 401 | #98 | PASS | skipped by design | `security-api.spec.ts` "서명은 맞지만 만료된 대화 토큰과 관리자 쿠키는 401". 운영 서명 비밀값이 QA 러너에 없어서 배포에서는 건너뜀 |
+| 만료 토큰 → 401 | #98, #109 | PASS | PASS | `security-api.spec.ts` "서명은 맞지만 만료된 대화 토큰과 관리자 쿠키는 401". 배포는 `.env.cloud`의 CLOUD_* 비밀값으로 돈다 |
+| `replace_recording_issues` 가드 | #88, #109 | PASS | PASS | `admin-flow.spec.ts` "replace_recording_issues는 반영 완료한 이슈가 있으면…". 배포는 클라우드 service role로 RPC를 직접 불러 마이그레이션 적용을 확인한다 |
 
 ## Bugs
 
