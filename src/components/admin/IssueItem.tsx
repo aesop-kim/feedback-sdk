@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { AdminButton } from "@/components/admin/AdminButton";
 import { ClarificationDraft } from "@/components/admin/ClarificationDraft";
 import { FrameThumbnail } from "@/components/admin/FrameThumbnail";
@@ -20,6 +20,7 @@ type IssueItemProps = {
 type StatusPill = { label: string; tone: "grey" | "orange" | "blue" | "green" };
 
 // 별일 없는 이슈(명확하고 열려 있음)는 배지를 달지 않는다. 손이 가야 하는 상태만 표시한다.
+// 배지 문구는 짧은 명사형으로 맞춘다(UX-25).
 function findStatusPill(issue: Issue): StatusPill | null {
   switch (issue.status) {
     case "resolved":
@@ -27,7 +28,7 @@ function findStatusPill(issue: Issue): StatusPill | null {
     case "answered":
       return { label: "답변 받음", tone: "green" };
     case "asked":
-      return { label: "물어봤어요", tone: "blue" };
+      return { label: "질문 보냄", tone: "blue" };
     case "reverify":
       return { label: "다시 확인 중", tone: "blue" };
     case "open":
@@ -104,7 +105,11 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemP
           ) : null}
           {issue.element?.selector ? <SelectorChip selector={issue.element.selector} /> : null}
           <IssueClarification issue={issue} />
-          {issue.status === "resolved" ? null : <ResolveButton issueId={issue.id} />}
+          {issue.status === "resolved" ? (
+            <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>
+          ) : (
+            <ResolveButton issueId={issue.id} />
+          )}
         </div>
       ) : null}
     </li>
@@ -113,9 +118,10 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemP
 
 function IssueClarification({ issue }: { issue: Issue }) {
   const card = issue.clarification;
-  if (!card || issue.status === "resolved") {
+  if (!card) {
     return null;
   }
+  // 반영 완료 뒤에도 고객 답변은 남겨서, 왜 이렇게 고쳤는지 나중에 볼 수 있게 한다.
   const answerText = findAnswerText(card);
   if (answerText) {
     return (
@@ -126,12 +132,21 @@ function IssueClarification({ issue }: { issue: Issue }) {
       </p>
     );
   }
+  if (issue.status === "resolved") {
+    return null;
+  }
   if (card.approvedAt) {
     return (
-      <p className={styles.waiting}>
+      <div className={styles.waiting} role="status">
+        <span className={styles.waitingLead}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="m3.5 8.5 3 3 6-7" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          고객에게 질문을 보냈어요
+        </span>
         <span className={styles.waitingQuestion}>{card.question}</span>
         고객 답변을 기다리고 있어요
-      </p>
+      </div>
     );
   }
   if (issue.confidence === "ambiguous") {
@@ -172,11 +187,20 @@ function SelectorChip({ selector }: { selector: string }) {
   );
 }
 
+// 반영 완료는 고객 위젯에 바로 메시지를 보내고 API로 되돌릴 수 없다. 그래서 누르기 전에 제자리에서 한 번 더 묻는다.
 function ResolveButton({ issueId }: { issueId: string }) {
   const request = useAdminRequest();
   const { refresh } = useAdminRevision();
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isConfirming) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [isConfirming]);
 
   async function resolveIssue() {
     setIsSaving(true);
@@ -187,19 +211,35 @@ function ResolveButton({ issueId }: { issueId: string }) {
       setErrorMessage(result.message);
       return;
     }
+    setIsConfirming(false);
     refresh();
+  }
+
+  if (isConfirming) {
+    return (
+      <div className={styles.actions} role="group" aria-label="반영 완료 확인">
+        <span className={styles.confirmQuestion}>고객에게 확인을 부탁할까요?</span>
+        <AdminButton ref={confirmButtonRef} size="small" onClick={() => void resolveIssue()} isLoading={isSaving}>
+          부탁하기
+        </AdminButton>
+        <AdminButton variant="text" size="small" onClick={() => setIsConfirming(false)} disabled={isSaving}>
+          닫기
+        </AdminButton>
+        {errorMessage ? (
+          <span className={styles.actionError} role="alert">
+            {errorMessage}
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   return (
     <div className={styles.actions}>
-      <AdminButton variant="weak" size="small" onClick={() => void resolveIssue()} isLoading={isSaving}>
+      <AdminButton variant="weak" size="small" onClick={() => setIsConfirming(true)}>
         반영 완료로 바꾸기
       </AdminButton>
-      {errorMessage ? (
-        <span className={styles.actionError} role="alert">
-          {errorMessage}
-        </span>
-      ) : null}
+      <span className={styles.actionCaption}>누르면 고객에게 다시 확인해 달라고 알려요</span>
     </div>
   );
 }

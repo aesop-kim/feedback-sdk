@@ -102,6 +102,12 @@ export function ClarificationDraft({ card }: { card: ClarificationCard }) {
             ) : null}
           </li>
         ))}
+        {/* 고객 카드에는 이 보기가 늘 맨 아래에 붙는다. 고객이 보는 그대로 미리 보여 주고, 고칠 수는 없다. */}
+        <li className={`${styles.option} ${styles.customOption}`}>
+          <span className={styles.optionMarker} aria-hidden="true" />
+          <span className={styles.customOptionLabel}>직접 입력할게요</span>
+          <span className={styles.customOptionNote}>항상 붙어요</span>
+        </li>
       </ul>
       {options.length < MAX_OPTION_COUNT ? (
         <button type="button" className={styles.addButton} onClick={addOption}>

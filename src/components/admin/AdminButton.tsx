@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentProps } from "react";
 import styles from "@/components/admin/AdminButton.module.css";
 
-type AdminButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type AdminButtonProps = ComponentProps<"button"> & {
   variant?: "primary" | "weak" | "text";
   size?: "large" | "medium" | "small";
   isLoading?: boolean;
