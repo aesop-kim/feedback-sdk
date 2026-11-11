@@ -1,4 +1,4 @@
-import { expect, test, type Frame, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import {
   SDK_ORIGIN,
@@ -9,6 +9,7 @@ import {
   createQaUser,
   findConversationIdForUser,
   getQaDatabase,
+  getWidgetFrame,
   loginAdmin,
   openWidget,
   runAxeRules,
@@ -21,14 +22,6 @@ import {
 test.afterAll(async () => {
   await cleanupQaUsers("qa-layout-");
 });
-
-function getWidgetFrame(page: Page): Frame {
-  const frame = page.frames().find((candidate) => candidate.url().startsWith(`${SDK_ORIGIN}/widget`));
-  if (!frame) {
-    throw new Error("위젯 iframe을 찾지 못했어요");
-  }
-  return frame;
-}
 
 
 test("메시지 목록은 log 래퍼 안에서 ol/li 의미를 지키고, axe 목록 규칙 위반이 없다", async ({ page }) => {

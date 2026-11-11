@@ -10,6 +10,7 @@ import {
   createQaUser,
   findConversationIdForUser,
   getQaDatabase,
+  getWidgetFrame,
   loginAdmin,
   openWidget,
   saveDiagnostics,
@@ -28,14 +29,6 @@ test.afterAll(async () => {
 const STORAGE_UPLOAD_PATTERN = /\/storage\/v1\/object\/upload\/sign\//;
 const SHORT_MAX_RECORDING_MS = 5_000;
 const SERVER_RECORDING_STATUS = /정리하고 있어요|정리를 마쳤어요|문제 \d+건을 정리했어요|받았어요. 담당자가 직접 볼게요/;
-
-function getWidgetFrame(page: Page) {
-  const frame = page.frames().find((candidate) => candidate.url().startsWith(`${SDK_ORIGIN}/widget`));
-  if (!frame) {
-    throw new Error("위젯 iframe을 찾지 못했어요");
-  }
-  return frame;
-}
 
 async function startRecording(widget: FrameLocator): Promise<void> {
   await widget.getByRole("button", { name: "화면 녹화로 설명하기" }).click();

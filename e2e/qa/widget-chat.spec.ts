@@ -205,7 +205,6 @@ test("360×740 화면에서 위젯이 화면 안에 들어오고 긴 이름이 �
   const box = await page.locator(WIDGET_FRAME).boundingBox();
   expect(box).not.toBeNull();
   await captureQaScreen(page, "chat-05-mobile-360");
-  console.log(`[qa] mobile frame box ${JSON.stringify(box)}`);
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(360);
   expect(box!.y).toBeGreaterThanOrEqual(0);
@@ -277,7 +276,6 @@ test("위젯을 닫아 둔 사이 온 답장은 런처 배지로 보이고, 새�
   await page.reload();
   await page.waitForTimeout(4_000);
   const labelAfterReload = await page.getByRole("button", { name: /피드백 보내기/ }).getAttribute("aria-label");
-  console.log(`[qa] launcher label after reload: ${labelAfterReload}`);
   await captureQaScreen(page, "chat-07-badge-after-reload");
   await adminContext.close();
   expect(labelAfterReload, "새로고침하면 읽지 않은 답장 배지가 사라진다").toBe("피드백 보내기, 새 답장 1개");
