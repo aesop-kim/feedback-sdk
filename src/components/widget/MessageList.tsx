@@ -5,6 +5,7 @@ import { ClarificationCard } from "@/components/widget/ClarificationCard";
 import { MessageBubble } from "@/components/widget/MessageBubble";
 import { RecordingMessage } from "@/components/widget/RecordingMessage";
 import { ReverifyCard } from "@/components/widget/ReverifyCard";
+import { needsRerecord } from "@/lib/feedback/recording-status-label";
 import { formatMessageTime, getMinuteKey } from "@/lib/recording/format-recording-time";
 import type { PendingUpload } from "@/hooks/use-widget-recording";
 import { findReverifyPrompt } from "@/lib/widget/reverify-prompt";
@@ -25,6 +26,7 @@ type MessageListProps = {
   onRetryText: (localId: string) => void;
   onStartReverify: (issueId: string | null) => void;
   onRetryUpload: () => void;
+  onStartRecording: () => void;
 };
 
 // 같은 사람이 같은 분에 보낸 메시지는 한 묶음으로 보고, 묶음 끝에만 시각을 단다.
@@ -48,7 +50,23 @@ function findWaitingCardMessageId(messages: ChatMessage[]): string | null {
   return lastMessage.id;
 }
 
-function MessageContent({ message, showSenderName, onAnswer }: { message: ChatMessage; showSenderName: boolean } & Pick<MessageListProps, "onAnswer">) {
+// 다시 녹화하기는 가장 최근 녹화에만 단다. 그 뒤에 새로 보냈으면 이미 다시 녹화한 것이다.
+function findRerecordMessageId(messages: ChatMessage[], hasPendingUpload: boolean): string | null {
+  const latestRecordingMessage = messages.findLast((message) => message.type === "recording" && message.recording);
+  if (hasPendingUpload || !latestRecordingMessage?.recording || !needsRerecord(latestRecordingMessage.recording)) {
+    return null;
+  }
+  return latestRecordingMessage.id;
+}
+
+type MessageContentProps = {
+  message: ChatMessage;
+  showSenderName: boolean;
+  onAnswer: MessageListProps["onAnswer"];
+  onRerecord: (() => void) | undefined;
+};
+
+function MessageContent({ message, showSenderName, onAnswer, onRerecord }: MessageContentProps) {
   if (message.type === "clarification" && message.clarification) {
     return (
       <>
@@ -62,7 +80,9 @@ function MessageContent({ message, showSenderName, onAnswer }: { message: ChatMe
       <RecordingMessage
         durationMs={message.recording.durationMs}
         status={message.recording.status}
+        failureKind={message.recording.failureKind}
         issueCount={message.recording.issueCount}
+        onRerecord={onRerecord}
       />
     );
   }
@@ -78,12 +98,14 @@ export function MessageList({
   onRetryText,
   onStartReverify,
   onRetryUpload,
+  onStartRecording,
 }: MessageListProps) {
   const listRef = useRef<HTMLOListElement>(null);
   const itemCount = messages.length + pendingTexts.length + (pendingUpload ? 1 : 0);
 
   const waitingCardMessageId = findWaitingCardMessageId(messages);
   const reverifyPrompt = findReverifyPrompt(messages, reverifyRequest);
+  const rerecordMessageId = findRerecordMessageId(messages, pendingUpload !== null);
 
   useEffect(() => {
     // scrollIntoView는 고객사 페이지까지 스크롤할 수 있어서, 감싼 스크롤 영역만 직접 움직인다.
@@ -117,7 +139,12 @@ export function MessageList({
             {reverifyPrompt?.messageId === message.id ? (
               <ReverifyCard title={reverifyPrompt.title} onStart={() => onStartReverify(reverifyPrompt.issueId)} />
             ) : (
-              <MessageContent message={message} showSenderName={isGroupStart(messages, index)} onAnswer={onAnswer} />
+              <MessageContent
+                message={message}
+                showSenderName={isGroupStart(messages, index)}
+                onAnswer={onAnswer}
+                onRerecord={rerecordMessageId === message.id ? onStartRecording : undefined}
+              />
             )}
             {message.sender !== "system" && isGroupEnd(messages, index) ? (
               <time className={styles.time} dateTime={message.createdAt}>

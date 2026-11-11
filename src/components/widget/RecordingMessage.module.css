@@ -52,7 +52,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.status[data-status="upload_failed"] {
+.status[data-status="upload_failed"],
+.status[data-failure-kind="upload_incomplete"] {
   color: var(--danger);
 }
 

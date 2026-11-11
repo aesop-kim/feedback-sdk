@@ -41,6 +41,8 @@ export type RecordingSummary = {
   pageTitle: string | null;
   issueCount: number;
   createdAt: string;
+  // 실패한 녹화의 종류(실패가 아니면 null). 위젯과 관리자가 같은 이야기를 하도록 둘 다 받는다.
+  failureKind: RecordingFailureKind | null;
 };
 
 export type ChatMessage = {
@@ -78,7 +80,6 @@ export type RecordingDetail = RecordingSummary & {
   transcript: TranscriptSegment[];
   issues: Issue[];
   error: string | null;
-  failureKind: RecordingFailureKind | null;
   // 이 녹화가 어떤 이슈의 재확인 녹화인지(일반 녹화면 null).
   reverifyIssueId: string | null;
 };

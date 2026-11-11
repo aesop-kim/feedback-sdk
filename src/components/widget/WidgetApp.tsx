@@ -229,6 +229,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             onRetryText={handleRetryText}
             onStartReverify={handleStartReverify}
             onRetryUpload={recording.retryUpload}
+            onStartRecording={handleStartRecording}
           />
         ) : null}
       </div>

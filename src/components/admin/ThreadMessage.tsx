@@ -1,4 +1,5 @@
 import styles from "@/components/admin/ThreadMessage.module.css";
+import { getAdminRecordingStateLabel } from "@/lib/feedback/recording-status-label";
 import { formatClockTime } from "@/lib/format/date-format";
 import { formatDuration } from "@/lib/format/duration-format";
 import type { ChatMessage, ClarificationCard, RecordingSummary } from "@/types/feedback";
@@ -42,20 +43,6 @@ function MessageContent({ message, isRecordingSelected, onSelectRecording }: Omi
   return <p className={styles.bubble}>{message.body}</p>;
 }
 
-function getRecordingState(recording: RecordingSummary): string {
-  switch (recording.status) {
-    case "uploading":
-      return "올리는 중";
-    case "uploaded":
-    case "analyzing":
-      return "정리하는 중";
-    case "failed":
-      return "정리하지 못했어요";
-    case "analyzed":
-      return recording.issueCount > 0 ? `문제 ${recording.issueCount}건` : "찾은 문제 없음";
-  }
-}
-
 function RecordingRow({
   recording,
   isSelected,
@@ -81,7 +68,7 @@ function RecordingRow({
       <span className={styles.recordingLabel}>
         화면 녹화 <span className={styles.number}>{formatDuration(recording.durationMs)}</span>
         <span className={styles.dot}>·</span>
-        <span className={recording.status === "failed" ? styles.recordingFailed : undefined}>{getRecordingState(recording)}</span>
+        <span className={recording.status === "failed" ? styles.recordingFailed : undefined}>{getAdminRecordingStateLabel(recording)}</span>
       </span>
       <svg className={styles.chevron} width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
