@@ -115,7 +115,8 @@ export async function loginAdmin(context: BrowserContext): Promise<Page> {
   await adminPage.goto(`${SDK_ORIGIN}/admin/login`);
   await adminPage.getByPlaceholder("비밀번호를 입력해 주세요").fill(ADMIN_PASSWORD);
   await adminPage.getByRole("button", { name: "로그인하기" }).click();
-  await adminPage.waitForURL(/\/admin$/);
+  // 로그인이 막히면(429 등) 테스트 제한 시간까지 멈추지 않고 바로 실패하게 한다.
+  await adminPage.waitForURL(/\/admin$/, { timeout: 15_000 });
   return adminPage;
 }
 

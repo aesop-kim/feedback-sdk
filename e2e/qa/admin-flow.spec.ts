@@ -60,8 +60,13 @@ test("받은 대화가 없으면 빈 상태를 보여 준다", async ({ browser 
     route.fulfill({ json: { projectId: null, projectName: "래티스 주식회사", conversations: [] } }),
   );
   await adminPage.reload();
-  await expect(adminPage.getByText("아직 받은 의견이 없어요")).toBeVisible();
-  await expect(adminPage.getByText("대화를 골라 주세요")).toBeVisible();
+  // UX(#47): 목록이 비면 가운데 칸은 "골라 주세요" 대신 위젯 설치 방법을 보여 준다.
+  await expect(adminPage.getByRole("navigation", { name: "받은 대화" }).getByText("아직 받은 의견이 없어요")).toBeVisible();
+  const placeholder = adminPage.locator("section").filter({ hasText: "고객사 페이지에 아래 두 줄을 넣으면 위젯이 떠요" });
+  await expect(placeholder.getByText("아직 받은 의견이 없어요")).toBeVisible();
+  await expect(placeholder.locator("code")).toContainText("Feedback.init(");
+  await expect(placeholder.getByRole("button", { name: "코드 복사하기" })).toBeVisible();
+  await expect(adminPage.getByText("의견을 골라 주세요")).toHaveCount(0);
   await captureQaScreen(adminPage, "admin-02-empty-list");
   await context.close();
 });
@@ -269,18 +274,37 @@ test("반영 완료로 바꾸면 위젯에 재확인 안내가 뜨고, 그 안�
   const adminPage = await loginAdmin(adminContext);
   const analysis = await openConversation(adminPage, conversationId);
   await analysis.getByRole("button", { name: "반영 완료로 바꾸기" }).click();
-  await expect(analysis.getByText("반영 완료")).toBeVisible();
-  await expect(widget.getByText(/수정을 반영했어요\. 같은 화면에서 한 번 더 확인해 주세요/)).toBeVisible({ timeout: 5_000 });
-  await captureQaScreen(customerPage, "admin-09-widget-reverify-prompt");
+  // #42: 위젯에 바로 메시지가 가므로 제자리에서 한 번 더 묻는다.
+  await analysis.getByRole("group", { name: "반영 완료 확인" }).getByRole("button", { name: "부탁하기" }).click();
+  await expect(analysis.getByText("반영 완료", { exact: true })).toBeVisible();
+  await expect(analysis.getByText("반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요")).toBeVisible();
   await captureQaScreen(adminPage, "admin-09-admin-resolved");
 
+  // #60: 회색 안내 대신 이슈 제목과 녹화 버튼이 있는 카드가 뜬다.
+  const reverifyCard = widget.getByRole("region", { name: "수정 확인 요청" });
+  await expect(reverifyCard.getByText("고쳤어요. 한 번 확인해 주세요")).toBeVisible({ timeout: 5_000 });
+  await captureQaScreen(customerPage, "admin-09-widget-reverify-prompt");
   const { data: issue } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
-  console.log(`[qa] issue status after resolve: ${issue?.status}`);
-  // 재확인 녹화를 이 이슈에 연결할 수 있는 버튼(또는 링크)이 안내 옆에 있어야 한다.
-  const messageList = widget.locator("[data-widget-scroll]");
-  const reverifyAction = messageList.getByRole("button", { name: /다시 확인|재확인|녹화/ });
-  console.log(`[qa] buttons inside widget message list after resolve: ${await messageList.getByRole("button").count()}`);
-  expect(await reverifyAction.count(), "재확인 안내에 이슈와 연결된 녹화 시작 동작이 없다").toBeGreaterThan(0);
+  expect(issue?.status).toBe("resolved");
+
+  // 카드에서 녹화하면 그 녹화가 이 이슈의 재확인 녹화로 올라가고, 이슈는 reverify로 바뀐다.
+  await reverifyCard.getByRole("button", { name: "다시 녹화해서 확인하기" }).click();
+  await expect(widget.getByRole("status", { name: "화면 녹화 중" })).toBeVisible({ timeout: 10_000 });
+  await customerPage.waitForTimeout(2_000);
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  // 끝내기 직후에는 아직 업로드 카드가 없다. 카드가 뜬 뒤 사라질 때(업로드 완료)까지 기다린다.
+  const uploadingCard = widget.getByText(/보내는 중/);
+  await expect(uploadingCard).toBeVisible({ timeout: 10_000 });
+  await expect(uploadingCard).toHaveCount(0, { timeout: 60_000 });
+  await expect(reverifyCard).toHaveCount(0);
+  const { data: reverifyRecordings } = await getQaDatabase()
+    .from("recordings")
+    .select("id")
+    .eq("conversation_id", conversationId)
+    .eq("reverify_issue_id", seeded.issueId);
+  expect(reverifyRecordings).toHaveLength(1);
+  const { data: issueAfter } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
+  expect(issueAfter?.status).toBe("reverify");
   await adminContext.close();
   await customerContext.close();
 });

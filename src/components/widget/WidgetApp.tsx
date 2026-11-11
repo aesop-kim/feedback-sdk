@@ -35,9 +35,9 @@ function getLoadErrorDescription(errorMessage: string | null): string {
   return errorMessage;
 }
 
-type WidgetAppProps = { projectKey: string };
+type WidgetAppProps = { projectKey: string; maxDurationMs: number };
 
-export function WidgetApp({ projectKey }: WidgetAppProps) {
+export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   const [init, setInit] = useState<HostInit | null>(null);
   const [hostOrigin, setHostOrigin] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -100,6 +100,7 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
     onToast: showToast,
     onModeChange: handleModeChange,
     onUploaded: refetch,
+    maxDurationMs,
   });
 
   useEffect(() => {

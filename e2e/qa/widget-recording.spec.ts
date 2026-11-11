@@ -1,6 +1,7 @@
 import { expect, test, type FrameLocator, type Page } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import {
+  IS_DEPLOYED,
   SDK_ORIGIN,
   WIDGET_FRAME,
   captureQaScreen,
@@ -22,6 +23,8 @@ test.afterAll(async () => {
 });
 
 const STORAGE_UPLOAD_PATTERN = /\/storage\/v1\/object\/upload\/sign\//;
+const SHORT_MAX_RECORDING_MS = 5_000;
+const SERVER_RECORDING_STATUS = /정리하고 있어요|정리를 마쳤어요|문제 \d+건을 정리했어요|받았어요. 담당자가 직접 볼게요/;
 
 function getWidgetFrame(page: Page) {
   const frame = page.frames().find((candidate) => candidate.url().startsWith(`${SDK_ORIGIN}/widget`));
@@ -105,7 +108,8 @@ test("마이크를 거부하면 안내 토스트가 뜨고, 이미 받은 화면
   const user = createQaUser("rec-mic-denied");
   const widget = await openWidget(page, user);
   await widget.getByRole("button", { name: "화면 녹화로 설명하기" }).click();
-  await expect(widget.getByText("마이크 권한이 필요해요")).toBeVisible();
+  // UX-20: 해결 방법까지 알려 주는 문구로 바뀌었다.
+  await expect(widget.getByText("마이크를 쓸 수 없어요. 주소창 왼쪽 자물쇠에서 마이크를 허용해 주세요")).toBeVisible();
   await captureQaScreen(page, "rec-03-mic-denied");
   await expect(page.locator(WIDGET_FRAME)).toHaveAttribute("data-mode", "open");
   const trackStates = await getWidgetFrame(page).evaluate(() =>
@@ -141,22 +145,36 @@ test("크롬의 '공유 중지'로 화면 공유가 끊기면 녹화가 자동�
   await captureQaScreen(page, "rec-04-share-stopped");
 });
 
-test("최대 녹화 시간(3분)에 닿으면 자동으로 끝나고 올라간다", async ({ page }) => {
-  test.setTimeout(5 * 60 * 1000);
+// 실제 3분을 기다리지 않는다. 개발 서버의 /widget은 maxRecordingMs로 한도를 줄일 수 있다(운영에서는 무시, get-max-recording-ms.test.ts).
+test("최대 녹화 시간에 닿으면 자동으로 끝나고 올라간다(개발 서버에서 한도를 5초로 줄여 확인)", async ({ page }) => {
   const diagnostics = collectDiagnostics(page);
+  await page.route(
+    (url) => url.origin === SDK_ORIGIN && url.pathname === "/widget",
+    (route) => {
+      const url = new URL(route.request().url());
+      url.searchParams.set("maxRecordingMs", String(SHORT_MAX_RECORDING_MS));
+      return route.continue({ url: url.toString() });
+    },
+  );
   const user = createQaUser("rec-max");
   const widget = await openWidget(page, user);
   await startRecording(widget);
-  const startedAt = Date.now();
-  // 실제 3분을 기다린다(시계 가짜화는 MediaRecorder·업로드와 섞여 신뢰하기 어렵다).
-  await expect(widget.getByText(/화면 녹화 · [23]:\d{2}/)).toBeVisible({ timeout: 4 * 60 * 1000 });
-  const elapsedMs = Date.now() - startedAt;
-  console.log(`[qa] auto-stop after ${elapsedMs}ms`);
+  const pill = widget.getByRole("status", { name: "화면 녹화 중" });
+  await expect(pill.getByText("/ 0:05")).toBeVisible();
+  // 끝내기를 누르지 않는다. 한도에 닿으면 알약이 스스로 사라져야 한다.
+  await expect(pill).toHaveCount(0, { timeout: SHORT_MAX_RECORDING_MS + 10_000 });
+  // 업로드 카드("보내는 중")가 서버 녹화 카드로 바뀐 뒤에 DB를 본다.
+  await expect(widget.getByText(/보내는 중/)).toHaveCount(0, { timeout: 60_000 });
+  await expect(widget.getByText(/화면 녹화 · 0:0[45]/)).toBeVisible();
+  await expect(widget.getByText(SERVER_RECORDING_STATUS)).toBeVisible();
   await captureQaScreen(page, "rec-05-max-duration");
-  const recordings = await countRecordings(user.id);
+  const conversationId = await findConversationIdForUser(user.id);
+  const { data: recordings } = await getQaDatabase().from("recordings").select("status, duration_ms").eq("conversation_id", conversationId);
   console.log(`[qa] max-duration recordings: ${JSON.stringify(recordings)}`);
-  expect(recordings.map((recording) => recording.status)).not.toContain("uploading");
   expect(recordings).toHaveLength(1);
+  expect(recordings?.[0].status).not.toBe("uploading");
+  expect(recordings?.[0].duration_ms).toBeGreaterThanOrEqual(SHORT_MAX_RECORDING_MS - 1_000);
+  expect(recordings?.[0].duration_ms).toBeLessThanOrEqual(SHORT_MAX_RECORDING_MS + 1_000);
   saveDiagnostics("rec-05-max", diagnostics);
 });
 
@@ -170,7 +188,9 @@ test("업로드가 실패하면 다시 보내기 버튼이 뜨고, 다시 보내
   await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   const retryButton = widget.getByRole("button", { name: "다시 보내기" });
   await expect(retryButton).toBeVisible({ timeout: 30_000 });
-  await expect(widget.getByText("보내지 못했어요")).toBeVisible();
+  // 카드 상태와 토스트("녹화를 보내지 못했어요. ‘다시 보내기’를 눌러 주세요")가 둘 다 보인다.
+  await expect(widget.locator('[data-status="upload_failed"]')).toHaveText("보내지 못했어요");
+  await expect(widget.getByText("녹화를 보내지 못했어요. ‘다시 보내기’를 눌러 주세요")).toBeVisible();
   await captureQaScreen(page, "rec-06-upload-failed");
 
   await page.unroute(STORAGE_UPLOAD_PATTERN);
@@ -206,28 +226,37 @@ test("업로드 실패 카드는 '정리하지 못했어요'가 아니라 '보�
   expect(statusText).not.toBe("정리하지 못했어요");
 });
 
-test("녹화 중 새로고침하면: 녹화는 사라지고, 위젯은 정상으로 돌아온다(경고 여부 기록)", async ({ page }) => {
+// BUG-18: 녹화·업로드 중에는 고객사 페이지가 떠나기 전에 확인을 묻는다. 확인 창을 닫으면(dismiss) 페이지에 남아
+// reload가 끝나지 않으므로, 여기서는 고객이 "떠나기"를 고른 경우(accept)를 본다.
+function acceptLeaveConfirmation(page: Page): { readonly types: string[] } {
+  const shown = { types: [] as string[] };
+  page.on("dialog", async (dialog) => {
+    shown.types.push(dialog.type());
+    await dialog.accept();
+  });
+  return shown;
+}
+
+test("녹화 중 새로고침하면 떠나기 전에 확인을 묻고, 떠나면 녹화는 사라지고 위젯은 정상으로 돌아온다", async ({ page }) => {
   const user = createQaUser("rec-refresh-recording");
   const widget = await openWidget(page, user);
   await startRecording(widget);
   await page.waitForTimeout(2_000);
-  let dialogShown = false;
-  page.on("dialog", async (dialog) => {
-    dialogShown = true;
-    await dialog.dismiss();
-  });
+  const dialogs = acceptLeaveConfirmation(page);
   await page.reload();
+  expect(dialogs.types).toEqual(["beforeunload"]);
   await page.getByRole("button", { name: /피드백 보내기/ }).click();
   const reloadedWidget = page.frameLocator(WIDGET_FRAME);
   await expect(reloadedWidget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
   await captureQaScreen(page, "rec-07-refresh-mid-recording");
-  const recordings = await countRecordings(user.id);
-  console.log(`[qa] refresh mid-recording: beforeunload dialog=${dialogShown}, recordings=${JSON.stringify(recordings)}`);
-  expect(recordings).toHaveLength(0);
+  expect(await countRecordings(user.id)).toHaveLength(0);
   await expect(reloadedWidget.getByRole("status", { name: "화면 녹화 중" })).toHaveCount(0);
 });
 
-test("업로드 중 새로고침하면 고아 'uploading' 녹화가 관리자에 영원히 남지 않는다", async ({ page, browser }) => {
+// BUG-02: 버려진 업로드는 업로드 주소를 받은 지 30분 뒤 워커가 expire_stale_uploads로 실패 처리한다.
+// 30분을 기다리지 않도록 이 녹화의 upload_requested_at만 31분 전으로 돌리고, 워커가 1분마다 부르는 같은 RPC를 부른다.
+test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' 녹화는 30분이 지나면 관리자에 실패 이유와 함께 보인다", async ({ page, browser }) => {
+  test.skip(IS_DEPLOYED, "배포 DB의 다른 녹화까지 만료시키지 않도록 로컬에서만 돈다");
   const user = createQaUser("rec-refresh-upload");
   const widget = await openWidget(page, user);
   // 업로드 요청을 붙잡아 '업로드 중' 상태에서 새로고침한다.
@@ -237,23 +266,30 @@ test("업로드 중 새로고침하면 고아 'uploading' 녹화가 관리자에
   await widget.getByRole("button", { name: "끝내고 보내기" }).click();
   await expect(widget.getByText(/보내는 중/)).toBeVisible({ timeout: 30_000 });
   await captureQaScreen(page, "rec-08-uploading");
-  await page.unroute(STORAGE_UPLOAD_PATTERN);
+  const dialogs = acceptLeaveConfirmation(page);
   await page.reload();
+  expect(dialogs.types).toEqual(["beforeunload"]);
   await page.getByRole("button", { name: /피드백 보내기/ }).click();
   const reloadedWidget = page.frameLocator(WIDGET_FRAME);
   await expect(reloadedWidget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
   await captureQaScreen(page, "rec-08-after-refresh-widget");
   const recordings = await countRecordings(user.id);
   console.log(`[qa] refresh mid-upload recordings: ${JSON.stringify(recordings)}`);
+  expect(recordings.map((recording) => recording.status)).toEqual(["uploading"]);
+
+  const database = getQaDatabase();
+  const staleRequestedAt = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+  await database.from("recordings").update({ upload_requested_at: staleRequestedAt }).eq("id", recordings[0].id);
+  const { data: expired, error } = await database.rpc("expire_stale_uploads", { p_stale_minutes: 30 });
+  expect(error).toBeNull();
+  expect((expired as { id: string }[]).map((row) => row.id)).toContain(recordings[0].id);
 
   const adminContext = await browser.newContext();
   const adminPage = await loginAdmin(adminContext);
   await adminPage.goto(`${SDK_ORIGIN}/admin/${await findConversationIdForUser(user.id)}`);
   const analysis = adminPage.getByRole("complementary", { name: "녹화 분석" });
-  await expect(analysis).toBeVisible();
-  await adminPage.waitForTimeout(1_000);
-  await captureQaScreen(adminPage, "rec-08-admin-orphan");
-  const isStuck = await analysis.getByText("고객이 영상을 올리고 있어요").isVisible();
+  await expect(analysis.getByText("업로드가 끝나지 않았어요. 고객이 업로드 중에 페이지를 떠났을 수 있어요.", { exact: false })).toBeVisible();
+  await expect(analysis.getByText("고객이 영상을 올리고 있어요")).toHaveCount(0);
+  await captureQaScreen(adminPage, "rec-08-admin-expired-upload");
   await adminContext.close();
-  expect(isStuck, "새로고침으로 버려진 업로드가 관리자에 '올리고 있어요'로 영원히 남는다").toBe(false);
 });
