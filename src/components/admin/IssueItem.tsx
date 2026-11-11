@@ -31,6 +31,8 @@ function findStatusPill(issue: Issue): StatusPill | null {
       return { label: "질문 보냄", tone: "blue" };
     case "reverify":
       return { label: "다시 확인 중", tone: "blue" };
+    case "closed":
+      return { label: "해결됨", tone: "green" };
     case "open":
       return issue.confidence === "ambiguous" ? { label: "확인 필요", tone: "orange" } : null;
   }
@@ -73,7 +75,7 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemP
   const pill = findStatusPill(issue);
 
   return (
-    <li className={issue.status === "resolved" ? `${styles.item} ${styles.resolved}` : styles.item}>
+    <li className={isFinished(issue) ? `${styles.item} ${styles.resolved}` : styles.item}>
       <button type="button" className={styles.summaryRow} onClick={onToggle} aria-expanded={isOpen} aria-controls={bodyId}>
         <span className={styles.index}>{index}</span>
         <span className={styles.heading}>
@@ -105,14 +107,80 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemP
           ) : null}
           {issue.element?.selector ? <SelectorChip selector={issue.element.selector} /> : null}
           <IssueClarification issue={issue} />
-          {issue.status === "resolved" ? (
-            <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>
-          ) : (
-            <ResolveButton issueId={issue.id} />
-          )}
+          <IssueActions issue={issue} />
         </div>
       ) : null}
     </li>
+  );
+}
+
+// 관리자가 손을 뗀 이슈: 반영 완료(고객 확인 대기)와 해결됨(닫힘).
+function isFinished(issue: Issue): boolean {
+  return issue.status === "resolved" || issue.status === "closed";
+}
+
+// 상태마다 마무리 버튼이 다르다. 재확인 중인 이슈에 반영 완료 버튼을 다시 보여 주면 고객에게 요청이 또 가므로,
+// 고객이 다시 확인한 뒤에는 해결됨으로 닫거나 다시 여는 것만 고르게 한다.
+function IssueActions({ issue }: { issue: Issue }) {
+  switch (issue.status) {
+    case "resolved":
+      return <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>;
+    case "closed":
+      return <p className={styles.resolvedNote}>고객 확인까지 끝나서 해결됨으로 닫았어요</p>;
+    case "reverify":
+      return <ReverifyActions issueId={issue.id} />;
+    default:
+      return <ResolveButton issueId={issue.id} />;
+  }
+}
+
+function ReverifyActions({ issueId }: { issueId: string }) {
+  const request = useAdminRequest();
+  const { refresh } = useAdminRevision();
+  const [savingStatus, setSavingStatus] = useState<"closed" | "open" | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  async function changeStatus(status: "closed" | "open") {
+    setSavingStatus(status);
+    setErrorMessage(null);
+    const result = await request(`/api/admin/issues/${issueId}`, { method: "PATCH", body: { status } });
+    setSavingStatus(null);
+    if (!result.ok) {
+      setErrorMessage(result.message);
+      return;
+    }
+    refresh();
+  }
+
+  return (
+    <div className={styles.actions} role="group" aria-label="다시 확인 결과">
+      <span className={styles.actionCaption}>고객이 다시 녹화해 보냈어요. 영상을 보고 골라 주세요</span>
+      <div className={styles.actionButtons}>
+        <AdminButton
+          variant="weak"
+          size="small"
+          onClick={() => void changeStatus("closed")}
+          isLoading={savingStatus === "closed"}
+          disabled={savingStatus === "open"}
+        >
+          확인 끝 · 해결됨
+        </AdminButton>
+        <AdminButton
+          variant="text"
+          size="small"
+          onClick={() => void changeStatus("open")}
+          isLoading={savingStatus === "open"}
+          disabled={savingStatus === "closed"}
+        >
+          아직 안 고쳐졌어요 · 다시 열기
+        </AdminButton>
+      </div>
+      {errorMessage ? (
+        <span className={styles.actionError} role="alert">
+          {errorMessage}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -132,7 +200,7 @@ function IssueClarification({ issue }: { issue: Issue }) {
       </p>
     );
   }
-  if (issue.status === "resolved") {
+  if (isFinished(issue)) {
     return null;
   }
   if (card.approvedAt) {

@@ -4,7 +4,8 @@ export type MessageSender = "user" | "admin" | "system";
 export type MessageType = "text" | "recording" | "clarification" | "system";
 export type RecordingStatus = "uploading" | "uploaded" | "analyzing" | "analyzed" | "failed";
 export type IssueConfidence = "clear" | "ambiguous";
-export type IssueStatus = "open" | "asked" | "answered" | "resolved" | "reverify";
+// resolved: 고쳤고 고객에게 재확인을 부탁한 중. reverify: 고객이 재확인 녹화를 보냄. closed: 확인까지 끝나 닫음.
+export type IssueStatus = "open" | "asked" | "answered" | "resolved" | "reverify" | "closed";
 
 export type EndUserInput = { id: string; name: string; email?: string };
 

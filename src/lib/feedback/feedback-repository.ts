@@ -1,4 +1,5 @@
 import "server-only";
+import { isRemainingIssue } from "@/lib/feedback/issue-status";
 import { findRecordingFailureKind } from "@/lib/feedback/recording-failure";
 import { findOpenReverifyRequest } from "@/lib/feedback/reverify-request";
 import { getFirstRelation } from "@/lib/supabase/first-relation";
@@ -11,6 +12,7 @@ import type {
   ElementContext,
   HighlightBox,
   Issue,
+  IssueStatus,
   RecordingDetail,
   RecordingSummary,
   ReverifyRequest,
@@ -265,7 +267,7 @@ export async function getConversationSummaries(conversationId?: string): Promise
     : await baseQuery.order("last_message_at", { ascending: false }).limit(100);
   return (rows ?? []).map((row) => {
     const endUser = getFirstRelation<{ external_id: string; name: string; email: string | null }>(row.end_users);
-    const issueRows = (row.issues ?? []) as { status: string }[];
+    const issueRows = (row.issues ?? []) as { status: IssueStatus }[];
     return {
       id: row.id,
       endUser: { externalId: endUser.external_id, name: endUser.name, email: endUser.email },
@@ -273,7 +275,7 @@ export async function getConversationSummaries(conversationId?: string): Promise
       lastMessagePreview: row.last_message_preview,
       adminUnreadCount: row.admin_unread_count,
       recordingCount: (row.recordings ?? []).length,
-      openIssueCount: issueRows.filter((issue) => issue.status !== "resolved").length,
+      openIssueCount: issueRows.filter((issue) => isRemainingIssue(issue.status)).length,
     };
   });
 }

@@ -55,4 +55,4 @@ export const approveClarificationSchema = z.object({
     .optional(),
 });
 
-export const updateIssueSchema = z.object({ status: z.enum(["resolved"]) });
+export const updateIssueSchema = z.object({ status: z.enum(["resolved", "closed", "open"]) });

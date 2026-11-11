@@ -371,6 +371,52 @@ test("반영 완료로 바꾸면 위젯에 재확인 안내가 뜨고, 그 안�
   await customerContext.close();
 });
 
+// V3-02 (b)(c): 고객이 재확인 녹화를 보낸 이슈는 반영 완료 버튼 대신 "해결됨으로 닫기"와 "다시 열기"를 고른다.
+test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 있고, 닫힌 이슈는 남은 문제에서 빠진다", async ({ browser }) => {
+  const user = createQaUser("adm-reverify-close");
+  const adminContext = await browser.newContext();
+  const adminPage = await loginAdmin(adminContext);
+  const conversation = await startConversationViaApi(adminPage.request, user);
+  const conversationId = conversation.conversationId;
+  const seeded = await seedAnalyzedRecording(conversationId, { ambiguous: false });
+  const database = getQaDatabase();
+  await database.from("issues").update({ status: "reverify" }).eq("id", seeded.issueId);
+
+  const analysis = await openConversation(adminPage, conversationId);
+  const listRow = adminPage.getByRole("navigation", { name: "받은 의견" }).getByRole("link", { name: new RegExp(user.name) });
+  await expect(listRow).toContainText("남은 문제 1건");
+  await expect(analysis.getByText("다시 확인 중", { exact: true })).toBeVisible();
+  // V3-02 (c): 재확인 중인 이슈에 반영 완료 버튼(고객에게 재확인 요청이 또 간다)을 다시 보여 주지 않는다.
+  await expect(analysis.getByRole("button", { name: "반영 완료로 바꾸기" })).toHaveCount(0);
+  const choices = analysis.getByRole("group", { name: "다시 확인 결과" });
+  await captureQaScreen(adminPage, "admin-12-reverify-choices");
+  await choices.getByRole("button", { name: "확인 끝 · 해결됨" }).click();
+  await expect(analysis.getByText("해결됨", { exact: true })).toBeVisible();
+  await expect(analysis.getByText("고객 확인까지 끝나서 해결됨으로 닫았어요")).toBeVisible();
+  await expect(listRow).not.toContainText("남은 문제");
+  await captureQaScreen(adminPage, "admin-12-reverify-closed");
+
+  // API는 멱등이다. 다시 닫으면 그대로, 닫힌 이슈를 반영 완료로 되돌리면 409, 고객에게 메시지는 가지 않는다.
+  const issueUrl = `${SDK_ORIGIN}/api/admin/issues/${seeded.issueId}`;
+  const closeAgain = await adminPage.request.patch(issueUrl, { data: { status: "closed" } });
+  expect(await closeAgain.json()).toEqual({ issueId: seeded.issueId, changed: false });
+  expect((await adminPage.request.patch(issueUrl, { data: { status: "resolved" } })).status()).toBe(409);
+  const { data: systemMessages } = await database.from("messages").select("id").eq("conversation_id", conversationId).eq("type", "system");
+  expect(systemMessages).toHaveLength(0);
+  const { data: closedIssue } = await database.from("issues").select("status").eq("id", seeded.issueId).single();
+  expect(closedIssue?.status).toBe("closed");
+
+  // 아직 안 고쳐졌으면 다시 열어 반영 완료 버튼을 되찾는다.
+  await database.from("issues").update({ status: "reverify" }).eq("id", seeded.issueId);
+  await adminPage.reload();
+  await analysis.getByRole("group", { name: "다시 확인 결과" }).getByRole("button", { name: "아직 안 고쳐졌어요 · 다시 열기" }).click();
+  await expect(analysis.getByRole("button", { name: "반영 완료로 바꾸기" })).toBeVisible();
+  await expect(listRow).toContainText("남은 문제 1건");
+  const { data: reopenedIssue } = await database.from("issues").select("status, resolved_at").eq("id", seeded.issueId).single();
+  expect(reopenedIssue).toEqual({ status: "open", resolved_at: null });
+  await adminContext.close();
+});
+
 test("질문을 보낸 뒤 반영 완료로 바꾼 이슈는 고객이 늦게 답해도 '반영 완료'로 남는다", async ({ request }) => {
   const user = createQaUser("adm-late-answer");
   const conversation = await startConversationViaApi(request, user);
