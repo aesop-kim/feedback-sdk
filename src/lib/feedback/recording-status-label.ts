@@ -33,7 +33,7 @@ export function getWidgetRecordingStatusText(input: {
   }
 }
 
-// 위젯 녹화 카드 제목. 재확인 녹화는 관리자 칩처럼 어떤 이슈를 다시 확인한 녹화인지 붙인다.
+// 위젯 녹화 카드 제목. 재확인 녹화는 관리자 분석 패널처럼 어떤 이슈를 다시 확인한 녹화인지 붙인다.
 export function getWidgetRecordingTitle(reverifyIssueTitle: string | null | undefined): string {
   return reverifyIssueTitle ? `‘${reverifyIssueTitle}’ 다시 확인 녹화` : "화면 녹화";
 }

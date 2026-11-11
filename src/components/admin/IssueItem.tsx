@@ -7,7 +7,9 @@ import { FrameThumbnail } from "@/components/admin/FrameThumbnail";
 import styles from "@/components/admin/IssueItem.module.css";
 import { useAdminRequest } from "@/hooks/use-admin-request";
 import { useAdminRevision } from "@/hooks/use-admin-revision";
-import type { ClarificationCard, HighlightBox, Issue } from "@/types/feedback";
+import { findCardAnswerText } from "@/lib/feedback/clarification-answer";
+import { isRemainingIssue, type AdminIssueStatus } from "@/lib/feedback/issue-status";
+import type { HighlightBox, Issue } from "@/types/feedback";
 
 type IssueItemProps = {
   issue: Issue;
@@ -69,14 +71,6 @@ function findHighlight(issue: Issue): HighlightBox | null {
   };
 }
 
-function findAnswerText(card: ClarificationCard): string | null {
-  if (!card.answer) {
-    return null;
-  }
-  const optionLabel = card.options.find((option) => option.id === card.answer?.optionId)?.label;
-  return [optionLabel, card.answer.text].filter(Boolean).join(" · ") || null;
-}
-
 export function IssueItem({
   issue,
   index,
@@ -99,7 +93,7 @@ export function IssueItem({
   }, [shouldFocus]);
 
   return (
-    <li className={isFinished(issue) ? `${styles.item} ${styles.resolved}` : styles.item}>
+    <li className={isRemainingIssue(issue.status) ? styles.item : `${styles.item} ${styles.resolved}`}>
       <button
         ref={summaryButtonRef}
         type="button"
@@ -147,11 +141,6 @@ export function IssueItem({
   );
 }
 
-// 관리자가 손을 뗀 이슈: 반영 완료(고객 확인 대기)와 해결됨(닫힘).
-function isFinished(issue: Issue): boolean {
-  return issue.status === "resolved" || issue.status === "closed";
-}
-
 // 상태마다 마무리 버튼이 다르다. 재확인 중인 이슈에 반영 완료 버튼을 다시 보여 주면 고객에게 요청이 또 가므로,
 // 고객이 다시 확인한 뒤에는 해결됨으로 닫거나 다시 여는 것만 고르게 한다. 닫은 이슈도 다시 열 수 있다.
 // 재확인 녹화에서 찾은 이슈도 반영 완료를 누르면 고객에게 "수정을 반영했어요"가 또 가므로 안내만 둔다(V5-01).
@@ -171,16 +160,14 @@ function IssueActions({ issue, isReverifyFinding }: { issue: Issue; isReverifyFi
   }
 }
 
-type FinishingStatus = "closed" | "open";
-
-// 해결됨으로 닫기·다시 열기 요청. 성공하면 화면을 새로 고치고, 실패하면 이유를 남긴다.
+// 반영 완료·해결됨으로 닫기·다시 열기 요청. 성공하면 화면을 새로 고치고, 실패하면 이유를 남긴다.
 function useIssueStatusChange(issueId: string) {
   const request = useAdminRequest();
   const { refresh } = useAdminRevision();
-  const [savingStatus, setSavingStatus] = useState<FinishingStatus | null>(null);
+  const [savingStatus, setSavingStatus] = useState<AdminIssueStatus | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  async function changeStatus(status: FinishingStatus): Promise<boolean> {
+  async function changeStatus(status: AdminIssueStatus): Promise<boolean> {
     setSavingStatus(status);
     setErrorMessage(null);
     const result = await request(`/api/admin/issues/${issueId}`, { method: "PATCH", body: { status } });
@@ -280,7 +267,7 @@ function IssueClarification({ issue }: { issue: Issue }) {
     return null;
   }
   // 반영 완료 뒤에도 고객 답변은 남겨서, 왜 이렇게 고쳤는지 나중에 볼 수 있게 한다.
-  const answerText = findAnswerText(card);
+  const answerText = findCardAnswerText(card);
   if (answerText) {
     return (
       <p className={styles.answer}>
@@ -290,7 +277,7 @@ function IssueClarification({ issue }: { issue: Issue }) {
       </p>
     );
   }
-  if (isFinished(issue)) {
+  if (!isRemainingIssue(issue.status)) {
     return null;
   }
   if (card.approvedAt) {
@@ -347,12 +334,10 @@ function SelectorChip({ selector }: { selector: string }) {
 
 // 반영 완료는 고객 위젯에 바로 메시지를 보내고 API로 되돌릴 수 없다. 그래서 누르기 전에 제자리에서 한 번 더 묻는다.
 function ResolveButton({ issueId }: { issueId: string }) {
-  const request = useAdminRequest();
-  const { refresh } = useAdminRevision();
+  const { savingStatus, errorMessage, changeStatus } = useIssueStatusChange(issueId);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const [isConfirming, setIsConfirming] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isSaving = savingStatus === "resolved";
 
   useEffect(() => {
     if (isConfirming) {
@@ -361,16 +346,9 @@ function ResolveButton({ issueId }: { issueId: string }) {
   }, [isConfirming]);
 
   async function resolveIssue() {
-    setIsSaving(true);
-    setErrorMessage(null);
-    const result = await request(`/api/admin/issues/${issueId}`, { method: "PATCH", body: { status: "resolved" } });
-    setIsSaving(false);
-    if (!result.ok) {
-      setErrorMessage(result.message);
-      return;
+    if (await changeStatus("resolved")) {
+      setIsConfirming(false);
     }
-    setIsConfirming(false);
-    refresh();
   }
 
   if (isConfirming) {
@@ -383,11 +361,7 @@ function ResolveButton({ issueId }: { issueId: string }) {
         <AdminButton variant="text" size="small" onClick={() => setIsConfirming(false)} disabled={isSaving}>
           닫기
         </AdminButton>
-        {errorMessage ? (
-          <span className={styles.actionError} role="alert">
-            {errorMessage}
-          </span>
-        ) : null}
+        <ActionError message={errorMessage} />
       </div>
     );
   }

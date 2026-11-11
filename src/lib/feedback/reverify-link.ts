@@ -1,3 +1,4 @@
+import { getWidgetRecordingTitle } from "@/lib/feedback/recording-status-label";
 import type { RecordingDetail } from "@/types/feedback";
 
 export type ReverifyOrigin = { issueId: string; recordingId: string; title: string };
@@ -21,6 +22,7 @@ export function findLatestReverifyRecordingId(recordings: RecordingDetail[], iss
   return recordings.find((recording) => recording.reverifyIssueId === issueId)?.id ?? null;
 }
 
+// 분석 패널의 재확인 녹화 제목. 위젯 카드와 같은 문구를 쓰고, 원래 이슈를 못 찾으면 이름 없이 부른다.
 export function getReverifyRecordingLabel(origin: ReverifyOrigin | null): string {
-  return origin ? `‘${origin.title}’ 다시 확인 녹화` : "다시 확인 녹화";
+  return origin ? getWidgetRecordingTitle(origin.title) : "다시 확인 녹화";
 }

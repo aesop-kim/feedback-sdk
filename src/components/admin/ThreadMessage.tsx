@@ -1,4 +1,5 @@
 import styles from "@/components/admin/ThreadMessage.module.css";
+import { findCardAnswerText } from "@/lib/feedback/clarification-answer";
 import { getAdminRecordingStateLabel } from "@/lib/feedback/recording-status-label";
 import { formatClockTime } from "@/lib/format/date-format";
 import { formatDuration } from "@/lib/format/duration-format";
@@ -90,16 +91,8 @@ function RecordingRow({
   );
 }
 
-function findAnswerLabel(card: ClarificationCard): string | null {
-  if (!card.answer) {
-    return null;
-  }
-  const optionLabel = card.options.find((option) => option.id === card.answer?.optionId)?.label;
-  return [optionLabel, card.answer.text].filter(Boolean).join(" · ") || null;
-}
-
 function ClarificationSummary({ card }: { card: ClarificationCard }) {
-  const answerLabel = findAnswerLabel(card);
+  const answerLabel = findCardAnswerText(card);
   return (
     <div className={styles.clarification}>
       <p className={styles.clarificationQuestion}>

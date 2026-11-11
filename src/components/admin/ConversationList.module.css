@@ -180,7 +180,6 @@
   color: var(--grey-800);
 }
 
-.emptyCaption,
 .notice {
   margin: 0;
   font-size: var(--fs-t7);
