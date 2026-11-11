@@ -207,7 +207,8 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
         isCompact={isReady && hasMessages}
         onClose={handleClose}
       />
-      <div className={styles.body} data-widget-scroll="">
+      {/* 대화가 길어져 안에 누를 것이 없어도 키보드로 스크롤할 수 있게 포커스를 받는다(V4-01, WCAG 2.1.1). */}
+      <div className={styles.body} data-widget-scroll="" role="region" aria-label="대화 내용" tabIndex={0}>
         {conversation.status === "loading" ? <MessageSkeleton /> : null}
         {conversation.status === "error" ? (
           <section className={styles.errorState}>
