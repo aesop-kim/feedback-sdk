@@ -16,9 +16,9 @@ export function ConversationWorkspace({ conversationId }: { conversationId: stri
   if (!detail) {
     return (
       <>
-        <section className={styles.threadColumn} aria-busy={isLoading}>
+        <main className={styles.threadColumn} aria-busy={isLoading}>
           {errorMessage ? <p className={styles.notice}>{errorMessage}</p> : <ThreadSkeleton />}
-        </section>
+        </main>
         <aside className={styles.analysisColumn} aria-busy={isLoading} />
       </>
     );
@@ -30,13 +30,14 @@ export function ConversationWorkspace({ conversationId }: { conversationId: stri
 
   return (
     <>
-      <section className={styles.threadColumn} aria-label={`${detail.endUser.name} 님과의 대화`}>
+      {/* 페이지의 주 내용은 대화다. 녹화 분석(aside)은 main 밖 최상위에 두어야 complementary 규칙을 지킨다(V3-04). */}
+      <main className={styles.threadColumn} aria-label={`${detail.endUser.name} 님과의 대화`}>
         <ConversationThread
           conversation={detail}
           selectedRecordingId={activeRecordingId}
           onSelectRecording={setSelectedRecordingId}
         />
-      </section>
+      </main>
       <aside className={styles.analysisColumn} aria-label="녹화 분석">
         <RecordingAnalysisPanel
           recordings={detail.recordings}

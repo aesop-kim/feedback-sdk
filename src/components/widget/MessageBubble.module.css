@@ -36,8 +36,11 @@
   border-bottom-right-radius: 6px;
 }
 
+/* 보내는 중: 글자를 흐리게 하면 대비가 2.58:1로 떨어진다(V3-03). 옅은 파란 면에 진한 글자(5.35:1)로 바꾸고,
+   보내지면 파란 면으로 바뀌어 상태 차이를 보여 준다. */
 .userBubble[data-pending="true"] {
-  opacity: 0.6;
+  background: var(--blue-50);
+  color: var(--blue-700);
 }
 
 /* 파란 면은 "보냄"으로 읽히므로, 보내지 못한 글은 회색 면에 둔다. */

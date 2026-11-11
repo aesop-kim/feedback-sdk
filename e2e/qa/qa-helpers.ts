@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, type APIRequestContext, type BrowserContext, type FrameLocator, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type BrowserContext, type Frame, type FrameLocator, type Page } from "@playwright/test";
 
 // QA 회귀 스펙 공통 도우미.
 // QA_TARGET=deployed 이면 배포 주소(클라우드 DB)를, 아니면 로컬(3000/3001)을 친다.
@@ -35,6 +35,20 @@ function readEnvFile(fileName: string): Record<string, string> {
 let cachedAdminClient: SupabaseClient | null = null;
 
 // 정리·검증용 service role 클라이언트. 키는 출력하지 않는다.
+const AXE_SOURCE = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
+
+export type AxeViolation = { id: string; nodes: unknown[] };
+
+// 프레임(위젯 iframe 또는 관리자 페이지)에 axe를 넣고 고른 규칙만 돌린다.
+export async function runAxeRules(frame: Frame, rules: string[]): Promise<AxeViolation[]> {
+  await frame.evaluate(AXE_SOURCE);
+  return frame.evaluate(async (values) => {
+    const axe = (window as unknown as { axe: { run: (context: Document, options: object) => Promise<{ violations: AxeViolation[] }> } }).axe;
+    const result = await axe.run(document, { runOnly: { type: "rule", values } });
+    return result.violations.map((violation) => ({ id: violation.id, nodes: violation.nodes }));
+  }, rules);
+}
+
 export function getQaDatabase(): SupabaseClient {
   if (cachedAdminClient) {
     return cachedAdminClient;

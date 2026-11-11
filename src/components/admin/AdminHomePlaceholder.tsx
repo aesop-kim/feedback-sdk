@@ -27,11 +27,12 @@ export function AdminHomePlaceholder() {
   if (conversationCount === 0) {
     return <InstallGuide projectKey={projectKey} />;
   }
+  // 대화를 고르기 전에는 이 안내가 페이지의 주 내용이라 main과 h1을 여기에 둔다(V3-04).
   return (
-    <section className={styles.placeholder}>
-      <p className={styles.title}>의견을 골라 주세요</p>
+    <main className={styles.placeholder}>
+      <h1 className={styles.title}>의견을 골라 주세요</h1>
       <p className={styles.caption}>왼쪽 목록에서 의견을 고르면 주고받은 메시지와 녹화 분석을 함께 볼 수 있어요.</p>
-    </section>
+    </main>
   );
 }
 
@@ -50,8 +51,8 @@ function InstallGuide({ projectKey }: { projectKey: string | null }) {
   }
 
   return (
-    <section className={styles.placeholder}>
-      <p className={styles.title}>아직 받은 의견이 없어요</p>
+    <main className={styles.placeholder}>
+      <h1 className={styles.title}>아직 받은 의견이 없어요</h1>
       <p className={styles.caption}>고객사 페이지에 아래 코드를 넣으면 위젯이 떠요</p>
       {projectKey ? (
         <p className={styles.caption}>
@@ -67,6 +68,6 @@ function InstallGuide({ projectKey }: { projectKey: string | null }) {
       <span className={styles.visuallyHidden} role="status">
         {isCopied ? "설치 코드를 복사했어요" : ""}
       </span>
-    </section>
+    </main>
   );
 }

@@ -60,7 +60,7 @@ test("고객 메시지는 2초 안에 관리자에게, 관리자 답장은 2초 
   const adminPage = await loginAdmin(adminContext);
   const adminDiagnostics = collectDiagnostics(adminPage);
   await adminPage.goto(`${SDK_ORIGIN}/admin/${conversationId}`);
-  const thread = adminPage.getByRole("region", { name: `${user.name} 님과의 대화` });
+  const thread = adminPage.getByRole("main", { name: `${user.name} 님과의 대화` });
   await expect(thread.getByText("첫 메시지")).toBeVisible();
   // 채널 구독이 붙을 시간을 준다(실시간 측정은 그 뒤부터).
   await adminPage.waitForTimeout(2_000);
