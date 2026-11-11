@@ -290,6 +290,15 @@ test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' �
   const analysis = adminPage.getByRole("complementary", { name: "녹화 분석" });
   await expect(analysis.getByText("업로드가 끝나지 않았어요. 고객이 업로드 중에 페이지를 떠났을 수 있어요.", { exact: false })).toBeVisible();
   await expect(analysis.getByText("고객이 영상을 올리고 있어요")).toHaveCount(0);
+  // NEW-01: 받은 영상이 없으니 "받아 두었어요"·다시 정리하기를 보여 주지 않고, API로 눌러도 이유가 바뀌지 않는다.
+  await expect(analysis.getByText("녹화를 끝까지 받지 못했어요")).toBeVisible();
+  await expect(analysis.getByText(/안전하게 받아|다시 정리하면/)).toHaveCount(0);
+  await expect(analysis.getByRole("button", { name: /다시 정리하기/ })).toHaveCount(0);
   await captureQaScreen(adminPage, "rec-08-admin-expired-upload");
+  const reanalyze = await adminPage.request.post(`${SDK_ORIGIN}/api/admin/recordings/${recordings[0].id}/reanalyze`);
+  expect(reanalyze.status()).toBe(409);
+  const { data: afterReanalyze } = await database.from("recordings").select("status, error").eq("id", recordings[0].id).single();
+  expect(afterReanalyze?.status).toBe("failed");
+  expect(afterReanalyze?.error).toContain("업로드가 끝나지 않았어요");
   await adminContext.close();
 });

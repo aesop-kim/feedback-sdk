@@ -124,12 +124,12 @@ test("관리자 답장이 2000자를 넘으면 한국어로 이유를 알려 준
   await context.close();
 });
 
-test("분석 중·실패(무음 안내 포함) 상태가 보이고, 다시 정리하기를 누르면 대기열로 돌아간다", async ({ browser, request }) => {
+test("분석 중·무음 실패 상태가 보이고, 무음은 다시 녹화를 먼저 안내한다", async ({ browser, request }) => {
   const user = createQaUser("adm-states");
   const conversation = await startConversationViaApi(request, user);
   const silentMessage = "목소리가 녹음되지 않았어요. 크롬에서 고른 마이크를 확인해 주세요";
-  const analyzing = await seedAnalyzedRecording(conversation.conversationId, { status: "analyzing" });
-  const failed = await seedAnalyzedRecording(conversation.conversationId, { status: "failed", error: silentMessage });
+  await seedAnalyzedRecording(conversation.conversationId, { status: "analyzing" });
+  await seedAnalyzedRecording(conversation.conversationId, { status: "failed", error: silentMessage, withAudio: true });
   const context = await browser.newContext();
   const adminPage = await loginAdmin(context);
   const diagnostics = collectDiagnostics(adminPage);
@@ -137,21 +137,60 @@ test("분석 중·실패(무음 안내 포함) 상태가 보이고, 다시 정�
 
   // 최신 녹화(failed)가 먼저 열린다.
   await expect(analysis.getByText("말한 내용을 정리하지 못했어요")).toBeVisible();
+  await expect(analysis.getByText(silentMessage)).toBeVisible();
+  // NEW-10: 무음은 다시 녹화 요청이 먼저고, 다시 정리하기는 보조 버튼으로만 둔다.
+  await expect(analysis.getByText(/다시 녹화해 달라고 답장해 주세요/)).toBeVisible();
+  await expect(analysis.getByRole("button", { name: "다시 정리하기", exact: true })).toHaveCount(0);
+  await expect(analysis.getByRole("button", { name: "그래도 다시 정리하기" })).toBeVisible();
   await captureQaScreen(adminPage, "admin-05-failed-silent");
-  const isReasonVisible = await analysis.getByText(silentMessage).isVisible();
 
   await analysis.getByRole("button", { name: "이전 녹화" }).click();
   await expect(analysis.getByText("말한 내용을 정리하고 있어요")).toBeVisible();
   await captureQaScreen(adminPage, "admin-05-analyzing");
-  await analysis.getByRole("button", { name: "다음 녹화" }).click();
+  saveDiagnostics("admin-05-states", diagnostics);
+  await context.close();
+});
 
-  await analysis.getByRole("button", { name: "다시 정리하기" }).click();
+test("분석 실패는 다시 정리하기를 누르면 대기열로 돌아간다", async ({ browser, request }) => {
+  const user = createQaUser("adm-requeue");
+  const conversation = await startConversationViaApi(request, user);
+  const failed = await seedAnalyzedRecording(conversation.conversationId, {
+    status: "failed",
+    error: "이슈를 분석하지 못했어요: 시간 초과",
+    withAudio: true,
+  });
+  const context = await browser.newContext();
+  const adminPage = await loginAdmin(context);
+  const analysis = await openConversation(adminPage, conversation.conversationId);
+  await expect(analysis.getByText("다시 정리하면 보통 1분 안에 끝나요", { exact: false })).toBeVisible();
+  await analysis.getByRole("button", { name: "다시 정리하기", exact: true }).click();
   await expect(analysis.getByText(/말한 내용을 정리하고 있어요|말한 내용을 정리하지 못했어요/)).toBeVisible();
   const { data: requeued } = await getQaDatabase().from("recordings").select("status").eq("id", failed.recordingId).single();
-  console.log(`[qa] after reanalyze status=${requeued?.status}; analyzing seeded id=${analyzing.recordingId}`);
+  console.log(`[qa] after reanalyze status=${requeued?.status}`);
   expect(["uploaded", "analyzing", "failed"]).toContain(requeued?.status);
-  saveDiagnostics("admin-05-states", diagnostics);
-  expect(isReasonVisible, "실패 이유(무음 안내)가 관리자 화면에 보여야 한다").toBe(true);
+  await context.close();
+});
+
+// NEW-01: 업로드가 끝나지 않은 녹화는 "영상을 받아 두었어요"나 다시 정리하기를 보여 주지 않고, API도 409로 거절한다.
+test("업로드가 끝나지 않은 녹화는 다시 녹화를 안내하고 다시 정리할 수 없다", async ({ browser, request }) => {
+  const user = createQaUser("adm-incomplete");
+  const conversation = await startConversationViaApi(request, user);
+  const reason = "업로드가 끝나지 않았어요. 고객이 업로드 중에 페이지를 떠났을 수 있어요. 다시 녹화해 달라고 요청해 주세요";
+  const incomplete = await seedAnalyzedRecording(conversation.conversationId, { status: "failed", error: reason, analysisAttempt: 0 });
+  const context = await browser.newContext();
+  const adminPage = await loginAdmin(context);
+  const analysis = await openConversation(adminPage, conversation.conversationId);
+  await expect(analysis.getByText("녹화를 끝까지 받지 못했어요")).toBeVisible();
+  await expect(analysis.getByText(reason)).toBeVisible();
+  await expect(analysis.getByText(/안전하게 받아|다시 정리하면/)).toHaveCount(0);
+  await expect(analysis.getByRole("button", { name: /다시 정리하기/ })).toHaveCount(0);
+  await captureQaScreen(adminPage, "admin-05-upload-incomplete");
+
+  const response = await adminPage.request.post(`${SDK_ORIGIN}/api/admin/recordings/${incomplete.recordingId}/reanalyze`);
+  expect(response.status()).toBe(409);
+  expect(((await response.json()) as { error: string }).error).toMatch(/다시 녹화해 달라고/);
+  const { data: unchanged } = await getQaDatabase().from("recordings").select("status, error").eq("id", incomplete.recordingId).single();
+  expect(unchanged).toEqual({ status: "failed", error: reason });
   await context.close();
 });
 

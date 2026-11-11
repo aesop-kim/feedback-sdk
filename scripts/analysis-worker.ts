@@ -12,7 +12,7 @@ import { buildAnalysisPrompt } from "@/lib/analysis/build-analysis-prompt";
 import { analysisResultSchema, getAnalysisJsonSchema, type AnalysisIssue } from "@/lib/analysis/issue-schema";
 import { mapIssuesToRows } from "@/lib/analysis/map-issues-to-rows";
 import { findMeanVolumeDb, isSilentAudio } from "@/lib/analysis/detect-silence";
-import { SILENT_AUDIO_ERROR } from "@/lib/feedback/recording-failure";
+import { MISSING_RECORDING_FILE_ERROR, SILENT_AUDIO_ERROR } from "@/lib/feedback/recording-failure";
 import { parseWhisperJson, type ParsedTranscript } from "@/lib/analysis/parse-whisper-json";
 import { getAdminChannelName, getConversationChannelName } from "@/lib/realtime/realtime-signal";
 import { sendChannelSignal } from "@/lib/realtime/send-channel-signal";
@@ -62,6 +62,9 @@ class StageError extends Error {
   }
 }
 
+// 관리자에게 그대로 보여 줄 실패 이유. 단계 문구를 덧붙이지 않고, 원문 오류는 로그에만 남긴다.
+class ReadableFailure extends Error {}
+
 function getErrorDetail(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -73,7 +76,7 @@ async function runStage<TResult>(stage: Stage, task: () => Promise<TResult>): Pr
   try {
     return await task();
   } catch (error) {
-    if (error instanceof StageError) {
+    if (error instanceof StageError || error instanceof ReadableFailure) {
       throw error;
     }
     throw new StageError(stage, getErrorDetail(error));
@@ -186,7 +189,14 @@ async function downloadInputs(supabase: SupabaseClient, recording: RecordingRow,
   const framesDirectory = path.join(workDirectory, "frames");
   await mkdir(framesDirectory, { recursive: true });
   const audioPath = path.join(workDirectory, "audio.webm");
-  await writeFile(audioPath, await downloadObject(supabase, `${recording.id}/audio.webm`));
+  let audio: Buffer;
+  try {
+    audio = await downloadObject(supabase, `${recording.id}/audio.webm`);
+  } catch (error) {
+    console.warn(`[worker] ${recording.id} 녹음 파일을 받지 못했어요: ${getErrorDetail(error)}`);
+    throw new ReadableFailure(MISSING_RECORDING_FILE_ERROR);
+  }
+  await writeFile(audioPath, audio);
 
   let events: unknown = [];
   try {
@@ -389,7 +399,10 @@ async function processRecording(
     timings.push(`이슈 ${rows.length}건`);
     console.log(`[worker] ${claimed.id} ${timings.join(" · ")} (세그먼트 ${transcript.segments.length}, 컨텍스트 ${contexts.length}, 장면 ${context.frames.length}/${frames.length})`);
   } catch (error) {
-    const message = error instanceof StageError ? error.message : `분석 중 오류가 났어요: ${getErrorDetail(error)}`;
+    let message = `분석 중 오류가 났어요: ${getErrorDetail(error)}`;
+    if (error instanceof StageError || error instanceof ReadableFailure) {
+      message = error.message;
+    }
     if (message.includes("approved clarification cards")) {
       // 고객에게 이미 질문을 보낸 녹화는 결과를 바꾸지 않는다. 기존 이슈를 그대로 두고 analyzed로 돌린다.
       console.warn(`[worker] ${claimed.id} 이미 고객에게 질문을 보낸 녹화라 기존 결과를 유지해요`);

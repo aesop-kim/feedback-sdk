@@ -146,7 +146,13 @@ export async function findConversationIdForUser(externalId: string): Promise<str
 // 녹화 분석 없이 관리자/되묻기 흐름을 시험하려고, 분석이 끝난 녹화·이슈·질문 카드를 DB에 직접 만든다.
 export async function seedAnalyzedRecording(
   conversationId: string,
-  options: { status?: "analyzed" | "failed" | "analyzing"; error?: string; ambiguous?: boolean } = {},
+  options: {
+    status?: "analyzed" | "failed" | "analyzing";
+    error?: string;
+    ambiguous?: boolean;
+    analysisAttempt?: number;
+    withAudio?: boolean;
+  } = {},
 ): Promise<{ recordingId: string; issueId: string | null; cardId: string | null }> {
   const database = getQaDatabase();
   const status = options.status ?? "analyzed";
@@ -163,6 +169,7 @@ export async function seedAnalyzedRecording(
       frames: [],
       status,
       error: options.error ?? null,
+      analysis_attempt: options.analysisAttempt ?? 1,
       transcript: status === "analyzed" ? { segments: [{ startMs: 0, endMs: 2000, text: "QA 시드 발화" }] } : null,
     })
     .select("id")
@@ -171,6 +178,12 @@ export async function seedAnalyzedRecording(
     throw new Error(`녹화 시드 실패: ${error?.message}`);
   }
   await database.from("messages").insert({ conversation_id: conversationId, sender: "user", type: "recording", recording_id: recording.id });
+  if (options.withAudio) {
+    // 내용은 의미 없는 바이트다. 다시 정리하기가 "녹음 파일 있음"으로 판단하게 하는 용도.
+    await database.storage
+      .from("recordings")
+      .upload(`${recording.id}/audio.webm`, new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]), { contentType: "audio/webm" });
+  }
   if (status !== "analyzed") {
     return { recordingId: recording.id as string, issueId: null, cardId: null };
   }
