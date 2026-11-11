@@ -7,6 +7,8 @@ import {
   cleanupQaUsers,
   collectDiagnostics,
   createQaUser,
+  findConversationIdForUser,
+  getQaDatabase,
   loginAdmin,
   openWidget,
   runAxeRules,
@@ -14,7 +16,7 @@ import {
 } from "./qa-helpers";
 
 // 접근성·배치 회귀: 메시지 목록 의미(NEW-05), 360px 녹화 알약(NEW-06), 카메라 정책 콘솔 오류(NEW-09),
-// 보내는 중 말풍선 대비(V3-03), 관리자 랜드마크(V3-04).
+// 보내는 중 말풍선 대비(V3-03), 관리자 랜드마크(V3-04), 긴 대화의 키보드 스크롤(V4-01).
 
 test.afterAll(async () => {
   await cleanupQaUsers("qa-layout-");
@@ -101,4 +103,43 @@ test("관리자 화면은 main 하나와 h1이 있고 모든 내용이 랜드마
   console.log(`[qa] admin conversation landmarks: ${JSON.stringify(conversationViolations.map((violation) => violation.id))}`);
   expect(conversationViolations).toEqual([]);
   await context.close();
+});
+
+test("긴 대화에서도 메시지 영역을 키보드로 스크롤할 수 있다", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  const user = createQaUser("layout-scroll");
+  await openWidget(page, user);
+  const conversationId = await findConversationIdForUser(user.id);
+  expect(conversationId).not.toBeNull();
+  // 누를 것이 없는 말풍선만 10개 쌓는다. 버튼이 남아 있으면 탭으로 스크롤이 되어 문제가 가려진다.
+  const rows = Array.from({ length: 10 }, (_, index) => ({
+    conversation_id: conversationId!,
+    sender: index % 2 === 0 ? "user" : "admin",
+    type: "text",
+    body: `긴 대화 스크롤 확인 ${index + 1}번째 메시지예요. 화면을 넘길 만큼 길게 써요.`,
+    created_at: new Date(Date.now() - (10 - index) * 1000).toISOString(),
+  }));
+  const { error } = await getQaDatabase().from("messages").insert(rows);
+  expect(error).toBeNull();
+
+  const widget = await openWidget(page, user);
+  await expect(widget.getByText("긴 대화 스크롤 확인 10번째")).toBeVisible();
+  const scrollRegion = widget.getByRole("region", { name: "대화 내용" });
+  const { scrollHeight, clientHeight } = await scrollRegion.evaluate((element) => ({
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+  }));
+  expect(scrollHeight, "스크롤이 생길 만큼 길어야 시험이 의미 있다").toBeGreaterThan(clientHeight);
+
+  const violations = await runAxeRules(getWidgetFrame(page), ["scrollable-region-focusable"]);
+  console.log(`[qa] scrollable-region-focusable: ${JSON.stringify(violations.map((violation) => `${violation.id}×${violation.nodes.length}`))}`);
+  expect(violations).toEqual([]);
+
+  await scrollRegion.focus();
+  await expect(scrollRegion).toBeFocused();
+  await scrollRegion.press("End");
+  const bottom = await scrollRegion.evaluate((element) => element.scrollTop);
+  await scrollRegion.press("Home");
+  await expect.poll(() => scrollRegion.evaluate((element) => element.scrollTop)).toBeLessThan(bottom);
+  await captureQaScreen(page, "layout-long-history-focus");
 });

@@ -13,6 +13,12 @@
   overscroll-behavior: contain;
 }
 
+/* 패널이 overflow: hidden이라 바깥 링은 잘린다. 안쪽으로 그린다. */
+.body:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: -2px;
+}
+
 .footer {
   position: relative;
 }
