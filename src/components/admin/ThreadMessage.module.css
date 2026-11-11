@@ -132,8 +132,9 @@
 
 .clarification {
   max-width: 360px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 14px 12px;
+  border-radius: 18px;
+  border-bottom-right-radius: 6px;
   border: 1px solid var(--border-hairline);
   background: var(--bg);
 }

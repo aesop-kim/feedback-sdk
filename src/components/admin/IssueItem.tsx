@@ -19,7 +19,8 @@ type IssueItemProps = {
 
 type StatusPill = { label: string; tone: "grey" | "orange" | "blue" | "green" };
 
-function getStatusPill(issue: Issue): StatusPill {
+// 별일 없는 이슈(명확하고 열려 있음)는 배지를 달지 않는다. 손이 가야 하는 상태만 표시한다.
+function findStatusPill(issue: Issue): StatusPill | null {
   switch (issue.status) {
     case "resolved":
       return { label: "반영 완료", tone: "grey" };
@@ -30,9 +31,16 @@ function getStatusPill(issue: Issue): StatusPill {
     case "reverify":
       return { label: "다시 확인 중", tone: "blue" };
     case "open":
-      return issue.confidence === "ambiguous" ? { label: "확인 필요", tone: "orange" } : { label: "명확", tone: "grey" };
+      return issue.confidence === "ambiguous" ? { label: "확인 필요", tone: "orange" } : null;
   }
 }
+
+const PILL_TONE_CLASS_NAMES: Record<StatusPill["tone"], string> = {
+  grey: styles.pillGrey,
+  orange: styles.pillOrange,
+  blue: styles.pillBlue,
+  green: styles.pillGreen,
+};
 
 // 강조 영역: 질문 카드에 지정된 영역을 먼저 쓰고, 없으면 요소 위치를 화면 크기로 나눠 0~1로 바꾼다.
 function findHighlight(issue: Issue): HighlightBox | null {
@@ -61,8 +69,7 @@ function findAnswerText(card: ClarificationCard): string | null {
 
 export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemProps) {
   const bodyId = useId();
-  const pill = getStatusPill(issue);
-  const toneClassName = styles[`pill${pill.tone[0].toUpperCase()}${pill.tone.slice(1)}`];
+  const pill = findStatusPill(issue);
 
   return (
     <li className={issue.status === "resolved" ? `${styles.item} ${styles.resolved}` : styles.item}>
@@ -72,7 +79,7 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemP
           <span className={styles.title}>{issue.title}</span>
           {isOpen ? null : <span className={styles.collapsedSummary}>{issue.summary}</span>}
         </span>
-        <span className={`${styles.pill} ${toneClassName}`}>{pill.label}</span>
+        {pill ? <span className={`${styles.pill} ${PILL_TONE_CLASS_NAMES[pill.tone]}`}>{pill.label}</span> : null}
         <svg
           className={isOpen ? `${styles.chevron} ${styles.chevronOpen}` : styles.chevron}
           width="16"
