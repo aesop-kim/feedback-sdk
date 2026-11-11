@@ -9,6 +9,8 @@ type PromptInput = {
   pageUrl: string | null;
   pageTitle: string | null;
   viewport: { width: number; height: number } | null;
+  // 재확인 녹화면 고객이 다시 확인한 원래 이슈.
+  reverifyIssue?: { title: string; summary: string } | null;
   retryReason?: string;
 };
 
@@ -47,6 +49,23 @@ function formatFrames(context: AnalysisContext, framesDirectory: string): string
     .join("\n");
 }
 
+// 재확인 녹화: 개발팀이 고쳤다고 알린 이슈를 고객이 같은 화면에서 다시 확인한 녹화다.
+function formatReverifySection(reverifyIssue: { title: string; summary: string } | null): string[] {
+  if (!reverifyIssue) {
+    return [];
+  }
+  return [
+    "## 다시 확인 녹화",
+    "이 녹화는 새 신고가 아니에요. 개발팀이 아래 이슈를 고쳤다고 알렸고, 고객이 같은 화면에서 고쳐졌는지 다시 확인하며 녹화했어요.",
+    `- 원래 이슈: ${reverifyIssue.title}`,
+    `- 원래 내용: ${reverifyIssue.summary}`,
+    "- 고객이 원래 문제가 아직 남아 있다고 말하면, 원래 이슈 제목을 그대로 title로 쓰고 summary에 지금 어떻게 남아 있는지 적으세요.",
+    "- 고객이 고쳐졌다고만 말하면 issues를 빈 배열로 두세요.",
+    "- 다시 확인 녹화에서는 고객에게 되묻지 않아요. confidence는 모두 \"clear\", clarification은 모두 null로 두세요.",
+    "",
+  ];
+}
+
 export function buildAnalysisPrompt(input: PromptInput): string {
   const { context, framesDirectory, pageUrl, pageTitle, viewport } = input;
   const sections = [
@@ -59,6 +78,7 @@ export function buildAnalysisPrompt(input: PromptInput): string {
     `- 제목: ${pageTitle ?? "알 수 없음"}`,
     `- 화면 크기: ${viewport ? `${viewport.width}x${viewport.height}` : "알 수 없음"}`,
     "",
+    ...formatReverifySection(input.reverifyIssue ?? null),
     "## 받아쓰기 세그먼트 (tMs는 녹화 시작 기준 ms, 아래 줄은 그 무렵의 요소 컨텍스트)",
     context.segments.length > 0 ? formatSegments(context) : "(받아쓰기 없음)",
     "",

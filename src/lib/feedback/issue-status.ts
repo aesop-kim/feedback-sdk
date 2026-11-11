@@ -41,3 +41,12 @@ export function getAdminTransitionSources(target: AdminIssueStatus): IssueStatus
 export function isRemainingIssue(status: IssueStatus): boolean {
   return status !== "resolved" && status !== "closed";
 }
+
+// 대화 목록의 "남은 문제" 수. 재확인 녹화에서 나온 이슈는 원래 이슈를 닫을지 다시 열지 고르는 근거라서 세지 않는다.
+// 원래 이슈가 다시 열리면 그 이슈가 남은 문제로 돌아온다(V4-06).
+export function countRemainingIssues(
+  issues: { status: IssueStatus; recordingId: string }[],
+  reverifyRecordingIds: ReadonlySet<string>,
+): number {
+  return issues.filter((issue) => isRemainingIssue(issue.status) && !reverifyRecordingIds.has(issue.recordingId)).length;
+}

@@ -48,7 +48,10 @@ type RecordingRow = {
   t0_epoch_ms: number | null;
   audio_offset_ms: number;
   frames: FrameReference[] | null;
+  reverify_issue_id: string | null;
 };
+
+type ReverifyIssue = { title: string; summary: string };
 
 type ClaimedRecording = { id: string; attempt: number };
 
@@ -282,6 +285,7 @@ async function analyzeWithClaude(input: {
   framesDirectory: string;
   workDirectory: string;
   recording: RecordingRow;
+  reverifyIssue: ReverifyIssue | null;
 }): Promise<AnalysisIssue[]> {
   let retryReason: string | undefined;
   for (let attemptIndex = 0; attemptIndex < 2; attemptIndex += 1) {
@@ -291,6 +295,7 @@ async function analyzeWithClaude(input: {
       pageUrl: input.recording.page_url,
       pageTitle: input.recording.page_title,
       viewport: input.recording.viewport,
+      reverifyIssue: input.reverifyIssue,
       retryReason,
     });
     const { stdout } = await runCommand("claude", getClaudeArgs(input.framesDirectory), {
@@ -320,7 +325,7 @@ async function analyzeWithClaude(input: {
 async function loadRecording(supabase: SupabaseClient, recordingId: string): Promise<{ recording: RecordingRow; projectId: string }> {
   const { data, error } = await supabase
     .from("recordings")
-    .select("id, conversation_id, page_url, page_title, viewport, t0_epoch_ms, audio_offset_ms, frames, conversations(project_id)")
+    .select("id, conversation_id, page_url, page_title, viewport, t0_epoch_ms, audio_offset_ms, frames, reverify_issue_id, conversations(project_id)")
     .eq("id", recordingId)
     .single();
   if (error || !data) {
@@ -331,6 +336,18 @@ async function loadRecording(supabase: SupabaseClient, recordingId: string): Pro
     throw new Error("대화를 찾지 못했어요");
   }
   return { recording: data as unknown as RecordingRow, projectId: conversation.project_id };
+}
+
+// 재확인 녹화가 다시 확인하는 원래 이슈. 일반 녹화거나 이슈가 지워졌으면 null이다.
+async function loadReverifyIssue(supabase: SupabaseClient, issueId: string | null): Promise<ReverifyIssue | null> {
+  if (!issueId) {
+    return null;
+  }
+  const { data, error } = await supabase.from("issues").select("title, summary").eq("id", issueId).maybeSingle();
+  if (error) {
+    throw new Error(error.message);
+  }
+  return (data as ReverifyIssue | null) ?? null;
 }
 
 async function markFailed(supabase: SupabaseClient, claimed: ClaimedRecording, message: string): Promise<void> {
@@ -357,6 +374,7 @@ async function processRecording(
   try {
     const loaded = await runStage("load", () => loadRecording(supabase, claimed.id));
     const { recording } = loaded;
+    const reverifyIssue = await runStage("load", () => loadReverifyIssue(supabase, recording.reverify_issue_id));
     conversationId = recording.conversation_id;
     projectId = loaded.projectId;
 
@@ -378,7 +396,7 @@ async function processRecording(
     let issues: AnalysisIssue[] = [];
     if (context.segments.length > 0) {
       const analysis = await measure(() =>
-        runStage("analyze", () => analyzeWithClaude({ context, framesDirectory, workDirectory, recording })),
+        runStage("analyze", () => analyzeWithClaude({ context, framesDirectory, workDirectory, recording, reverifyIssue })),
       );
       timings.push(`분석 ${formatSeconds(analysis.elapsedMs)}`);
       issues = analysis.result;
@@ -386,7 +404,8 @@ async function processRecording(
       timings.push("분석 건너뜀(말 없음)");
     }
 
-    const rows = mapIssuesToRows({ recordingId: claimed.id, issues, contexts, frames });
+    // 재확인 녹화의 이슈는 recordings.reverify_issue_id로 원래 이슈에 묶인다. 질문 초안은 만들지 않는다.
+    const rows = mapIssuesToRows({ recordingId: claimed.id, issues, contexts, frames, isReverify: recording.reverify_issue_id !== null });
     await runStage("save", async () => {
       const { error } = await supabase.rpc("replace_recording_issues", {
         p_recording_id: claimed.id,

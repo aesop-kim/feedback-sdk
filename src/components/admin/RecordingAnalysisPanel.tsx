@@ -160,12 +160,15 @@ function RecordingAnalysis({
   }
 
   const checkCount = recording.issues.filter(needsCheck).length;
+  // 재확인 녹화에서 나온 내용은 원래 이슈를 닫을지 다시 열지 고르는 근거라서, 새 문제로 세지 않고 이 녹화 아래에 묶는다(V4-06).
+  const isReverify = recording.reverifyIssueId !== null;
 
   return (
     <>
       <div className={styles.summaryLine}>
         <h3 className={styles.summaryTitle}>
-          문제 <span className={styles.summaryNumber}>{recording.issues.length}</span>건
+          {isReverify ? "다시 확인에서 찾은 내용 " : "문제 "}
+          <span className={styles.summaryNumber}>{recording.issues.length}</span>건
         </h3>
         {checkCount > 0 ? (
           <span className={styles.summaryAttention}>
@@ -174,9 +177,13 @@ function RecordingAnalysis({
           </span>
         ) : null}
       </div>
-      {recording.issues.length === 0 ? (
+      {isReverify ? (
+        <p className={styles.noIssue}>남은 문제에는 세지 않아요. 원래 이슈에서 해결됨으로 닫거나 다시 열어 주세요.</p>
+      ) : null}
+      {recording.issues.length === 0 && !isReverify ? (
         <p className={styles.noIssue}>이번 녹화에서는 고칠 점을 찾지 못했어요. 아래에서 말한 내용을 확인해 보세요.</p>
-      ) : (
+      ) : null}
+      {recording.issues.length === 0 ? null : (
         <ol className={styles.issues}>
           {recording.issues.map((issue, index) => (
             <IssueItem
