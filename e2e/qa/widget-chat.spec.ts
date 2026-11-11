@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import {
+  DEMO_URL,
   SDK_ORIGIN,
   WIDGET_FRAME,
   captureQaScreen,
@@ -11,6 +12,7 @@ import {
   getQaDatabase,
   loginAdmin,
   openWidget,
+  pinQaUserOnDemoPage,
   readWidgetSession,
   saveDiagnostics,
 } from "./qa-helpers";
@@ -279,4 +281,23 @@ test("위젯을 닫아 둔 사이 온 답장은 런처 배지로 보이고, 새�
   await captureQaScreen(page, "chat-07-badge-after-reload");
   await adminContext.close();
   expect(labelAfterReload, "새로고침하면 읽지 않은 답장 배지가 사라진다").toBe("피드백 보내기, 새 답장 1개");
+});
+
+// NEW-08: 페이지를 열기만 한 방문자는 고객·대화를 만들지 않는다. 처음 위젯을 열 때 만든다.
+test("위젯을 열기 전에는 고객·대화를 만들지 않고, 처음 열 때 만든다", async ({ page }) => {
+  const user = createQaUser("chat-lazy");
+  await pinQaUserOnDemoPage(page, user);
+  await page.goto(DEMO_URL);
+  const launcher = page.getByRole("button", { name: /피드백 보내기/ });
+  await expect(launcher).toBeVisible();
+  await page.keyboard.press("Tab");
+  await page.waitForTimeout(3_000);
+  const database = getQaDatabase();
+  const { data: before } = await database.from("end_users").select("id").eq("external_id", user.id);
+  expect(before).toEqual([]);
+
+  await launcher.click();
+  const widget = page.frameLocator(WIDGET_FRAME);
+  await expect(widget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  expect(await findConversationIdForUser(user.id)).not.toBeNull();
 });

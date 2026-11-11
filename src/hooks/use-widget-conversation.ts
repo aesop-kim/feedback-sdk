@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRealtimeSignal } from "@/hooks/use-realtime-signal";
 import { getConversationChannelName } from "@/lib/realtime/realtime-signal";
 import {
@@ -138,6 +138,15 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
   const unreadCountRef = useRef(0);
   const isOpenRef = useRef(isOpen);
   const onUnreadChangeRef = useRef(onUnreadChange);
+  const [hasOpened, setHasOpened] = useState(isOpen);
+  // 한 번 열었으면 닫아도 연결을 유지한다(렌더 중 파생 상태 갱신).
+  if (isOpen && !hasOpened) {
+    setHasOpened(true);
+  }
+  // 고객사 페이지를 열기만 한 방문자까지 고객·대화를 만들면 관리자 목록이 빈 대화로 찬다(NEW-08).
+  // 그래서 처음 위젯을 열 때 연결한다. 이미 대화 토큰이 있는 재방문자는 안 읽은 답장 배지를 위해 바로 불러온다.
+  const hasStoredSession = useMemo(() => (init ? findStoredSession(getStorageKey(init)) !== null : false), [init]);
+  const shouldConnect = hasOpened || hasStoredSession;
 
   useEffect(() => {
     onUnreadChangeRef.current = onUnreadChange;
@@ -181,7 +190,7 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
   }, [isOpen, updateUnread]);
 
   useEffect(() => {
-    if (!init || !hostOrigin) {
+    if (!init || !hostOrigin || !shouldConnect) {
       return;
     }
     lastReadKeyRef.current = getLastReadStorageKey(init.projectKey, init.user.id);
@@ -210,7 +219,7 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
     return () => {
       isCancelled = true;
     };
-  }, [init, hostOrigin, applyMessages, markReadUntil, loadAttempt]);
+  }, [init, hostOrigin, shouldConnect, applyMessages, markReadUntil, loadAttempt]);
 
   // 처음 연결이 실패했을 때 "다시 불러오기". 세션 만들기부터 다시 한다.
   const reload = useCallback(() => {
