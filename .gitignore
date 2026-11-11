@@ -64,3 +64,8 @@ supabase/.temp/
 # reference videos (local study only)
 demo/v2/refs
 demo/v2/analysis
+
+# agent worktrees
+.claude/
+.omc/
+demo/v2/.omc/
