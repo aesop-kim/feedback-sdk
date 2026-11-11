@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type KeyboardEvent } from "react";
+import { LoadingDots } from "@/components/widget/LoadingDots";
 import { CheckIcon } from "@/components/widget/WidgetIcons";
 import { useSceneZoom } from "@/hooks/use-scene-zoom";
 import { toHighlightStyle } from "@/lib/geometry/focus-transform";
@@ -37,7 +38,7 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
   const [isSending, setIsSending] = useState(false);
   const submitButtonRef = useRef<HTMLButtonElement>(null);
 
-  // 고른 답은 바로 아래 고객 말풍선으로 남으므로, 여기서는 어떤 질문에 답했는지만 보여 준다.
+  // 고른 답은 바로 아래 고객 말풍선으로 남으므로, 회사 쪽 말로 고마움과 어떤 질문이었는지만 보여 준다.
   if (card.answeredAt) {
     return (
       <div className={styles.answered}>
@@ -45,7 +46,7 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
           <span className={styles.answeredIcon}>
             <CheckIcon size={16} />
           </span>
-          답변을 보냈어요
+          답변 고마워요
         </p>
         <p className={styles.answeredQuestion}>{card.question}</p>
       </div>
@@ -126,7 +127,7 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
           />
         ) : null}
         <button ref={submitButtonRef} type="button" className={styles.submitButton} onClick={handleSubmit} disabled={!canSend} aria-busy={isSending}>
-          답변 보내기
+          {isSending ? <LoadingDots label="답변을 보내고 있어요" /> : "답변 보내기"}
         </button>
       </div>
     </section>

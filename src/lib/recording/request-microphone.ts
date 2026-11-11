@@ -1,7 +1,7 @@
 import { findPreferredMicrophone } from "@/lib/recording/pick-microphone";
 
 const SILENCE_CHECK_DELAY_MS = 4_000;
-const SILENCE_SAMPLE_INTERVAL_MS = 200;
+const SILENCE_SAMPLE_INTERVAL_MS = 150;
 // 정규화된 파형 RMS. 조용한 방의 내장 마이크도 0.002 이상은 나온다.
 const SILENT_RMS = 0.0005;
 
@@ -24,16 +24,37 @@ export async function requestMicrophone(): Promise<MediaStream> {
   }
 }
 
-function getRms(samples: Float32Array): number {
+// 말소리 RMS는 보통 0.02~0.1이다. 막대 표시용으로 0..1에 펼친다.
+const FULL_LEVEL_RMS = 0.08;
+
+export function getRms(samples: Float32Array): number {
   let sum = 0;
   for (const sample of samples) {
     sum += sample * sample;
   }
-  return Math.sqrt(sum / samples.length);
+  return samples.length > 0 ? Math.sqrt(sum / samples.length) : 0;
 }
 
-// 녹화 시작 후 몇 초 동안 소리가 전혀 들어오지 않으면 한 번 알린다. 확인이 끝나면 스스로 정리한다.
-export function watchForSilence(stream: MediaStream, onSilent: () => void): () => void {
+export function toMicrophoneLevel(rms: number): number {
+  if (rms < SILENT_RMS) {
+    return 0;
+  }
+  return Math.min(1, Math.sqrt(rms / FULL_LEVEL_RMS));
+}
+
+export function isSilentRms(rms: number): boolean {
+  return rms < SILENT_RMS;
+}
+
+type MicrophoneWatchHandlers = {
+  // 녹화 시작 후 몇 초 동안 소리가 전혀 없으면 한 번 부른다.
+  onSilent: () => void;
+  // 알약의 음량 막대용. 0..1.
+  onLevel: (level: number) => void;
+};
+
+// 녹화하는 동안 마이크 입력 음량을 계속 알리고, 처음 몇 초가 무음이면 한 번 알린다. 돌려주는 함수로 정리한다.
+export function watchMicrophone(stream: MediaStream, { onSilent, onLevel }: MicrophoneWatchHandlers): () => void {
   const AudioContextClass = window.AudioContext;
   if (!AudioContextClass) {
     return () => undefined;
@@ -47,19 +68,20 @@ export function watchForSilence(stream: MediaStream, onSilent: () => void): () =
 
   const sampleTimer = window.setInterval(() => {
     analyser.getFloatTimeDomainData(samples);
-    loudestRms = Math.max(loudestRms, getRms(samples));
+    const rms = getRms(samples);
+    loudestRms = Math.max(loudestRms, rms);
+    onLevel(toMicrophoneLevel(rms));
   }, SILENCE_SAMPLE_INTERVAL_MS);
 
-  const cleanup = () => {
+  const checkTimer = window.setTimeout(() => {
+    if (isSilentRms(loudestRms)) {
+      onSilent();
+    }
+  }, SILENCE_CHECK_DELAY_MS);
+
+  return () => {
     window.clearInterval(sampleTimer);
     window.clearTimeout(checkTimer);
     void audioContext.close().catch(() => undefined);
   };
-  const checkTimer = window.setTimeout(() => {
-    cleanup();
-    if (loudestRms < SILENT_RMS) {
-      onSilent();
-    }
-  }, SILENCE_CHECK_DELAY_MS);
-  return cleanup;
 }

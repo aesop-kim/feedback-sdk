@@ -40,6 +40,44 @@
   opacity: 0.6;
 }
 
+/* 파란 면은 "보냄"으로 읽히므로, 보내지 못한 글은 회색 면에 둔다. */
+.userBubble[data-failed="true"] {
+  background: var(--grey-100);
+  color: var(--text-primary);
+}
+
+.failedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-top: 2px;
+}
+
+.failedText {
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--danger);
+}
+
+.retryButton {
+  min-height: 44px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-btn-m);
+  font-size: var(--fs-t7);
+  font-weight: var(--fw-semibold);
+  color: var(--accent-weak-text);
+  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out);
+}
+
+.retryButton:hover {
+  background: var(--grey-50);
+}
+
+.retryButton:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
+}
+
 .adminBubble {
   background: var(--grey-100);
   color: var(--text-primary);

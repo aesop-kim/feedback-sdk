@@ -9,12 +9,31 @@ import { WidgetEmptyState } from "@/components/widget/WidgetEmptyState";
 import { WidgetHeader } from "@/components/widget/WidgetHeader";
 import { WidgetToast } from "@/components/widget/WidgetToast";
 import { useWidgetBridge } from "@/hooks/use-widget-bridge";
-import { NETWORK_ERROR_MESSAGE, useWidgetConversation, type HostInit } from "@/hooks/use-widget-conversation";
-import { useWidgetRecording } from "@/hooks/use-widget-recording";
+import {
+  NETWORK_ERROR_MESSAGE,
+  isAlreadyAnsweredError,
+  useWidgetConversation,
+  type HostInit,
+} from "@/hooks/use-widget-conversation";
+import { MICROPHONE_SILENT_MESSAGE, useWidgetRecording } from "@/hooks/use-widget-recording";
 import type { HostToWidgetMessage } from "@/sdk/bridge-protocol";
 import styles from "@/components/widget/WidgetApp.module.css";
 
 const TOAST_DURATION_MS = 3_000;
+// 해결 방법까지 적은 긴 안내는 3초 안에 다 읽기 어렵다.
+const LONG_TOAST_DURATION_MS = 5_000;
+const LONG_TOAST_LENGTH = 25;
+const SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요. 말풍선 아래 ‘다시 보내기’를 눌러 주세요";
+const ALREADY_ANSWERED_MESSAGE = "이미 답한 질문이에요";
+const LOAD_FAILED_DESCRIPTION = "연결이 잠깐 끊겼어요. 다시 불러와 볼게요";
+
+// 서버가 알려 준 이유(허용되지 않은 사이트 등)는 그대로, 네트워크 문제는 다시 불러오기를 권한다.
+function getLoadErrorDescription(errorMessage: string | null): string {
+  if (!errorMessage || errorMessage === NETWORK_ERROR_MESSAGE) {
+    return LOAD_FAILED_DESCRIPTION;
+  }
+  return errorMessage;
+}
 
 type WidgetAppProps = { projectKey: string };
 
@@ -33,7 +52,8 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
     if (toastTimerRef.current !== null) {
       window.clearTimeout(toastTimerRef.current);
     }
-    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), TOAST_DURATION_MS);
+    const duration = message.length > LONG_TOAST_LENGTH ? LONG_TOAST_DURATION_MS : TOAST_DURATION_MS;
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), duration);
   }, []);
 
   const handleHostMessage = useCallback(
@@ -116,24 +136,49 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
   }, [isOpen, isRecordingIdle, handleClose]);
 
   const { sendText } = conversation;
+  // 보내지 못한 글은 지우지 않고 실패한 말풍선으로 남겨 '다시 보내기'로 같은 글을 다시 보낸다.
+  const deliverText = (localId: string, body: string) => {
+    sendText(body)
+      .then(() => setPendingTexts((current) => current.filter((pendingText) => pendingText.localId !== localId)))
+      .catch(() => {
+        setPendingTexts((current) =>
+          current.map((pendingText) => (pendingText.localId === localId ? { ...pendingText, isFailed: true } : pendingText)),
+        );
+        showToast(SEND_FAILED_MESSAGE);
+      });
+  };
+
   const handleSendText = (body: string) => {
     const localId = `pending-${Date.now()}`;
-    setPendingTexts((current) => [...current, { localId, body }]);
-    sendText(body)
-      .catch(() => showToast(NETWORK_ERROR_MESSAGE))
-      .finally(() => setPendingTexts((current) => current.filter((pendingText) => pendingText.localId !== localId)));
+    setPendingTexts((current) => [...current, { localId, body, isFailed: false }]);
+    deliverText(localId, body);
+  };
+
+  const handleRetryText = (localId: string) => {
+    const failedText = pendingTexts.find((pendingText) => pendingText.localId === localId);
+    if (!failedText) {
+      return;
+    }
+    setPendingTexts((current) =>
+      current.map((pendingText) => (pendingText.localId === localId ? { ...pendingText, isFailed: false } : pendingText)),
+    );
+    deliverText(localId, failedText.body);
   };
 
   const handleAnswer = async (cardId: string, answer: { optionId?: string; text?: string }) => {
     try {
       await conversation.answerClarification(cardId, answer);
-    } catch {
-      showToast(NETWORK_ERROR_MESSAGE);
+    } catch (error) {
+      showToast(isAlreadyAnsweredError(error) ? ALREADY_ANSWERED_MESSAGE : NETWORK_ERROR_MESSAGE);
     }
   };
 
   const handleStartRecording = () => {
     void recording.startRecording();
+  };
+
+  const handleStartReverify = (issueId: string | null) => {
+    void recording.startRecording({ reverifyIssueId: issueId });
   };
 
   if (recording.phase !== "idle") {
@@ -142,7 +187,10 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
         elapsedMs={recording.elapsedMs}
         maxDurationMs={recording.maxDurationMs}
         isStopping={recording.phase === "stopping"}
+        microphoneLevel={recording.microphoneLevel}
+        warning={recording.isMicrophoneSilent ? MICROPHONE_SILENT_MESSAGE : null}
         onStop={() => void recording.stopRecording()}
+        onCancel={() => void recording.cancelRecording()}
       />
     );
   }
@@ -155,6 +203,7 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
       <WidgetHeader
         projectName={conversation.session?.projectName ?? ""}
         userName={conversation.session?.endUserName || init?.user.name || ""}
+        isCompact={isReady && hasMessages}
         onClose={handleClose}
       />
       <div className={styles.body} data-widget-scroll="">
@@ -162,16 +211,22 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
         {conversation.status === "error" ? (
           <section className={styles.errorState}>
             <p className={styles.errorTitle}>지금은 위젯을 열 수 없어요</p>
-            <p className={styles.errorDescription}>{conversation.errorMessage ?? NETWORK_ERROR_MESSAGE}</p>
+            <p className={styles.errorDescription}>{getLoadErrorDescription(conversation.errorMessage)}</p>
+            <button type="button" className={styles.reloadButton} onClick={conversation.reload}>
+              다시 불러오기
+            </button>
           </section>
         ) : null}
         {isReady && !hasMessages ? <WidgetEmptyState onStartRecording={handleStartRecording} isRecordingDisabled={false} /> : null}
         {isReady && hasMessages ? (
           <MessageList
             messages={conversation.messages}
+            reverifyRequest={conversation.reverifyRequest}
             pendingTexts={pendingTexts}
             pendingUpload={recording.pendingUpload}
             onAnswer={handleAnswer}
+            onRetryText={handleRetryText}
+            onStartReverify={handleStartReverify}
             onRetryUpload={recording.retryUpload}
           />
         ) : null}
