@@ -53,6 +53,20 @@ describe("element-context", () => {
     expect(selector.split(" > ").length).toBeLessThanOrEqual(5);
   });
 
+  it("형제 사이에서 클래스로 구별되면 읽기 쉬운 태그.클래스를 쓴다", () => {
+    document.body.innerHTML = `
+      <div class="_titleSection_1dv6w_41">
+        <p class="_title_1dv6w_41 rr-block">전체 계약서</p>
+        <p class="_count_1dv6w_50">60</p>
+      </div>
+      <div class="_titleSection_1dv6w_41"><p class="_title_1dv6w_41">다른 제목</p></div>`;
+    const element = getRequiredElement("p._title_1dv6w_41");
+    const selector = getElementSelector(element);
+    expect(selector).toContain("p._title_1dv6w_41");
+    expect(selector).not.toContain("rr-block");
+    expect(document.querySelector(selector)).toBe(element);
+  });
+
   it("글자는 공백을 정리하고, 없으면 aria-label을 쓴다", () => {
     expect(getElementContext(getRequiredElement("[data-testid=checkout]")).text).toBe("결제 하기");
     expect(getElementContext(getRequiredElement("#top button")).text).toBe("메뉴 열기");

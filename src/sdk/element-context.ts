@@ -19,11 +19,34 @@ function isUniqueSelector(selector: string, root: ParentNode): boolean {
   }
 }
 
+const IGNORED_CLASS_NAMES = new Set(["rr-block", "active", "selected", "hover", "focus"]);
+const CLASS_NAME_PATTERN = /^[a-zA-Z_][\w-]{1,60}$/;
+
+// 개발자가 읽을 수 있게, 형제 사이에서 클래스 하나로 구별되면 `태그.클래스`를 쓴다.
+function findClassSegment(element: Element, parent: Element): string | null {
+  const tagName = element.tagName.toLowerCase();
+  for (const className of Array.from(element.classList)) {
+    if (IGNORED_CLASS_NAMES.has(className) || !CLASS_NAME_PATTERN.test(className)) {
+      continue;
+    }
+    const segment = `${tagName}.${escapeIdentifier(className)}`;
+    const matchingSiblings = Array.from(parent.children).filter((child) => child.matches(segment));
+    if (matchingSiblings.length === 1) {
+      return segment;
+    }
+  }
+  return null;
+}
+
 function getNthOfTypeSegment(element: Element): string {
   const tagName = element.tagName.toLowerCase();
   const parent = element.parentElement;
   if (!parent) {
     return tagName;
+  }
+  const classSegment = findClassSegment(element, parent);
+  if (classSegment) {
+    return classSegment;
   }
   const sameTagSiblings = Array.from(parent.children).filter((child) => child.tagName === element.tagName);
   if (sameTagSiblings.length === 1) {
