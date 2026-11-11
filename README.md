@@ -66,6 +66,13 @@ npm run check:analysis                             # 분석 결과 vs fixtures/d
 
 E2E는 데모 페이지에서 실제로 녹화(대본대로 버튼 클릭·오타·제목을 가리키며 말함) → 업로드 → 워커 분석 → 관리자 확인·답장·되묻기 → 고객이 한 번에 답변 → 관리자 반영까지 확인해요.
 
+## 배포 주소
+
+- SDK 앱·관리자: https://lattice-feedback-sdk.vercel.app (관리자: `/admin`)
+- 데모 페이지: https://lattice-feedback-demo.vercel.app
+- 데이터베이스: Supabase 클라우드 `lattice-feedback-sdk` (서울)
+- 분석 워커는 로컬에서 클라우드 DB를 바라보게 실행해요: `NEXT_PUBLIC_SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npm run worker`
+
 ## 배포
 
 - SDK 앱: Vercel 새 프로젝트 → 환경 변수 등록(`NEXT_PUBLIC_SDK_ORIGIN`은 배포 주소) → Supabase 클라우드 프로젝트에 `supabase db push`, `projects.allowed_origins`에 데모 페이지 주소 추가.

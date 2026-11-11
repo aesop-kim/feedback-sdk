@@ -1,0 +1,10 @@
+.env*
+!.env.example
+demo/raw
+demo/build
+demo/cards
+fixtures/demo-recording/snapshot
+fixtures/demo-recording/*.wav
+.screens
+test-results
+playwright-report
