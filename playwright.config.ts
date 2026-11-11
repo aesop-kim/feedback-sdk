@@ -8,6 +8,8 @@ export default defineConfig({
   testDir: "e2e",
   // 데모 영상 촬영(demo-recording.spec.ts)은 `npm run demo:record`(DEMO_RECORD=1)에서만 돈다.
   testIgnore: process.env.DEMO_RECORD ? [] : ["**/demo-recording.spec.ts"],
+  // db:reset 직후에도 첫 테스트가 빈 위젯을 보지 않도록 위젯·API가 준비될 때까지 기다린다.
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 6 * 60 * 1000,
   expect: { timeout: 15_000 },
   workers: 1,

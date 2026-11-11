@@ -147,6 +147,7 @@ test("크롬의 '공유 중지'로 화면 공유가 끊기면 녹화가 자동�
 
 // 실제 3분을 기다리지 않는다. 개발 서버의 /widget은 maxRecordingMs로 한도를 줄일 수 있다(운영에서는 무시, get-max-recording-ms.test.ts).
 test("최대 녹화 시간에 닿으면 자동으로 끝나고 올라간다(개발 서버에서 한도를 5초로 줄여 확인)", async ({ page }) => {
+  test.skip(IS_DEPLOYED, "운영 빌드는 ?maxRecordingMs를 무시해서 실제 3분 한도를 기다려야 한다(get-max-recording-ms.ts)");
   const diagnostics = collectDiagnostics(page);
   await page.route(
     (url) => url.origin === SDK_ORIGIN && url.pathname === "/widget",

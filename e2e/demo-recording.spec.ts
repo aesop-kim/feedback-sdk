@@ -284,12 +284,18 @@ test("데모 영상 촬영: 고객 녹화부터 반영 완료 후 다시 확인 
   await resolveButton.evaluate((element) => element.scrollIntoView({ block: "center", behavior: "smooth" }));
   await adminPage.waitForTimeout(900);
   await glideAndClick(adminPage, "admin", resolveButton, "resolve");
+  // 위젯에 바로 메시지가 가므로 제자리 확인("고객에게 확인을 부탁할까요?")에서 한 번 더 누른다.
+  const confirmButton = firstIssue.getByRole("group", { name: "반영 완료 확인" }).getByRole("button", { name: "부탁하기" });
+  await expect(confirmButton).toBeVisible();
+  await adminPage.waitForTimeout(600);
+  await glideAndClick(adminPage, "admin", confirmButton, "resolve-confirm");
   await expect(firstIssue.getByText("반영 완료", { exact: true })).toBeVisible({ timeout: 20_000 });
   markCue("admin", "resolved");
 
-  const reverifyMessage = widget.getByText(/수정을 반영했어요/);
-  await expect(reverifyMessage).toBeVisible({ timeout: 20_000 });
-  const messageBox = await reverifyMessage.boundingBox();
+  // 고객 위젯에는 이슈 제목과 다시 녹화 버튼이 있는 재확인 카드가 뜬다.
+  const reverifyCard = widget.getByRole("region", { name: "수정 확인 요청" });
+  await expect(reverifyCard.getByText("고쳤어요. 한 번 확인해 주세요")).toBeVisible({ timeout: 20_000 });
+  const messageBox = await reverifyCard.boundingBox();
   markCue("customer", "reverify-visible", messageBox ? { x: messageBox.x + messageBox.width / 2, y: messageBox.y + messageBox.height / 2 } : undefined);
   await customerPage.waitForTimeout(3_000);
   markCue("customer", "end");
