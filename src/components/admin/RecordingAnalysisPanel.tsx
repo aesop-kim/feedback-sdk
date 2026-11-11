@@ -8,7 +8,7 @@ import { TranscriptSection } from "@/components/admin/TranscriptSection";
 import styles from "@/components/admin/RecordingAnalysisPanel.module.css";
 import { useAdminRequest } from "@/hooks/use-admin-request";
 import { useAdminRevision } from "@/hooks/use-admin-revision";
-import { getFailureGuidance } from "@/lib/feedback/recording-failure";
+import { PROGRESSED_ISSUE_REJECTION, getFailureGuidance, hasProgressedIssue } from "@/lib/feedback/recording-failure";
 import { findLatestReverifyRecordingId, findReverifyOrigin, getReverifyRecordingLabel } from "@/lib/feedback/reverify-link";
 import type { Issue, RecordingDetail, RecordingFailureKind } from "@/types/feedback";
 
@@ -149,7 +149,13 @@ function RecordingAnalysis({
   }
   if (recording.status === "failed") {
     return (
-      <AnalysisFailed recordingId={recording.id} reason={recording.error} failureKind={recording.failureKind} hasVideo={hasVideo} />
+      <AnalysisFailed
+        recordingId={recording.id}
+        reason={recording.error}
+        failureKind={recording.failureKind}
+        hasVideo={hasVideo}
+        hasProgressedIssue={hasProgressedIssue(recording.issues.map((issue) => issue.status))}
+      />
     );
   }
 
@@ -210,11 +216,14 @@ type AnalysisFailedProps = {
   reason: string | null;
   failureKind: RecordingFailureKind | null;
   hasVideo: boolean;
+  hasProgressedIssue: boolean;
 };
 
 // 안내와 버튼은 실패 종류로 가른다. 업로드 미완료는 다시 정리할 수 없고, 무음은 다시 녹화 요청이 먼저다.
-function AnalysisFailed({ recordingId, reason, failureKind, hasVideo }: AnalysisFailedProps) {
+// 이미 처리한 이슈가 남아 있으면 다시 정리하면 그 기록이 지워지므로 버튼 대신 이유를 보여 준다.
+function AnalysisFailed({ recordingId, reason, failureKind, hasVideo, hasProgressedIssue }: AnalysisFailedProps) {
   const guidance = getFailureGuidance(failureKind, hasVideo);
+  const reanalyzeAction = hasProgressedIssue ? "none" : guidance.reanalyzeAction;
   const request = useAdminRequest();
   const { refresh } = useAdminRevision();
   const [isRequesting, setIsRequesting] = useState(false);
@@ -246,12 +255,13 @@ function AnalysisFailed({ recordingId, reason, failureKind, hasVideo }: Analysis
         </p>
       ) : null}
       <p className={styles.caption}>{guidance.guide}</p>
-      {guidance.reanalyzeAction === "primary" ? (
+      {hasProgressedIssue ? <p className={styles.caption}>{PROGRESSED_ISSUE_REJECTION}</p> : null}
+      {reanalyzeAction === "primary" ? (
         <AdminButton variant="weak" size="small" onClick={() => void reanalyze()} isLoading={isRequesting}>
           다시 정리하기
         </AdminButton>
       ) : null}
-      {guidance.reanalyzeAction === "secondary" ? (
+      {reanalyzeAction === "secondary" ? (
         <AdminButton variant="text" size="small" onClick={() => void reanalyze()} isLoading={isRequesting}>
           그래도 다시 정리하기
         </AdminButton>

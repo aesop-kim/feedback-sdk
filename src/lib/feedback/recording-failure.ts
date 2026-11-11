@@ -1,4 +1,4 @@
-import type { RecordingFailureKind, RecordingStatus } from "@/types/feedback";
+import type { IssueStatus, RecordingFailureKind, RecordingStatus } from "@/types/feedback";
 
 // 워커가 무음 녹화를 거를 때 남기는 문구. 관리자 화면은 이 문구로 "다시 녹화 요청"을 안내한다.
 export const SILENT_AUDIO_ERROR = "목소리가 녹음되지 않았어요. 크롬에서 고른 마이크를 확인해 주세요";
@@ -32,6 +32,17 @@ export function findReanalyzeRejection(input: { failureKind: RecordingFailureKin
     return "업로드가 끝나지 않은 녹화라 다시 정리할 수 없어요. 고객에게 다시 녹화해 달라고 요청해 주세요.";
   }
   return null;
+}
+
+// 관리자가 이미 처리한 이슈 상태. 다시 정리하면 이슈를 새로 만들면서 이 이슈들이 지워져
+// 처리 기록과 재확인 녹화 연결(reverify_issue_id)이 사라진다. replace_recording_issues도 같은 상태를 막는다.
+export const PROGRESSED_ISSUE_STATUSES: IssueStatus[] = ["resolved", "reverify", "closed"];
+
+export const PROGRESSED_ISSUE_REJECTION =
+  "반영 완료했거나 해결된 이슈가 있어서 다시 정리할 수 없어요. 다시 정리하면 그 처리 기록이 사라져요.";
+
+export function hasProgressedIssue(issueStatuses: IssueStatus[]): boolean {
+  return issueStatuses.some((status) => PROGRESSED_ISSUE_STATUSES.includes(status));
 }
 
 export type ReanalyzeAction = "primary" | "secondary" | "none";
