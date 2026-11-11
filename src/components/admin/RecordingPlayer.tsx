@@ -13,7 +13,7 @@ type RecordingPlayerProps = {
   recording: Pick<RecordingDetail, "id" | "videoUrl" | "durationMs" | "pageTitle" | "pageUrl">;
 };
 
-function getReadablePageUrl(pageUrl: string | null): string | null {
+function findReadablePageUrl(pageUrl: string | null): string | null {
   if (!pageUrl) {
     return null;
   }
@@ -58,7 +58,7 @@ export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
     },
   }));
 
-  const readableUrl = getReadablePageUrl(recording.pageUrl);
+  const readableUrl = findReadablePageUrl(recording.pageUrl);
 
   return (
     <div className={styles.player}>

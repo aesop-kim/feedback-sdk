@@ -9,8 +9,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ con
     return rejection;
   }
   const { conversationId } = await params;
-  const summaries = await getConversationSummaries();
-  const summary = summaries.find((conversation) => conversation.id === conversationId);
+  const [summary] = await getConversationSummaries(conversationId);
   if (!summary) {
     return respondError(404, "대화를 찾을 수 없어요.");
   }

@@ -18,6 +18,19 @@ export async function POST(request: Request) {
   const input = parsed.data;
   const supabase = getServerSupabase();
 
+  // 재확인 녹화는 같은 대화의 이슈에만 연결한다.
+  if (input.reverifyIssueId) {
+    const { data: reverifyIssue } = await supabase
+      .from("issues")
+      .select("id")
+      .eq("id", input.reverifyIssueId)
+      .eq("conversation_id", conversation.conversationId)
+      .maybeSingle();
+    if (!reverifyIssue) {
+      return respondError(404, "다시 확인할 문제를 찾을 수 없어요.");
+    }
+  }
+
   const { data: recording, error } = await supabase
     .from("recordings")
     .insert({

@@ -7,6 +7,7 @@ const DEMO_PAGE_URL = "http://localhost:3001/";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "lattice-demo";
 const NARRATION_LEAD_MS = 2_000;
 const ANALYSIS_TIMEOUT_MS = 4 * 60 * 1000;
+const REALTIME_TIMEOUT_MS = 2_000;
 
 const SCREENS_DIRECTORY = process.env.E2E_SCREENS ? ".screens/flow" : null;
 
@@ -94,10 +95,19 @@ test("고객이 말로 설명한 문제가 이슈 카드가 되고, 애매한 �
     await analysis.getByRole("button", { name: "크게 보기" }).first().click();
   }
 
-  // 3. 관리자 답장 → 고객 위젯에 실시간 표시
+  // 3. 실시간 왕복(AC2: 2초 안). 15초 주기 재조회로는 통과할 수 없게 2초로 잰다.
+  const thread = adminPage.getByRole("region", { name: "김데모 님과의 대화" });
+  const customerSentAt = Date.now();
+  await widget.getByRole("textbox", { name: "메시지" }).fill("등록 버튼이 제일 급해요");
+  await widget.getByRole("button", { name: "보내기" }).click();
+  await expect(thread.getByText("등록 버튼이 제일 급해요")).toBeVisible({ timeout: REALTIME_TIMEOUT_MS });
+  console.log(`[e2e] 고객 → 관리자 ${Date.now() - customerSentAt}ms`);
+
+  const adminSentAt = Date.now();
   await adminPage.getByPlaceholder("김데모 님에게 답장하기").fill("말씀하신 세 가지 확인했어요. 등록 버튼부터 바로 고칠게요.");
   await adminPage.keyboard.press("Enter");
-  await expect(widget.getByText("등록 버튼부터 바로 고칠게요")).toBeVisible({ timeout: 20_000 });
+  await expect(widget.getByText("등록 버튼부터 바로 고칠게요")).toBeVisible({ timeout: REALTIME_TIMEOUT_MS });
+  console.log(`[e2e] 관리자 → 고객 ${Date.now() - adminSentAt}ms`);
   await captureScreen(customerPage, "06-widget-reply");
 
   // 4. 애매한 이슈를 고객에게 되묻기

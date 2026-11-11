@@ -60,7 +60,7 @@ function roundRatio(value: number): number {
   return Math.round(value * 10_000) / 10_000;
 }
 
-export function getNormalizedHighlight(element: ElementContext | null): HighlightBox | null {
+export function findNormalizedHighlight(element: ElementContext | null): HighlightBox | null {
   if (!element || element.viewport.width <= 0 || element.viewport.height <= 0) {
     return null;
   }
@@ -90,7 +90,7 @@ export function mapIssuesToRows(input: {
         ? {
             question: issue.clarification.question,
             options: issue.clarification.options.map((label, index) => ({ id: `o${index + 1}`, label })),
-            highlight: getNormalizedHighlight(element),
+            highlight: findNormalizedHighlight(element),
           }
         : null;
     return {

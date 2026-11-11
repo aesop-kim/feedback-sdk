@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TimedElementContext } from "@/lib/analysis/align-timeline";
 import type { AnalysisIssue } from "@/lib/analysis/issue-schema";
-import { getNormalizedHighlight, mapIssuesToRows } from "@/lib/analysis/map-issues-to-rows";
+import { findNormalizedHighlight, mapIssuesToRows } from "@/lib/analysis/map-issues-to-rows";
 
 const RECORDING_ID = "rec-1";
 const VIEWPORT = { width: 1000, height: 500 };
@@ -99,9 +99,9 @@ describe("mapIssuesToRows", () => {
   });
 });
 
-describe("getNormalizedHighlight", () => {
+describe("findNormalizedHighlight", () => {
   it("화면 밖으로 나간 부분은 잘라낸다", () => {
-    const highlight = getNormalizedHighlight({
+    const highlight = findNormalizedHighlight({
       selector: "#a",
       text: "",
       tagName: "DIV",
@@ -113,7 +113,7 @@ describe("getNormalizedHighlight", () => {
 
   it("viewport가 0이면 null", () => {
     expect(
-      getNormalizedHighlight({ selector: "#a", text: "", tagName: "DIV", rect: { x: 0, y: 0, width: 1, height: 1 }, viewport: { width: 0, height: 0 } }),
+      findNormalizedHighlight({ selector: "#a", text: "", tagName: "DIV", rect: { x: 0, y: 0, width: 1, height: 1 }, viewport: { width: 0, height: 0 } }),
     ).toBeNull();
   });
 });

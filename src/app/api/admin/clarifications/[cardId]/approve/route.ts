@@ -36,14 +36,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ car
   const conversationId = issueRelation.conversation_id;
   const projectRelation = Array.isArray(issueRelation.conversations) ? issueRelation.conversations[0] : issueRelation.conversations;
 
-  await supabase
+  // 아직 승인되지 않은 카드만 바꾼다. 동시에 두 번 눌러도 질문 메시지는 한 번만 생긴다.
+  const { data: approvedRows } = await supabase
     .from("clarification_cards")
     .update({
       approved_at: new Date().toISOString(),
       ...(parsed.data.question ? { question: parsed.data.question } : {}),
       ...(parsed.data.options ? { options: parsed.data.options } : {}),
     })
-    .eq("id", cardId);
+    .eq("id", cardId)
+    .is("approved_at", null)
+    .select("id");
+  if (!approvedRows || approvedRows.length === 0) {
+    return respondJson({ cardId, alreadyApproved: true });
+  }
   await supabase.from("issues").update({ status: "asked" }).eq("id", card.issue_id);
 
   const messageId = await insertMessage({

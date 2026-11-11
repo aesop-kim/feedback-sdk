@@ -232,13 +232,15 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
   });
 }
 
-export async function getConversationSummaries(): Promise<ConversationSummary[]> {
+// conversationId를 주면 그 대화 하나만(상세 화면), 없으면 최근 100개(목록)를 돌려준다.
+export async function getConversationSummaries(conversationId?: string): Promise<ConversationSummary[]> {
   const supabase = getServerSupabase();
-  const { data: rows } = await supabase
+  const baseQuery = supabase
     .from("conversations")
-    .select("id, last_message_at, last_message_preview, admin_unread_count, end_users(external_id, name, email), recordings(id), issues(id, status)")
-    .order("last_message_at", { ascending: false })
-    .limit(100);
+    .select("id, last_message_at, last_message_preview, admin_unread_count, end_users(external_id, name, email), recordings(id), issues(id, status)");
+  const { data: rows } = conversationId
+    ? await baseQuery.eq("id", conversationId)
+    : await baseQuery.order("last_message_at", { ascending: false }).limit(100);
   return (rows ?? []).map((row) => {
     const endUser = (Array.isArray(row.end_users) ? row.end_users[0] : row.end_users) as { external_id: string; name: string; email: string | null };
     const issueRows = (row.issues ?? []) as { status: string }[];
