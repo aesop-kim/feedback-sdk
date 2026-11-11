@@ -81,7 +81,7 @@ function RecordingRow({
       <span className={styles.recordingLabel}>
         {isReverify ? "다시 확인 녹화" : "화면 녹화"} <span className={styles.number}>{formatDuration(recording.durationMs)}</span>
         <span className={styles.dot}>·</span>
-        <span className={recording.status === "failed" ? styles.recordingFailed : undefined}>{getAdminRecordingStateLabel(recording)}</span>
+        <span className={recording.status === "failed" ? styles.recordingFailed : undefined}>{getAdminRecordingStateLabel(recording, isReverify)}</span>
       </span>
       <svg className={styles.chevron} width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="m6 3.5 4.5 4.5L6 12.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />

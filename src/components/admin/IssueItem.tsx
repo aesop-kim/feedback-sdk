@@ -20,6 +20,8 @@ type IssueItemProps = {
   // 고객이 이 이슈를 다시 확인하려고 보낸 녹화(없으면 null).
   reverifyRecordingId: string | null;
   onOpenRecording: (recordingId: string) => void;
+  // 재확인 녹화에서 찾은 이슈. 결정은 원래 이슈에서 하므로 반영 완료를 받지 않는다(V5-01).
+  isReverifyFinding: boolean;
 };
 
 type StatusPill = { label: string; tone: "grey" | "orange" | "blue" | "green" };
@@ -75,7 +77,17 @@ function findAnswerText(card: ClarificationCard): string | null {
   return [optionLabel, card.answer.text].filter(Boolean).join(" · ") || null;
 }
 
-export function IssueItem({ issue, index, isOpen, onToggle, onSeek, shouldFocus, reverifyRecordingId, onOpenRecording }: IssueItemProps) {
+export function IssueItem({
+  issue,
+  index,
+  isOpen,
+  onToggle,
+  onSeek,
+  shouldFocus,
+  reverifyRecordingId,
+  onOpenRecording,
+  isReverifyFinding,
+}: IssueItemProps) {
   const bodyId = useId();
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
   const pill = findStatusPill(issue);
@@ -128,7 +140,7 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek, shouldFocus,
               고객이 보낸 다시 확인 녹화 보기
             </button>
           ) : null}
-          <IssueActions issue={issue} />
+          <IssueActions issue={issue} isReverifyFinding={isReverifyFinding} />
         </div>
       ) : null}
     </li>
@@ -142,7 +154,11 @@ function isFinished(issue: Issue): boolean {
 
 // 상태마다 마무리 버튼이 다르다. 재확인 중인 이슈에 반영 완료 버튼을 다시 보여 주면 고객에게 요청이 또 가므로,
 // 고객이 다시 확인한 뒤에는 해결됨으로 닫거나 다시 여는 것만 고르게 한다. 닫은 이슈도 다시 열 수 있다.
-function IssueActions({ issue }: { issue: Issue }) {
+// 재확인 녹화에서 찾은 이슈도 반영 완료를 누르면 고객에게 "수정을 반영했어요"가 또 가므로 안내만 둔다(V5-01).
+function IssueActions({ issue, isReverifyFinding }: { issue: Issue; isReverifyFinding: boolean }) {
+  if (isReverifyFinding) {
+    return <p className={styles.resolvedNote}>다시 확인 녹화에서 찾은 내용이라 따로 반영하지 않아요. 원래 이슈에서 정해 주세요</p>;
+  }
   switch (issue.status) {
     case "resolved":
       return <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>;

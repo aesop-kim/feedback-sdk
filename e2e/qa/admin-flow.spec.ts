@@ -523,6 +523,22 @@ test("재확인 녹화에서 나온 이슈는 남은 문제에 세지 않고 그
   await expect(analysis.getByText("‘QA 이슈 제목’ 다시 확인 녹화")).toBeVisible();
   await expect(analysis.getByRole("heading", { name: "다시 확인에서 찾은 내용 1건" })).toBeVisible();
   await expect(analysis.getByText("남은 문제에는 세지 않아요. 원래 이슈에서 해결됨으로 닫거나 다시 열어 주세요.")).toBeVisible();
+  // V5-02: 대화의 재확인 녹화 칩도 패널처럼 "찾은 내용"이라고 부른다.
+  await expect(adminPage.getByRole("button", { name: /다시 확인 녹화.*찾은 내용 1건/ })).toBeVisible();
+  await expect(adminPage.getByRole("button", { name: /다시 확인 녹화.*문제 1건/ })).toHaveCount(0);
+  // V5-01: 재확인 녹화에서 찾은 이슈는 반영 완료를 받지 않는다. 고객에게 "수정을 반영했어요"가 또 가지 않는다.
+  await expect(analysis.getByText("다시 확인 녹화에서 찾은 내용이라 따로 반영하지 않아요. 원래 이슈에서 정해 주세요")).toBeVisible();
+  await expect(analysis.getByRole("button", { name: "반영 완료로 바꾸기" })).toHaveCount(0);
+  const resolveDerived = await adminPage.request.patch(`${SDK_ORIGIN}/api/admin/issues/${derived.issueId}`, { data: { status: "resolved" } });
+  expect(resolveDerived.status()).toBe(409);
+  const { data: derivedIssue } = await database.from("issues").select("status").eq("id", derived.issueId).single();
+  expect(derivedIssue?.status).toBe("open");
+  const { count: systemMessageCount } = await database
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("conversation_id", conversationId)
+    .eq("type", "system");
+  expect(systemMessageCount).toBe(0);
   await captureQaScreen(adminPage, "admin-13-reverify-derived");
   await adminContext.close();
 });

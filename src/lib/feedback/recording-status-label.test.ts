@@ -81,4 +81,10 @@ describe("getAdminRecordingStateLabel", () => {
     expect(getAdminRecordingStateLabel({ status: "analyzed", issueCount: 2, failureKind: null })).toBe("문제 2건");
     expect(getAdminRecordingStateLabel({ status: "analyzed", issueCount: 0, failureKind: null })).toBe("찾은 문제 없음");
   });
+
+  it("재확인 녹화는 남은 문제로 세지 않으니 패널처럼 '찾은 내용'이라고 부른다 (V5-02)", () => {
+    expect(getAdminRecordingStateLabel({ status: "analyzed", issueCount: 1, failureKind: null }, true)).toBe("찾은 내용 1건");
+    expect(getAdminRecordingStateLabel({ status: "analyzed", issueCount: 0, failureKind: null }, true)).toBe("찾은 내용 없음");
+    expect(getAdminRecordingStateLabel({ status: "analyzing", issueCount: 0, failureKind: null }, true)).toBe("정리하는 중");
+  });
 });

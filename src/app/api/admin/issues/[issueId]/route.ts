@@ -4,7 +4,7 @@ import { findIssueTransition, getAdminTransitionSources, type AdminIssueStatus }
 import { getIssueStatusMessage } from "@/lib/feedback/issue-status-message";
 import { respondError, respondJson, respondValidationError } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
-import { getFirstRelation } from "@/lib/supabase/first-relation";
+import { findFirstRelation, getFirstRelation } from "@/lib/supabase/first-relation";
 import { getServerSupabase } from "@/lib/supabase/server-client";
 import { updateIssueSchema } from "@/lib/validation/api-schemas";
 import type { IssueStatus } from "@/types/feedback";
@@ -26,9 +26,12 @@ const REJECTED_MESSAGES: Record<AdminIssueStatus, string> = {
   open: "고객이 다시 확인했거나 해결됨으로 닫은 이슈만 다시 열 수 있어요.",
 };
 
+const REVERIFY_FINDING_REJECTION = "다시 확인 녹화에서 찾은 내용은 반영 완료로 바꾸지 않아요. 원래 이슈에서 닫거나 다시 열어 주세요.";
+
 // 이슈 상태 바꾸기. 같은 요청을 두 번 보내도 두 번째는 changed:false라서 메시지가 두 번 가지 않는다.
 // - resolved(반영 완료): 고객에게 다시 확인해 달라는 메시지를 보낸다. 위젯은 GET /api/messages의
 //   reverifyRequest로 이 이슈를 알고, 재확인 녹화에 reverifyIssueId를 붙여 보낸다.
+//   재확인 녹화에서 찾은 이슈는 원래 이슈를 정하는 근거라서 반영 완료를 받지 않는다(V5-01).
 // - closed(해결됨) / open(다시 열기): 재확인 녹화를 본 관리자가 고르는 마무리. 재확인 녹화를 보낸 고객이
 //   결과를 알 수 있게 짧은 메시지를 보낸다(V4-02). 닫은 이슈를 다시 열 때도 같은 메시지가 간다.
 export async function PATCH(request: Request, { params }: { params: Promise<{ issueId: string }> }) {
@@ -45,7 +48,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   const supabase = getServerSupabase();
   const { data: issue, error: issueError } = await supabase
     .from("issues")
-    .select("id, title, conversation_id, status, conversations!inner(project_id)")
+    .select("id, title, conversation_id, status, conversations!inner(project_id), recordings!issues_recording_id_fkey(reverify_issue_id)")
     .eq("id", issueId)
     .maybeSingle();
   if (issueError) {
@@ -60,6 +63,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   }
   if (transition === "rejected") {
     return respondError(409, REJECTED_MESSAGES[target]);
+  }
+  const recordingRelation = findFirstRelation<{ reverify_issue_id: string | null }>(issue.recordings);
+  if (target === "resolved" && recordingRelation?.reverify_issue_id) {
+    return respondError(409, REVERIFY_FINDING_REJECTION);
   }
 
   // 출발 상태를 조건으로 걸어, 동시에 온 요청 중 하나만 바꾸고 메시지도 한 번만 보낸다.

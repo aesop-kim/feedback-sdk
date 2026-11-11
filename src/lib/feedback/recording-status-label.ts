@@ -44,7 +44,11 @@ export function needsRerecord(recording: Pick<RecordingSummary, "failureKind">):
 }
 
 // 관리자 대화의 녹화 칩. 실패는 옆 분석 패널과 같은 제목을 써서 한 녹화에 설명이 둘이 되지 않게 한다.
-export function getAdminRecordingStateLabel(recording: Pick<RecordingSummary, "status" | "issueCount" | "failureKind">): string {
+// 재확인 녹화에서 찾은 내용은 남은 문제로 세지 않으므로, 패널 제목처럼 "찾은 내용"이라고 부른다(V5-02).
+export function getAdminRecordingStateLabel(
+  recording: Pick<RecordingSummary, "status" | "issueCount" | "failureKind">,
+  isReverify = false,
+): string {
   switch (recording.status) {
     case "uploading":
       return "올리는 중";
@@ -54,6 +58,9 @@ export function getAdminRecordingStateLabel(recording: Pick<RecordingSummary, "s
     case "failed":
       return getFailureGuidance(recording.failureKind, false).title;
     case "analyzed":
+      if (isReverify) {
+        return recording.issueCount > 0 ? `찾은 내용 ${recording.issueCount}건` : "찾은 내용 없음";
+      }
       return recording.issueCount > 0 ? `문제 ${recording.issueCount}건` : "찾은 문제 없음";
   }
 }

@@ -196,6 +196,7 @@ function RecordingAnalysis({
               shouldFocus={focusedIssueId === issue.id}
               reverifyRecordingId={findReverifyRecordingId(issue.id)}
               onOpenRecording={onOpenRecording}
+              isReverifyFinding={isReverify}
             />
           ))}
         </ol>

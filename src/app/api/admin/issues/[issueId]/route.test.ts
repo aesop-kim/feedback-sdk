@@ -67,6 +67,21 @@ describe("PATCH /api/admin/issues/[issueId]", () => {
     expect(vi.mocked(insertMessage).mock.calls[0][0]).toMatchObject({ body: "‘버튼이 안 눌려요’ 아직 남아 있는 걸 확인했어요. 다시 고칠게요." });
   });
 
+  it("재확인 녹화에서 찾은 이슈는 반영 완료로 바꾸지 않고 고객에게 메시지도 보내지 않는다 (V5-01)", async () => {
+    const reverifyFinding = { ...ISSUE_ROW, recordings: { reverify_issue_id: "issue-original" } };
+    supabaseHolder.client = createFakeSupabase({ issues: [{ data: reverifyFinding }] });
+    const response = await patchIssue("resolved");
+    expect(response.status).toBe(409);
+    expect(insertMessage).not.toHaveBeenCalled();
+  });
+
+  it("일반 녹화에서 찾은 이슈는 그대로 반영 완료로 바꾼다", async () => {
+    const ordinaryIssue = { ...ISSUE_ROW, recordings: { reverify_issue_id: null } };
+    supabaseHolder.client = createFakeSupabase({ issues: [{ data: ordinaryIssue }, { data: [{ id: "issue-1" }] }] });
+    expect(await (await patchIssue("resolved")).json()).toEqual({ issueId: "issue-1", changed: true });
+    expect(insertMessage).toHaveBeenCalledTimes(1);
+  });
+
   it("이미 닫힌 이슈를 또 닫거나, 다른 요청이 먼저 바꿨으면 메시지를 보내지 않는다", async () => {
     supabaseHolder.client = createFakeSupabase({ issues: [{ data: { ...ISSUE_ROW, status: "closed" } }] });
     expect(await (await patchIssue("closed")).json()).toEqual({ issueId: "issue-1", changed: false });
