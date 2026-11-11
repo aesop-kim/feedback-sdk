@@ -37,7 +37,7 @@
 }
 
 .textarea::placeholder {
-  color: var(--grey-500);
+  color: var(--text-placeholder);
 }
 
 .footer {

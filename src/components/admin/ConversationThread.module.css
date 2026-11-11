@@ -62,7 +62,7 @@
 .empty {
   margin: auto;
   font-size: var(--fs-t7);
-  color: var(--grey-500);
+  color: var(--text-tertiary);
 }
 
 .daySeparator {
@@ -75,5 +75,5 @@
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
   font-weight: var(--fw-semibold);
-  color: var(--grey-500);
+  color: var(--text-tertiary);
 }
