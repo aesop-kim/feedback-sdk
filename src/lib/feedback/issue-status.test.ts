@@ -32,11 +32,15 @@ describe("findIssueTransition", () => {
     expect(findIssueTransition("reverify", "open")).toBe("change");
   });
 
+  it("해결됨으로 닫은 이슈는 다시 열 수 있다(잘못 닫았거나 문제가 다시 나왔을 때)", () => {
+    expect(findIssueTransition("closed", "open")).toBe("change");
+  });
+
   it("재확인 전 이슈는 닫거나 다시 열 수 없다", () => {
     expect(findIssueTransition("resolved", "closed")).toBe("rejected");
     expect(findIssueTransition("asked", "closed")).toBe("rejected");
-    expect(findIssueTransition("closed", "open")).toBe("rejected");
     expect(findIssueTransition("answered", "open")).toBe("rejected");
+    expect(findIssueTransition("resolved", "open")).toBe("rejected");
   });
 
   it("이미 그 상태면 바꾸지 않는다(멱등)", () => {

@@ -421,7 +421,8 @@ test("반영 완료로 바꾸면 위젯에 재확인 안내가 뜨고, 그 안�
   await analysis.getByRole("button", { name: "고객이 보낸 다시 확인 녹화 보기" }).click();
   await expect(analysis.getByText("‘QA 이슈 제목’ 다시 확인 녹화")).toBeVisible();
   await analysis.getByRole("button", { name: "원래 이슈 보기" }).click();
-  await analysis.getByRole("group", { name: "다시 확인 결과" }).getByRole("button", { name: "확인 끝 · 해결됨" }).click();
+  await analysis.getByRole("group", { name: "다시 확인 결과" }).getByRole("button", { name: "해결됨으로 닫기" }).click();
+  await analysis.getByRole("group", { name: "해결됨으로 닫기 확인" }).getByRole("button", { name: "닫기" }).click();
   await expect(analysis.getByText("해결됨", { exact: true })).toBeVisible();
   await captureQaScreen(adminPage, "admin-09-admin-reverify-closed");
   const { data: closedIssue } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
@@ -449,7 +450,15 @@ test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 �
   await expect(analysis.getByRole("button", { name: "반영 완료로 바꾸기" })).toHaveCount(0);
   const choices = analysis.getByRole("group", { name: "다시 확인 결과" });
   await captureQaScreen(adminPage, "admin-12-reverify-choices");
-  await choices.getByRole("button", { name: "확인 끝 · 해결됨" }).click();
+  // V4-03: 닫기는 제자리에서 한 번 더 묻는다. "다음에"를 누르면 아무것도 바뀌지 않는다.
+  await choices.getByRole("button", { name: "해결됨으로 닫기" }).click();
+  const closeConfirm = analysis.getByRole("group", { name: "해결됨으로 닫기 확인" });
+  await expect(closeConfirm.getByRole("button", { name: "닫기" })).toBeFocused();
+  await closeConfirm.getByRole("button", { name: "다음에" }).click();
+  const { data: stillReverify } = await database.from("issues").select("status").eq("id", seeded.issueId).single();
+  expect(stillReverify?.status).toBe("reverify");
+  await choices.getByRole("button", { name: "해결됨으로 닫기" }).click();
+  await closeConfirm.getByRole("button", { name: "닫기" }).click();
   await expect(analysis.getByText("해결됨", { exact: true })).toBeVisible();
   await expect(analysis.getByText("고객 확인까지 끝나서 해결됨으로 닫았어요")).toBeVisible();
   await expect(listRow).not.toContainText("남은 문제");
@@ -465,10 +474,17 @@ test("다시 확인 중인 이슈는 해결됨으로 닫거나 다시 열 수 �
   const { data: closedIssue } = await database.from("issues").select("status").eq("id", seeded.issueId).single();
   expect(closedIssue?.status).toBe("closed");
 
+  // V4-03: 닫은 이슈도 다시 열 수 있다. 다시 열면 반영 완료 버튼을 되찾고 남은 문제로 돌아온다.
+  await analysis.getByRole("group", { name: "해결된 이슈" }).getByRole("button", { name: "다시 열기" }).click();
+  await expect(analysis.getByRole("button", { name: "반영 완료로 바꾸기" })).toBeVisible();
+  await expect(listRow).toContainText("남은 문제 1건");
+  const { data: reopenedFromClosed } = await database.from("issues").select("status, resolved_at").eq("id", seeded.issueId).single();
+  expect(reopenedFromClosed).toEqual({ status: "open", resolved_at: null });
+
   // 아직 안 고쳐졌으면 다시 열어 반영 완료 버튼을 되찾는다.
   await database.from("issues").update({ status: "reverify" }).eq("id", seeded.issueId);
   await adminPage.reload();
-  await analysis.getByRole("group", { name: "다시 확인 결과" }).getByRole("button", { name: "아직 안 고쳐졌어요 · 다시 열기" }).click();
+  await analysis.getByRole("group", { name: "다시 확인 결과" }).getByRole("button", { name: "다시 열기" }).click();
   await expect(analysis.getByRole("button", { name: "반영 완료로 바꾸기" })).toBeVisible();
   await expect(listRow).toContainText("남은 문제 1건");
   const { data: reopenedIssue } = await database.from("issues").select("status, resolved_at").eq("id", seeded.issueId).single();

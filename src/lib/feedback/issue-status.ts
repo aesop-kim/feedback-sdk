@@ -15,12 +15,12 @@ export type AdminIssueStatus = "resolved" | "closed" | "open";
 
 // 관리자가 이 상태로 바꿀 수 있는 출발 상태.
 // - resolved(반영 완료): 아직 고치지 않은 이슈만. 고객에게 재확인을 부탁하는 메시지가 함께 간다.
-// - closed(해결됨): 고객이 재확인 녹화를 보낸 이슈만. 닫힌 최종 상태다.
-// - open(다시 열기): 재확인 녹화를 봤는데 아직 안 고쳐진 이슈만.
+// - closed(해결됨): 고객이 재확인 녹화를 보낸 이슈만.
+// - open(다시 열기): 재확인 녹화를 봤는데 아직 안 고쳐진 이슈, 또는 잘못 닫았거나 문제가 다시 나온 해결됨 이슈.
 const ADMIN_TRANSITION_SOURCES: Record<AdminIssueStatus, IssueStatus[]> = {
   resolved: ["open", "asked", "answered"],
   closed: ["reverify"],
-  open: ["reverify"],
+  open: ["reverify", "closed"],
 };
 
 export type IssueTransition = "change" | "unchanged" | "rejected";

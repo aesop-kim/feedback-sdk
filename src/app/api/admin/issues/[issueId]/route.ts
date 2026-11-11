@@ -22,7 +22,7 @@ function getIssueUpdate(target: AdminIssueStatus): { status: AdminIssueStatus; r
 const REJECTED_MESSAGES: Record<AdminIssueStatus, string> = {
   resolved: "고객이 이미 다시 확인했거나 닫힌 이슈예요. 새로고침해 주세요.",
   closed: "고객이 다시 확인한 이슈만 해결됨으로 닫을 수 있어요.",
-  open: "고객이 다시 확인한 이슈만 다시 열 수 있어요.",
+  open: "고객이 다시 확인했거나 해결됨으로 닫은 이슈만 다시 열 수 있어요.",
 };
 
 // 이슈 상태 바꾸기. 같은 요청을 두 번 보내도 두 번째는 changed:false라서 메시지가 두 번 가지 않는다.
