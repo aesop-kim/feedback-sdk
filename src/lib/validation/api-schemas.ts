@@ -29,6 +29,8 @@ export const createRecordingSchema = z.object({
     .array(z.object({ tMs: z.number().int().min(0), reason: z.enum(["interval", "click"]) }))
     .max(MAX_FRAME_COUNT),
   reverifyIssueId: z.string().uuid().optional(),
+  // "다시 보내기": 이미 만든 녹화의 업로드 주소만 다시 받는다. 이때 나머지 필드는 무시한다.
+  recordingId: z.string().uuid().optional(),
 });
 
 export const completeRecordingSchema = z.object({

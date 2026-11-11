@@ -25,6 +25,8 @@ const CLAUDE_TIMEOUT_MS = 240_000;
 const WHISPER_TIMEOUT_MS = 300_000;
 const WHISPER_MODEL_PATH = path.join(homedir(), ".cache/whisper-cpp/ggml-large-v3-turbo.bin");
 const MAX_ERROR_LENGTH = 1_000;
+const STALE_UPLOAD_MINUTES = 30;
+const STALE_UPLOAD_CHECK_INTERVAL_MS = 60_000;
 
 type Stage = "load" | "download" | "transcribe" | "analyze" | "save";
 
@@ -128,6 +130,27 @@ async function claimNextRecording(supabase: SupabaseClient): Promise<ClaimedReco
   }
   const row = (data as ClaimedRecording[] | null)?.[0];
   return row ?? null;
+}
+
+type ExpiredUpload = { id: string; conversation_id: string; project_id: string };
+
+// 업로드 중에 고객이 떠나 30분 넘게 'uploading'에 머문 녹화를 failed로 바꾸고 화면들에 알린다.
+async function expireStaleUploads(supabase: SupabaseClient): Promise<void> {
+  const { data, error } = await supabase.rpc("expire_stale_uploads", { p_stale_minutes: STALE_UPLOAD_MINUTES });
+  if (error) {
+    throw new Error(`expire_stale_uploads 실패: ${error.message}`);
+  }
+  const expired = (data as ExpiredUpload[] | null) ?? [];
+  await Promise.all(
+    expired.flatMap((recording) => {
+      console.warn(`[worker] ${recording.id} 업로드가 ${STALE_UPLOAD_MINUTES}분 넘게 끝나지 않아 실패로 바꿨어요`);
+      const signal = { type: "recording.updated", id: recording.id } as const;
+      return [
+        sendChannelSignal(supabase, getConversationChannelName(recording.conversation_id), signal, "[worker]"),
+        sendChannelSignal(supabase, getAdminChannelName(recording.project_id), signal, "[worker]"),
+      ];
+    }),
+  );
 }
 
 // 디버그용: 상태와 무관하게 지정한 녹화를 다시 집는다.
@@ -412,7 +435,16 @@ async function main(): Promise<void> {
   }
 
   console.log(`[worker] 대기 중 (${POLL_INTERVAL_MS / 1000}초마다 확인${values.once ? ", 한 건만" : ""})`);
+  let lastStaleUploadCheckAt = 0;
   for (;;) {
+    if (Date.now() - lastStaleUploadCheckAt >= STALE_UPLOAD_CHECK_INTERVAL_MS) {
+      lastStaleUploadCheckAt = Date.now();
+      try {
+        await expireStaleUploads(supabase);
+      } catch (error) {
+        console.error(`[worker] ${getErrorDetail(error)}`);
+      }
+    }
     let claimed: ClaimedRecording | null = null;
     try {
       claimed = await claimNextRecording(supabase);
