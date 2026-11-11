@@ -27,3 +27,44 @@
 - 보기를 고른 뒤에도 "답변 보내기"가 패널 아래에 숨어 있어, 고객이 버튼을 찾으려고 직접 스크롤해야 함 → 보기를 누르면 버튼이 보일 만큼만 위젯 스크롤 영역을 부드럽게 내린다(`prefers-reduced-motion`이면 바로). `scrollIntoView`는 고객사 페이지까지 움직일 수 있어서 쓰지 않고, `[data-widget-scroll]` 영역만 움직인다.
 - 관리자 이슈의 "고객 답변" 상자가 초록 면이라 상태 색을 면적으로 씀 → grey-50 면으로 바꾸고 초록은 "고객 답변" 라벨 글자에만 남겼다.
 - 그대로 둔 것: 런처의 사각 말풍선과 음성 파형은 원형 안에서도 채팅 버튼처럼 보이지 않아 유지했다. 관리자 장면 확대는 하이라이트가 화면 맨 위에 있어도 이미지 바깥이 보이지 않게 고정되는 것을 05·05b에서 확인했다. 위젯 빈 화면의 위아래 배치도 그대로 둔다.
+
+## v2 audit (2026-11-12)
+
+기준: `docs/design/ux-audit-v2.md`의 UX-01..29. 고친 PR은 `gh pr list -R aesop-kim/feedback-sdk --state merged -L 60`의 제목·본문에 적힌 ID로 맞췄다. "→"는 v2 검증에서 PARTIAL·NOT FIXED가 나와 뒤 PR에서 마저 고쳤다는 뜻이다. 괄호 안 PR은 같은 화면을 뒤에 더 다듬은 것이다.
+
+| ID | 분류 | 문제 | 고친 PR | 결과 |
+|---|---|---|---|---|
+| UX-01 | error recovery | 전송 실패 시 글이 사라짐 | #50 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-02 | copy | 업로드 실패가 "정리하지 못했어요"로 보임 | #58 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-03 | copy | 분석 실패가 고객에게 빨간 오류로 보임 | #58 (#80에서 업로드 미완료 문구 분리) | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-04 | affordance | 재확인 요청에 누를 버튼이 없음 | #60 (#82·#84에서 관리자 쪽 마무리) | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) · 제안과 다르게 고침(아래) |
+| UX-05 | focus·aria | 위젯 열기/닫기 포커스·Escape | #45 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-06 | contrast | 4.5:1 미만 토큰 조합 | #45, #40, #42, #47, #76 (#86 보내는 중 말풍선) | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status), [verification-v3.md §3](../qa/verification-v3.md) |
+| UX-07 | feedback | 정리 중·실패 녹화의 영상을 볼 수 없음 | #40 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-08 | hierarchy | 고정 플레이어가 질문 초안 제목을 가림 | #40 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-09 | feedback | "반영 완료"를 되돌릴 수 없고 고객 알림 안내가 없음 | #42 (#82에서 다시 열기) | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) · 제안과 다르게 고침(아래) |
+| UX-10 | error recovery | 초기화 오류 화면에 다시 시도가 없음 | #50 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-11 | affordance | 터치 영역 44px 미만 | #45 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-12 | focus·aria | 입력창 포커스 표시 | #45, #47 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-13 | focus·aria | 질문 카드 보기가 방향키로 안 움직임 | #45 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-14 | feedback | "답변 보내기" 로딩 표시 없음 | #50 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-15 | focus·aria | 새 답장 live region 없음 | #45 → #72, #74 | fixed — verified in [verification-v3.md §2](../qa/verification-v3.md#2-re-verified-items-all-non-verified-items-from-v2) |
+| UX-16 | feedback | 질문 초안 미리보기·승인 피드백 | #42 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status), [verification-v3.md §3](../qa/verification-v3.md) |
+| UX-17 | feedback | 반영 완료 뒤 고객 답변이 사라짐 | #42 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-18 | copy | 빈 목록 안내·설치 안내 | #47 (#74에서 프로젝트 키) | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status), [verification-v3.md §3](../qa/verification-v3.md) |
+| UX-19 | hierarchy | 같은 이름 고객 구분 | #47 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-20 | error recovery | 마이크·화면 공유 거부 토스트에 해결 방법이 없음 | #58, #65 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-21 | affordance | 녹화 알약에 취소·마이크 상태가 없음 | #58 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-22 | focus·aria | reduced-motion 규칙이 스켈레톤을 깜빡이게 함 | #45 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) (코드 확인) |
+| UX-23 | hierarchy | 대화 중에도 큰 인사말 헤더 | #62 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status), [verification-v3.md §3](../qa/verification-v3.md) |
+| UX-24 | copy | 문구 겹침·띄어쓰기 | #62 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-25 | copy | 배지 말투·"의견/대화" 이름 섞임 | #42, #47 → #74 | fixed — verified in [verification-v3.md §2](../qa/verification-v3.md#2-re-verified-items-all-non-verified-items-from-v2) |
+| UX-26 | hierarchy | 토큰 밖 값(11px 글자, 토스트 반경) | #45 → #74 | fixed — verified in [verification-v3.md §2](../qa/verification-v3.md#2-re-verified-items-all-non-verified-items-from-v2) |
+| UX-27 | copy | 답한 뒤 칩의 말하는 사람 | #62 | fixed — verified in [verification-v2.md §2 UX](../qa/verification-v2.md#2-per-item-status) |
+| UX-28 | focus·aria | 장면 확대 토글의 aria-pressed와 바뀌는 라벨 | #62(v2에서 NOT FIXED) → #74 | fixed — verified in [verification-v3.md §2](../qa/verification-v3.md#2-re-verified-items-all-non-verified-items-from-v2) |
+| UX-29 | feedback | 목록·이슈 줄 눌림 반응, 페이저 눌림 시간 | #40, #42, #47 → #74 | fixed — verified in [verification-v3.md §2](../qa/verification-v3.md#2-re-verified-items-all-non-verified-items-from-v2) |
+
+### 감사 제안과 다르게 고친 항목
+
+- **UX-04**: 감사는 재확인 카드에 주 버튼 "화면 녹화로 확인하기"와 보조 텍스트 버튼 "잘 고쳐졌어요"를 제안했다. #60은 주 버튼("다시 녹화해서 확인하기", 48px)만 넣고 "잘 고쳐졌어요"는 뺐다. 고객이 이슈를 닫는 API가 없었고, 닫는 판단은 재확인 녹화를 본 관리자가 하는 편이 맞다고 봤다. 그 마무리는 #82(관리자가 "해결됨"으로 닫거나 다시 열기)와 #84(재확인 녹화 ↔ 원래 이슈 링크)로 관리자 쪽에 넣었다.
+- **UX-09**: 감사는 반영 완료 뒤 5초 동안 "되돌리기"를 두고, 못 만들면 확인 대화상자를 두라고 했다. #42는 되돌리기 대신 대체안을 골랐다. 버튼 아래 캡션 "누르면 고객에게 다시 확인해 달라고 알려요", 모달 대신 인라인 확인 "고객에게 확인을 부탁할까요? 부탁하기/닫기", 누른 뒤 안내 문구다. 이미 고객에게 간 메시지를 지우는 되돌리기는 만들지 않았다. 대신 #82가 재확인 중인 이슈를 "다시 열기"로 `open`에 돌릴 수 있게 했다.
