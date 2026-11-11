@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import { DEMO_URL, SDK_ORIGIN, WIDGET_FRAME, getQaDatabase, pinQaUserOnDemoPage } from "./qa/qa-helpers";
 
@@ -36,8 +36,9 @@ async function isWidgetOpenable(): Promise<boolean> {
     await page.goto(DEMO_URL);
     await page.getByRole("button", { name: /피드백 보내기/ }).click({ timeout: 15_000 });
     const recordButton = page.frameLocator(WIDGET_FRAME).getByRole("button", { name: "화면 녹화", exact: true });
-    await recordButton.waitFor({ state: "visible", timeout: 15_000 });
-    return await recordButton.isEnabled();
+    // 대화는 위젯을 처음 열 때 만들어지므로, 버튼이 보인 뒤 켜질 때까지 기다린다.
+    await expect(recordButton).toBeEnabled({ timeout: 15_000 });
+    return true;
   } finally {
     await browser.close();
   }
