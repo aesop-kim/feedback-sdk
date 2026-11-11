@@ -69,3 +69,9 @@ demo/v2/analysis
 .claude/
 .omc/
 demo/v2/.omc/
+
+# demo v2 Remotion project (generated output, deps, regenerable audio)
+/demo/v2/remotion/node_modules/
+/demo/v2/remotion/out/
+/demo/v2/remotion/public/audio/
+/demo/v2/remotion/public/sfx/pad.wav
