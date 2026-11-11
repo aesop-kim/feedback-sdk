@@ -45,6 +45,7 @@
 
 .pagerButton:active:not(:disabled) {
   transform: scale(var(--press-scale));
+  transition-duration: var(--dur-press);
 }
 
 .pagerButton:disabled {
@@ -128,8 +129,26 @@
   color: var(--grey-800);
 }
 
+/* 글자는 흰 바탕에서 4.5:1을 넘도록 red-700을 쓴다(UX-06). */
 .failedTitle {
-  color: var(--red-500);
+  color: var(--red-700);
+}
+
+.failedReason {
+  margin: var(--sp-2) 0 var(--sp-2);
+  padding: 10px 12px;
+  border-radius: var(--r-input);
+  background: var(--grey-50);
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--grey-900);
+  overflow-wrap: anywhere;
+}
+
+.failedReasonLabel {
+  margin-right: 6px;
+  font-weight: var(--fw-semibold);
+  color: var(--grey-700);
 }
 
 .caption {
@@ -151,6 +170,10 @@
   flex-direction: column;
   gap: var(--sp-3);
   padding: 0 var(--sp-5);
+}
+
+.pendingBelowVideo {
+  padding-top: var(--sp-5);
 }
 
 .skeletonVideo,

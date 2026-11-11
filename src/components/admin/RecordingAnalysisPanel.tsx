@@ -18,6 +18,7 @@ type RecordingAnalysisPanelProps = {
 
 // API는 최신 녹화가 먼저 오지만, 번호는 보낸 순서(1이 첫 녹화)로 붙인다.
 export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSelectRecording }: RecordingAnalysisPanelProps) {
+  const playerRef = useRef<RecordingPlayerHandle>(null);
   const orderedRecordings = [...recordings].reverse();
   const selectedIndex = orderedRecordings.findIndex((recording) => recording.id === selectedRecordingId);
   const recording = orderedRecordings[selectedIndex];
@@ -57,8 +58,17 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
         ) : null}
       </header>
       {recording ? (
-        // 분석이 끝나 상태가 바뀌면 다시 마운트해서, 확인이 필요한 이슈가 기본으로 펼쳐지게 한다.
-        <RecordingAnalysis key={`${recording.id}:${recording.status}`} recording={recording} />
+        <>
+          {/* 플레이어는 녹화가 바뀔 때만 다시 마운트해서, 분석이 끝나도 영상을 다시 받지 않는다. */}
+          {canShowVideo(recording) ? <RecordingPlayer key={recording.id} ref={playerRef} recording={recording} /> : null}
+          {/* 분석이 끝나 상태가 바뀌면 다시 마운트해서, 확인이 필요한 이슈가 기본으로 펼쳐지게 한다. */}
+          <RecordingAnalysis
+            key={`${recording.id}:${recording.status}`}
+            recording={recording}
+            hasVideo={canShowVideo(recording)}
+            onSeek={(milliseconds) => playerRef.current?.seekTo(milliseconds)}
+          />
+        </>
       ) : (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>아직 받은 녹화가 없어요</p>
@@ -69,6 +79,11 @@ export function RecordingAnalysisPanel({ recordings, selectedRecordingId, onSele
   );
 }
 
+// 업로드가 끝난 녹화는 정리 중이거나 실패했어도 영상을 먼저 볼 수 있게 한다.
+function canShowVideo(recording: RecordingDetail): boolean {
+  return recording.status !== "uploading" && Boolean(recording.videoUrl);
+}
+
 function needsCheck(issue: Issue): boolean {
   return issue.confidence === "ambiguous" && issue.status === "open";
 }
@@ -77,26 +92,29 @@ function findDefaultOpenIssueId(issues: Issue[]): string | null {
   return (issues.find(needsCheck) ?? issues[0])?.id ?? null;
 }
 
-function RecordingAnalysis({ recording }: { recording: RecordingDetail }) {
-  const playerRef = useRef<RecordingPlayerHandle>(null);
+type RecordingAnalysisProps = {
+  recording: RecordingDetail;
+  hasVideo: boolean;
+  onSeek: (milliseconds: number) => void;
+};
+
+function RecordingAnalysis({ recording, hasVideo, onSeek }: RecordingAnalysisProps) {
   const [openIssueId, setOpenIssueId] = useState<string | null>(() => findDefaultOpenIssueId(recording.issues));
 
   if (recording.status === "uploading") {
-    return <AnalysisPending message="고객이 영상을 올리고 있어요. 잠시만 기다려 주세요" />;
+    return <AnalysisPending message="고객이 영상을 올리고 있어요. 잠시만 기다려 주세요" hasVideo={false} />;
   }
   if (recording.status === "uploaded" || recording.status === "analyzing") {
-    return <AnalysisPending message="말한 내용을 정리하고 있어요. 보통 1분 안에 끝나요" />;
+    return <AnalysisPending message="말한 내용을 정리하고 있어요. 보통 1분 안에 끝나요" hasVideo={hasVideo} />;
   }
   if (recording.status === "failed") {
-    return <AnalysisFailed recordingId={recording.id} />;
+    return <AnalysisFailed recordingId={recording.id} reason={recording.error} hasVideo={hasVideo} />;
   }
 
   const checkCount = recording.issues.filter(needsCheck).length;
-  const seekTo = (milliseconds: number) => playerRef.current?.seekTo(milliseconds);
 
   return (
     <>
-      <RecordingPlayer ref={playerRef} recording={recording} />
       <div className={styles.summaryLine}>
         <h3 className={styles.summaryTitle}>
           문제 <span className={styles.summaryNumber}>{recording.issues.length}</span>건
@@ -119,20 +137,20 @@ function RecordingAnalysis({ recording }: { recording: RecordingDetail }) {
               index={index + 1}
               isOpen={openIssueId === issue.id}
               onToggle={() => setOpenIssueId((current) => (current === issue.id ? null : issue.id))}
-              onSeek={seekTo}
+              onSeek={onSeek}
             />
           ))}
         </ol>
       )}
-      <TranscriptSection segments={recording.transcript} onSeek={seekTo} />
+      <TranscriptSection segments={recording.transcript} onSeek={onSeek} />
     </>
   );
 }
 
-function AnalysisPending({ message }: { message: string }) {
+function AnalysisPending({ message, hasVideo }: { message: string; hasVideo: boolean }) {
   return (
-    <div className={styles.pending} aria-busy="true">
-      <span className={styles.skeletonVideo} />
+    <div className={hasVideo ? `${styles.pending} ${styles.pendingBelowVideo}` : styles.pending} aria-busy="true">
+      {hasVideo ? null : <span className={styles.skeletonVideo} />}
       <span className={styles.skeletonLine} />
       <span className={`${styles.skeletonLine} ${styles.skeletonShort}`} />
       <p className={styles.pendingMessage} role="status">
@@ -142,7 +160,22 @@ function AnalysisPending({ message }: { message: string }) {
   );
 }
 
-function AnalysisFailed({ recordingId }: { recordingId: string }) {
+// 무음 녹화는 다시 정리해도 같은 이유로 실패한다. 이때는 고객에게 다시 녹화를 부탁하라고 안내한다.
+const SILENT_RECORDING_ERROR = "목소리가 녹음되지 않았어요";
+
+function getFailedGuide(reason: string | null, hasVideo: boolean): string {
+  if (reason?.includes(SILENT_RECORDING_ERROR)) {
+    return "다시 정리해도 결과가 같아요. 고객에게 마이크를 확인하고 다시 녹화해 달라고 답장해 주세요.";
+  }
+  if (hasVideo) {
+    return "영상은 위에서 바로 볼 수 있어요. 다시 정리하면 보통 1분 안에 끝나요.";
+  }
+  return "영상은 안전하게 받아 두었어요. 다시 정리하면 보통 1분 안에 끝나요.";
+}
+
+type AnalysisFailedProps = { recordingId: string; reason: string | null; hasVideo: boolean };
+
+function AnalysisFailed({ recordingId, reason, hasVideo }: AnalysisFailedProps) {
   const request = useAdminRequest();
   const { refresh } = useAdminRevision();
   const [isRequesting, setIsRequesting] = useState(false);
@@ -167,7 +200,13 @@ function AnalysisFailed({ recordingId }: { recordingId: string }) {
   return (
     <div className={styles.failed}>
       <p className={styles.failedTitle}>말한 내용을 정리하지 못했어요</p>
-      <p className={styles.caption}>영상은 안전하게 받아 두었어요. 다시 정리하면 보통 1분 안에 끝나요.</p>
+      {reason ? (
+        <p className={styles.failedReason}>
+          <span className={styles.failedReasonLabel}>이유</span>
+          {reason}
+        </p>
+      ) : null}
+      <p className={styles.caption}>{getFailedGuide(reason, hasVideo)}</p>
       <AdminButton variant="weak" size="small" onClick={() => void reanalyze()} isLoading={isRequesting}>
         다시 정리하기
       </AdminButton>

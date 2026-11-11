@@ -1,10 +1,18 @@
+/* 키가 낮은 화면(1280×800 등)에서는 고정하지 않는다. 고정 플레이어가 이슈·질문 초안을 가리기 때문이다.
+   대신 장면이나 시각을 누르면 플레이어가 보이도록 스크롤한다(scroll-margin-top은 고정 헤더 높이). */
 .player {
-  position: sticky;
-  top: 52px;
-  z-index: 2;
+  scroll-margin-top: 52px;
   padding: 0 var(--sp-5) var(--sp-4);
   background: var(--bg);
   border-bottom: 1px solid var(--border-hairline);
+}
+
+@media (min-height: 901px) {
+  .player {
+    position: sticky;
+    top: 52px;
+    z-index: 2;
+  }
 }
 
 .frame {
@@ -61,7 +69,7 @@
   margin: 0;
   font-size: var(--fs-t7);
   line-height: var(--lh-t7);
-  color: var(--grey-500);
+  color: var(--grey-700);
 }
 
 .caption {
@@ -94,7 +102,7 @@
   white-space: nowrap;
   font-size: var(--fs-t8);
   line-height: var(--lh-t8);
-  color: var(--grey-500);
+  color: var(--grey-600);
 }
 
 .duration {
