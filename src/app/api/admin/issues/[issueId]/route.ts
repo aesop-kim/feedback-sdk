@@ -7,6 +7,7 @@ import { getServerSupabase } from "@/lib/supabase/server-client";
 import { updateIssueSchema } from "@/lib/validation/api-schemas";
 
 // 이슈를 "반영 완료"로 바꾸면 고객에게 다시 확인해 달라는 메시지를 보낸다.
+// 위젯은 GET /api/messages의 reverifyRequest로 이 이슈를 알고, 재확인 녹화에 reverifyIssueId를 붙여 보낸다.
 export async function PATCH(request: Request, { params }: { params: Promise<{ issueId: string }> }) {
   const rejection = await findAdminRejection();
   if (rejection) {
@@ -29,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   if (issue.status === "resolved") {
     return respondJson({ issueId, changed: false });
   }
-  await supabase.from("issues").update({ status: parsed.data.status }).eq("id", issueId);
+  await supabase.from("issues").update({ status: parsed.data.status, resolved_at: new Date().toISOString() }).eq("id", issueId);
   const projectRelation = getFirstRelation<{ project_id: string }>(issue.conversations);
   const messageId = await insertMessage({
     conversationId: issue.conversation_id,
