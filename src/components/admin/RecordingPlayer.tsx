@@ -26,6 +26,7 @@ function findReadablePageUrl(pageUrl: string | null): string | null {
 }
 
 export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
+  const playerElementRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const pendingSeekRef = useRef<number | null>(null);
   // 재생 전에는 기본 컨트롤(로딩 스피너·어두운 그라데이션)을 숨기고 첫 장면만 차분히 보여 준다.
@@ -49,6 +50,8 @@ export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
 
   useImperativeHandle(ref, () => ({
     seekTo(milliseconds: number) {
+      // 플레이어가 고정되지 않은 화면에서는 스크롤해 온 위치에서 영상이 보이지 않으므로 끌어온다.
+      playerElementRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       const video = videoRef.current;
       if (!video || video.readyState === 0) {
         pendingSeekRef.current = milliseconds;
@@ -61,7 +64,7 @@ export function RecordingPlayer({ ref, recording }: RecordingPlayerProps) {
   const readableUrl = findReadablePageUrl(recording.pageUrl);
 
   return (
-    <div className={styles.player}>
+    <div ref={playerElementRef} className={styles.player}>
       <div className={styles.frame} data-state={getFrameState(Boolean(blobUrl), isLoading)}>
         {blobUrl ? (
           <>
