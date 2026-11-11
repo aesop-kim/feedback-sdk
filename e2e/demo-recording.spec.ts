@@ -260,7 +260,7 @@ test("데모 영상 촬영: 고객 녹화부터 반영 완료 후 다시 확인 
   await glideAndClick(customerPage, "customer", card.getByRole("radio").first(), "answer-option");
   await customerPage.waitForTimeout(500);
   await glideAndClick(customerPage, "customer", card.getByRole("button", { name: "답변 보내기" }), "answer-send");
-  await expect(widget.getByText("답변을 보냈어요")).toBeVisible();
+  await expect(widget.getByText("답변 고마워요")).toBeVisible();
   markCue("customer", "answered");
 
   // 6. 관리자 화면에 고객 답변 반영

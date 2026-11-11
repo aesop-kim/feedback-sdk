@@ -131,7 +131,7 @@ test("말로 설명한 녹화: 워커가 이슈를 만들고, 승인한 질문�
     await captureQaScreen(page, "wrk-02-widget-card");
     await card.getByRole("radio").first().click();
     await card.getByRole("button", { name: "답변 보내기" }).click();
-    await expect(widget.getByText("답변을 보냈어요")).toBeVisible();
+    await expect(widget.getByText("답변 고마워요")).toBeVisible();
     await expect(analysis.getByText("고객 답변", { exact: true })).toBeVisible({ timeout: 5_000 });
     await captureQaScreen(adminPage, "wrk-02-admin-answered");
 
