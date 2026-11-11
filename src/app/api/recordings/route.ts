@@ -56,10 +56,20 @@ export async function POST(request: Request) {
     if (!retryable) {
       return respondError(409, "이미 보낸 녹화예요.");
     }
-    await supabase
+    // 읽은 뒤 그사이 업로드가 끝났거나 워커가 가져갔다면 되돌리지 않는다. 같은 조건을 update에 다시 건다.
+    const { data: resetRows, error: resetError } = await supabase
       .from("recordings")
       .update({ status: "uploading", error: null, upload_requested_at: new Date().toISOString() })
-      .eq("id", input.recordingId);
+      .eq("id", input.recordingId)
+      .in("status", ["uploading", "failed"])
+      .eq("analysis_attempt", 0)
+      .select("id");
+    if (resetError) {
+      return respondError(500, "업로드를 준비하지 못했어요.");
+    }
+    if (!resetRows || resetRows.length === 0) {
+      return respondError(409, "이미 보낸 녹화예요.");
+    }
     recordingId = input.recordingId;
     framePaths = ((existing.frames ?? []) as { path: string }[]).map((frame) => frame.path);
   } else {

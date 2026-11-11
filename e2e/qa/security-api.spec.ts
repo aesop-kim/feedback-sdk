@@ -100,6 +100,49 @@ test("다른 대화의 녹화를 완료 처리해도 바뀌지 않는다", async
   // 200 changed:false 이지만 404가 더 정확하다(존재 여부를 숨기려면 둘 다 괜찮음) — 상태가 바뀌지 않는 것만 강제한다.
 });
 
+// 다시 보내기도 스키마상 녹화 정보가 필요하다. 서버는 recordingId가 있으면 나머지를 무시한다.
+function createRetryBody(recordingId: string) {
+  return { pageUrl: DEMO_URL, viewport: { width: 1440, height: 900 }, t0EpochMs: Date.now(), durationMs: 1000, audioOffsetMs: 0, frames: [], recordingId };
+}
+
+test("업로드 다시 보내기는 그사이 워커가 가져간 녹화를 uploading으로 되돌리지 않는다", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-retry-race"));
+  const headers = { authorization: `Bearer ${owner.conversationToken}` };
+  const database = getQaDatabase();
+  for (let round = 0; round < 5; round += 1) {
+    const { data: recording } = await database
+      .from("recordings")
+      .insert({ conversation_id: owner.conversationId, status: "uploading", duration_ms: 1000, frames: [] })
+      .select("id")
+      .single();
+    // 다시 보내기와 워커의 가져가기(analyzing, attempt 1)를 동시에 보낸다.
+    const [retry] = await Promise.all([
+      request.post(`${SDK_ORIGIN}/api/recordings`, { headers, data: createRetryBody(recording!.id) }),
+      database.from("recordings").update({ status: "analyzing", analysis_attempt: 1 }).eq("id", recording!.id),
+    ]);
+    const { data: after } = await database.from("recordings").select("status, analysis_attempt").eq("id", recording!.id).single();
+    console.log(`[qa] retry race round ${round} → ${retry.status()} ${JSON.stringify(after)}`);
+    expect([200, 409]).toContain(retry.status());
+    expect(after).toEqual({ status: "analyzing", analysis_attempt: 1 });
+  }
+});
+
+test("이미 분석에 넘어간 녹화를 다시 보내면 409이고 상태는 그대로다", async ({ request }) => {
+  const owner = await startConversationViaApi(request, createQaUser("sec-retry-taken"));
+  const { data: recording } = await getQaDatabase()
+    .from("recordings")
+    .insert({ conversation_id: owner.conversationId, status: "analyzing", analysis_attempt: 1, duration_ms: 1000, frames: [] })
+    .select("id")
+    .single();
+  const response = await request.post(`${SDK_ORIGIN}/api/recordings`, {
+    headers: { authorization: `Bearer ${owner.conversationToken}` },
+    data: createRetryBody(recording!.id),
+  });
+  expect(response.status()).toBe(409);
+  const { data: after } = await getQaDatabase().from("recordings").select("status").eq("id", recording!.id).single();
+  expect(after?.status).toBe("analyzing");
+});
+
 test("같은 질문에 두 번 답하면 두 번째는 409", async ({ request }) => {
   const owner = await startConversationViaApi(request, createQaUser("sec-409"));
   const seeded = await seedAnalyzedRecording(owner.conversationId);
