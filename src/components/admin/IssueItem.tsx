@@ -15,6 +15,11 @@ type IssueItemProps = {
   isOpen: boolean;
   onToggle: () => void;
   onSeek: (milliseconds: number) => void;
+  // 원래 이슈 보기로 왔을 때 이 이슈에 초점을 준다.
+  shouldFocus: boolean;
+  // 고객이 이 이슈를 다시 확인하려고 보낸 녹화(없으면 null).
+  reverifyRecordingId: string | null;
+  onOpenRecording: (recordingId: string) => void;
 };
 
 type StatusPill = { label: string; tone: "grey" | "orange" | "blue" | "green" };
@@ -70,13 +75,24 @@ function findAnswerText(card: ClarificationCard): string | null {
   return [optionLabel, card.answer.text].filter(Boolean).join(" · ") || null;
 }
 
-export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemProps) {
+export function IssueItem({ issue, index, isOpen, onToggle, onSeek, shouldFocus, reverifyRecordingId, onOpenRecording }: IssueItemProps) {
   const bodyId = useId();
+  const summaryButtonRef = useRef<HTMLButtonElement>(null);
   const pill = findStatusPill(issue);
+
+  useEffect(() => {
+    if (shouldFocus) {
+      summaryButtonRef.current?.focus();
+    }
+  }, [shouldFocus]);
 
   return (
     <li className={isFinished(issue) ? `${styles.item} ${styles.resolved}` : styles.item}>
-      <button type="button" className={styles.summaryRow} onClick={onToggle} aria-expanded={isOpen} aria-controls={bodyId}>
+      <button
+        ref={summaryButtonRef}
+        type="button"
+        className={styles.summaryRow}
+        onClick={onToggle} aria-expanded={isOpen} aria-controls={bodyId}>
         <span className={styles.index}>{index}</span>
         <span className={styles.heading}>
           <span className={styles.title}>{issue.title}</span>
@@ -107,6 +123,11 @@ export function IssueItem({ issue, index, isOpen, onToggle, onSeek }: IssueItemP
           ) : null}
           {issue.element?.selector ? <SelectorChip selector={issue.element.selector} /> : null}
           <IssueClarification issue={issue} />
+          {reverifyRecordingId ? (
+            <button type="button" className={styles.reverifyLink} onClick={() => onOpenRecording(reverifyRecordingId)}>
+              고객이 보낸 다시 확인 녹화 보기
+            </button>
+          ) : null}
           <IssueActions issue={issue} />
         </div>
       ) : null}
