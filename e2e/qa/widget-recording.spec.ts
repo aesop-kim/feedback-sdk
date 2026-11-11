@@ -13,6 +13,7 @@ import {
   loginAdmin,
   openWidget,
   saveDiagnostics,
+  seedAnalyzedRecording,
 } from "./qa-helpers";
 
 // 녹화 QA: 시작·끝내기, 화면 공유/마이크 거부, 화면 공유 중단(자동 종료), 최대 시간 자동 종료,
@@ -302,4 +303,45 @@ test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' �
   expect(afterReanalyze?.status).toBe("failed");
   expect(afterReanalyze?.error).toContain("업로드가 끝나지 않았어요");
   await adminContext.close();
+});
+
+// V3-01·V3-05: 업로드가 끝나지 않은 녹화(워커가 audio.webm을 못 찾아 실패시킨 녹화)는
+// 고객에게 받지 못했다고 사실대로 알리고 다시 녹화를 권한다. 관리자 칩은 분석 패널과 같은 설명을 쓴다.
+test("업로드가 끝나지 않은 녹화는 위젯이 받지 못했다고 알리고, 다시 녹화하기로 새 녹화를 보낸다", async ({ page, browser }) => {
+  const user = createQaUser("rec-upload-incomplete");
+  await openWidget(page, user);
+  const conversationId = await findConversationIdForUser(user.id);
+  if (!conversationId) {
+    throw new Error("대화를 찾지 못했어요");
+  }
+  // 워커의 MISSING_RECORDING_FILE_ERROR와 같은 결과를 DB에 만든다.
+  await seedAnalyzedRecording(conversationId, {
+    status: "failed",
+    analysisAttempt: 1,
+    error: "녹화 파일이 없어요. 업로드가 끝나지 않은 녹화예요. 고객에게 다시 녹화해 달라고 요청해 주세요",
+  });
+
+  const adminContext = await browser.newContext();
+  const adminPage = await loginAdmin(adminContext);
+  await adminPage.goto(`${SDK_ORIGIN}/admin/${conversationId}`);
+  const chip = adminPage.getByRole("button", { name: /화면 녹화/ });
+  await expect(chip).toContainText("녹화를 끝까지 받지 못했어요");
+  await expect(adminPage.getByRole("complementary", { name: "녹화 분석" }).getByText("녹화를 끝까지 받지 못했어요")).toBeVisible();
+  await captureQaScreen(adminPage, "rec-09-admin-upload-incomplete-chip");
+  await adminContext.close();
+
+  await page.reload();
+  await page.getByRole("button", { name: /피드백 보내기/ }).click();
+  const widget = page.frameLocator(WIDGET_FRAME);
+  await expect(widget.getByText("녹화가 끝까지 올라가지 않았어요")).toBeVisible({ timeout: 20_000 });
+  await expect(widget.getByText("받았어요. 담당자가 직접 볼게요")).toHaveCount(0);
+  await captureQaScreen(page, "rec-09-widget-upload-incomplete");
+  await widget.getByRole("button", { name: "다시 녹화하기" }).click();
+  await expect(widget.getByRole("status", { name: "화면 녹화 중" })).toBeVisible({ timeout: 10_000 });
+  await page.waitForTimeout(2_000);
+  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await expect(widget.getByText(SERVER_RECORDING_STATUS)).toBeVisible({ timeout: 60_000 });
+  // 새 녹화가 가장 최근이 되면 옛 카드의 다시 녹화하기는 거둔다.
+  await expect(widget.getByRole("button", { name: "다시 녹화하기" })).toHaveCount(0);
+  expect((await countRecordings(user.id)).length).toBe(2);
 });

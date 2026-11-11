@@ -38,9 +38,10 @@ type RecordingRow = {
   transcript: { segments?: TranscriptSegment[] } | null;
   error: string | null;
   created_at: string;
+  analysis_attempt: number;
 };
 
-type RecordingDetailRow = RecordingRow & { analysis_attempt: number; reverify_issue_id: string | null };
+type RecordingDetailRow = RecordingRow & { reverify_issue_id: string | null };
 
 type IssueRow = {
   id: string;
@@ -126,6 +127,7 @@ function toRecordingSummary(row: RecordingRow, issueCount: number): RecordingSum
     pageTitle: row.page_title,
     issueCount,
     createdAt: row.created_at,
+    failureKind: findRecordingFailureKind({ status: row.status, error: row.error, analysisAttempt: row.analysis_attempt }),
   };
 }
 
@@ -144,7 +146,10 @@ export async function getConversationMessages(conversationId: string, audience: 
 
   const [{ data: recordingRows }, { data: issueCountRows }, { cards, answers }] = await Promise.all([
     recordingIds.length
-      ? supabase.from("recordings").select("id, status, duration_ms, page_url, page_title, transcript, error, created_at").in("id", recordingIds)
+      ? supabase
+          .from("recordings")
+          .select("id, status, duration_ms, page_url, page_title, transcript, error, created_at, analysis_attempt")
+          .in("id", recordingIds)
       : Promise.resolve({ data: [] }),
     recordingIds.length ? supabase.from("issues").select("recording_id").in("recording_id", recordingIds) : Promise.resolve({ data: [] }),
     getCardsWithAnswers(cardIds),
@@ -217,11 +222,6 @@ export async function getRecordingDetails(conversationId: string): Promise<Recor
       videoUrl: signedUrls.get(`${recording.id}/video.webm`) ?? null,
       transcript: recording.transcript?.segments ?? [],
       error: recording.error,
-      failureKind: findRecordingFailureKind({
-        status: recording.status,
-        error: recording.error,
-        analysisAttempt: recording.analysis_attempt,
-      }),
       reverifyIssueId: recording.reverify_issue_id,
       issues: recordingIssues.map((issue) => {
         const card = cardsByIssue.get(issue.id);
