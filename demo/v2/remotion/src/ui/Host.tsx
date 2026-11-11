@@ -182,6 +182,17 @@ export function UILayer({ children, style }: { children: ReactNode; style?: CSSP
   );
 }
 
+type Box = { x: number; y: number; w: number; h: number };
+/** 요소 하나를 썸네일 가운데에 같은 여백(pad, UI px)으로 맞추는 crop. 페이지 밖(빈 회색)이 보이지 않게 가장자리에서 멈춘다. */
+export function fitCrop(box: Box, w: number, h: number, pad = 8) {
+  const zoom = Math.min(w / (box.w + pad * 2), h / (box.h + pad * 2));
+  const hw = w / 2 / zoom;
+  const hh = h / 2 / zoom;
+  const cx = Math.max(hw, Math.min(UI.w - hw, box.x + box.w / 2));
+  const cy = Math.max(hh, Math.min(UI.h - hh, box.y + box.h / 2));
+  return { cx, cy, zoom };
+}
+
 /** 고객사 화면 일부를 잘라 보여 주는 장면 이미지(이슈 썸네일, 질문 카드 장면). */
 export function HostCrop({ w, h, cx, cy, zoom, box, boxDraw = 1, dim = 0 }: { w: number; h: number; cx: number; cy: number; zoom: number; box?: { x: number; y: number; w: number; h: number }; boxDraw?: number; dim?: number }) {
   const left = w / 2 - cx * zoom;
@@ -190,10 +201,16 @@ export function HostCrop({ w, h, cx, cy, zoom, box, boxDraw = 1, dim = 0 }: { w:
     <div style={{ position: "relative", width: w, height: h, overflow: "hidden", background: C.grey100 }}>
       <div style={{ position: "absolute", left, top, width: UI.w, height: UI.h, transform: `scale(${zoom})`, transformOrigin: "0 0" }}>
         <HostPage />
-        {dim > 0 ? <AbsoluteFill style={{ background: `rgba(25,31,40,${dim})` }} /> : null}
+        {dim > 0 && box ? (
+          // 하이라이트 바깥만 어둡게 (실제 UI의 --scrim-focus)
+          <svg style={{ position: "absolute", left: 0, top: 0 }} width={UI.w} height={UI.h}>
+            <path fillRule="evenodd" fill={`rgba(25,31,40,${dim})`} d={`M0 0H${UI.w}V${UI.h}H0Z M${box.x} ${box.y}h${box.w}v${box.h}h${-box.w}Z`} />
+          </svg>
+        ) : null}
+        {dim > 0 && !box ? <AbsoluteFill style={{ background: `rgba(25,31,40,${dim})` }} /> : null}
         {box ? (
           <svg style={{ position: "absolute", left: box.x, top: box.y, overflow: "visible" }} width={box.w} height={box.h}>
-            <rect x={0} y={0} width={box.w} height={box.h} rx={4} fill={dim > 0 ? "rgba(255,255,255,0.0)" : "none"} stroke={C.accent} strokeWidth={2.5 / Math.min(zoom, 2)} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - boxDraw} />
+            <rect x={0} y={0} width={box.w} height={box.h} rx={4} fill="none" stroke={C.accent} strokeWidth={2.5 / Math.min(zoom, 2)} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - boxDraw} />
           </svg>
         ) : null}
       </div>

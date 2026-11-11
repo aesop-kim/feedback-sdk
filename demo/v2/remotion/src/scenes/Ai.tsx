@@ -3,9 +3,9 @@ import { AbsoluteFill, useCurrentFrame } from "remotion";
 import { C, E_INOUT, E_OUT, FONT, LINEAR, pop, soft, tw } from "../theme";
 import { Caption, Roll } from "../motion/Kinetic";
 import { Camera } from "../motion/Camera";
-import { HostCrop } from "../ui/Host";
+import { fitCrop, HostCrop } from "../ui/Host";
 import { FilmIcon, ListCheckIcon, MicIcon, PointerIcon, SplitIcon, ChevronDown } from "../ui/Icons";
-import { DETAIL_SUMMARY, DoneChip, ISSUES, NeedBadge, QUOTE } from "../ui/Admin";
+import { DETAIL_SUMMARY, DoneChip, ISSUE_BOX, ISSUES, NeedBadge, QUOTE } from "../ui/Admin";
 import { SCENE_BOX, t } from "../ui/Widget";
 
 export const S14_ITEMS = ["말한 내용 받아쓰기", "장면 찾기", "가리킨 곳 찾기", "문제별로 나누기", "문제 3건을 찾아요"];
@@ -59,7 +59,7 @@ export function IssueCard({ i, h = CARD.h, badge = 0, badgeO = 1, thumbS = 1, ti
       {thumbO > 0 ? (
         <div style={{ position: "absolute", right: 12, top: 12, width: 224, height: 126, borderRadius: 12, overflow: "hidden", opacity: thumbO }}>
           <div style={{ transform: `scale(${thumbS})` }}>
-            <HostCrop w={224} h={126} cx={is.crop.cx} cy={is.crop.cy} zoom={is.crop.zoom} />
+            <HostCrop w={224} h={126} {...fitCrop(ISSUE_BOX[i], 224, 126)} box={ISSUE_BOX[i]} dim={0.28} />
           </div>
         </div>
       ) : null}
@@ -109,6 +109,7 @@ export function S16() {
   const m = tw(f, 6, 20, 0, 1, E_INOUT);
   const img = { x: 1100 - 12 - 224 + (84 - (1100 - 12 - 224)) * m, y: 12 + (112 - 12) * m, w: 224 + (600 - 224) * m, h: 126 + (338 - 126) * m };
   const boxDraw = tw(f, 30, 42, 0, 1);
+  const T0 = fitCrop(ISSUE_BOX[2], 224, 126);
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       <Camera cam={cam}>
@@ -122,7 +123,7 @@ export function S16() {
           <div style={{ position: "absolute", left: CARD.x, top: CARD.ys[2] }}>
             <IssueCard i={2} h={h} badge={1} thumbO={0}>
               <div style={{ position: "absolute", left: img.x, top: img.y, width: img.w, height: img.h, borderRadius: 14, overflow: "hidden" }}>
-                <HostCrop w={img.w} h={img.h} cx={330 + 90 * m} cy={60 + 130 * m} zoom={1.2 - 0.3 * m} box={m > 0.5 ? SCENE_BOX : undefined} boxDraw={boxDraw} />
+                <HostCrop w={img.w} h={img.h} cx={T0.cx + (420 - T0.cx) * m} cy={T0.cy + (190 - T0.cy) * m} zoom={T0.zoom + (0.9 - T0.zoom) * m} box={m > 0.5 ? SCENE_BOX : undefined} boxDraw={boxDraw} />
               </div>
               <div style={{ position: "absolute", left: 716, top: 112, width: 350 }}>
                 <p style={{ ...t(18, 600, C.grey500), ...line(0) }}>고객이 한 말</p>

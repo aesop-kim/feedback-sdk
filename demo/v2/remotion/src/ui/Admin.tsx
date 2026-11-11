@@ -3,6 +3,13 @@
 import type { ReactNode } from "react";
 import { C, mix } from "../theme";
 import { HOST, HostCrop } from "./Host";
+
+// 이슈마다 가리킨 요소 (UI 좌표). 썸네일은 이 상자를 가운데에 같은 여백으로 맞춘다.
+export const ISSUE_BOX = [
+  { x: HOST.register.x, y: HOST.register.y, w: HOST.register.w, h: HOST.register.h },
+  { x: 1160, y: 68, w: 60, h: 24 },
+  { x: HOST.title.x - 4, y: HOST.title.y - 1, w: HOST.title.w + 8, h: HOST.title.h + 2 },
+];
 import { CheckIcon, ChevronDown, LatticeMark, PlusIcon, CloseIcon, VideoIcon } from "./Icons";
 import { OPTIONS, QUESTION, QUOTE, Radio, SCENE_BOX, t } from "./Widget";
 
@@ -10,17 +17,14 @@ export const ISSUES = [
   {
     title: "계약서 등록 버튼 무반응",
     summary: "우측 상단 파란 ‘계약서 등록’ 버튼을 두 번 눌러도 아무 반응이 없고 …",
-    crop: { cx: HOST.register.x + 40, cy: 52, zoom: 1.2 },
   },
   {
     title: "표 머리글 ‘계약 금액’ 오타",
     summary: "표 머리글의 ‘계약 금액’ 열 제목이 ‘계약 긍액’으로 잘못 표기되어 있…",
-    crop: { cx: 1196, cy: 100, zoom: 1.2 },
   },
   {
     title: "상단 제목 글씨 어색함",
     summary: "화면 맨 위 ‘전체 계약서’ 제목의 글씨가 다른 곳과 달라 보인다고 했어요",
-    crop: { cx: 330, cy: 60, zoom: 1.2 },
   },
 ];
 export const DETAIL_SUMMARY = "화면 맨 위 ‘전체 계약서’ 제목의 글씨가 다른 곳과 달라 보여 어색하다고 했으나, 정확히 무엇이 문제인지는 고객도 모른다.";
@@ -184,7 +188,9 @@ export function DraftCard({ typed = QUESTION.length, optIn = [1, 1, 1, 1], btnSc
       </div>
       <div style={{ marginTop: 10 }}>
         {OPTIONS.map((o, i) => (
-          <div key={o} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, opacity: optIn[i] > 0 ? 1 : 0, transform: `translateY(${(1 - optIn[i]) * 20}px)` }}>
+          // 줄 높이도 0→48로 같이 자라서 질문 입력창과 "보기 추가하기" 사이에 빈 칸이 생기지 않는다
+          <div key={o} style={{ height: 48 * optIn[i], overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, height: 40, opacity: optIn[i] > 0 ? 1 : 0, transform: `translateY(${(1 - optIn[i]) * 20}px)` }}>
             <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 12px", borderRadius: 10, border: `1px solid ${C.grey200}` }}>
               <Radio t={0} />
               <span style={t(14, 500, mix(C.grey400, C.ink, optIn[i]))}>{o}</span>
@@ -192,6 +198,7 @@ export function DraftCard({ typed = QUESTION.length, optIn = [1, 1, 1, 1], btnSc
             <div style={{ color: C.grey400 }}>
               <CloseIcon size={14} />
             </div>
+          </div>
           </div>
         ))}
       </div>

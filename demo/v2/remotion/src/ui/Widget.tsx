@@ -36,7 +36,9 @@ export function Launcher({ x = LAUNCHER.x, y = LAUNCHER.y, size = 56, open = 0, 
 }
 
 /** 위젯 패널 틀. 오른쪽 아래 기준으로 scale/y/opacity가 바뀐다. */
-export function Panel({ children, scale = 1, dy = 0, opacity = 1, scrollY = 0, footer = true }: { children: ReactNode; scale?: number; dy?: number; opacity?: number; scrollY?: number; footer?: boolean }) {
+/** compact: 인사 머리글을 한 줄로 줄여 메시지 영역을 넓힌다(질문 카드 장면이 가려지지 않게). */
+export const PANEL_CONTENT_TOP = { normal: 84, compact: 52 };
+export function Panel({ children, scale = 1, dy = 0, opacity = 1, scrollY = 0, footer = true, compact = false }: { children: ReactNode; scale?: number; dy?: number; opacity?: number; scrollY?: number; footer?: boolean; compact?: boolean }) {
   if (opacity <= 0) return null;
   return (
     <div
@@ -55,14 +57,21 @@ export function Panel({ children, scale = 1, dy = 0, opacity = 1, scrollY = 0, f
         opacity,
       }}
     >
-      <div style={{ position: "absolute", left: 20, top: 22, right: 20 }}>
-        <p style={t(12, 500, C.grey600)}>래티스 주식회사</p>
-        <p style={t(19, 700, C.ink, { letterSpacing: -0.3, marginTop: 2 })}>김데모님, 무엇이든 알려주세요</p>
-      </div>
-      <div style={{ position: "absolute", right: 22, top: 26, color: C.grey600 }}>
+      {compact ? (
+        <div style={{ position: "absolute", left: 20, top: 16, right: 56, display: "flex", alignItems: "baseline", gap: 8 }}>
+          <p style={t(16, 700, C.ink, { letterSpacing: -0.3 })}>래티스 주식회사</p>
+          <p style={t(13, 500, C.grey600)}>김데모님</p>
+        </div>
+      ) : (
+        <div style={{ position: "absolute", left: 20, top: 22, right: 20 }}>
+          <p style={t(12, 500, C.grey600)}>래티스 주식회사</p>
+          <p style={t(19, 700, C.ink, { letterSpacing: -0.3, marginTop: 2 })}>김데모님, 무엇이든 알려주세요</p>
+        </div>
+      )}
+      <div style={{ position: "absolute", right: 22, top: compact ? 15 : 26, color: C.grey600 }}>
         <CloseIcon size={22} />
       </div>
-      <div style={{ position: "absolute", left: 0, right: 0, top: 84, bottom: footer ? 74 : 0, overflow: "hidden" }}>
+      <div style={{ position: "absolute", left: 0, right: 0, top: compact ? PANEL_CONTENT_TOP.compact : PANEL_CONTENT_TOP.normal, bottom: footer ? 74 : 0, overflow: "hidden" }}>
         <div style={{ position: "absolute", left: 20, right: 20, top: 8 - scrollY }}>{children}</div>
       </div>
       {footer ? <Composer /> : null}
@@ -176,12 +185,17 @@ export const OPTIONS = ["글씨가 너무 굵어요", "글자 사이 간격이 �
 export const SCENE_BOX = { x: 256, y: 10, w: 108, h: 34 };
 
 /** 위젯 질문 카드. sceneH: 장면 높이(0~190), selected: 고른 보기, dimOthers 0~1 */
-export function QuestionCard({ sceneH = 190, boxDraw = 1, kenBurns = 1, selected = -1, selectT = 0, sendScale = 1, width = 338 }: { sceneH?: number; boxDraw?: number; kenBurns?: number; selected?: number; selectT?: number; sendScale?: number; width?: number }) {
+/** 질문 카드 안 세로 위치(카드 위 기준, UI px). 커서 좌표 계산에 쓴다. 질문은 한 줄, 인용은 두 줄. */
+export const QCARD_LAYOUT = (optH: number) => {
+  const optTop = 190 + 14 + 38 + 8 + 22 + 8;
+  return { optTop, opt1: optTop + optH / 2, send: optTop + 5 * optH + 10 + 23, height: optTop + 5 * optH + 10 + 46 + 16 };
+};
+export function QuestionCard({ sceneH = 190, boxDraw = 1, kenBurns = 1, selected = -1, selectT = 0, sendScale = 1, width = 338, optH = 42 }: { sceneH?: number; boxDraw?: number; kenBurns?: number; selected?: number; selectT?: number; sendScale?: number; width?: number; optH?: number }) {
   return (
     <div style={{ width, borderRadius: 20, border: `1px solid ${C.grey200}`, background: C.surface, overflow: "hidden" }}>
       <div style={{ height: sceneH, overflow: "hidden", position: "relative" }}>
         <div style={{ transform: `scale(${kenBurns})`, transformOrigin: "30% 20%" }}>
-          <HostCrop w={width} h={190} cx={330} cy={92} zoom={0.62} box={SCENE_BOX} boxDraw={boxDraw} />
+          <HostCrop w={width} h={190} cx={330} cy={154} zoom={0.62} box={SCENE_BOX} boxDraw={boxDraw} />
         </div>
         <div style={{ position: "absolute", right: 8, bottom: 8, padding: "3px 8px", borderRadius: 6, background: "rgba(25,31,40,0.72)", ...t(11.5, 600, "#fff") }}>전체 보기</div>
       </div>
@@ -194,13 +208,13 @@ export function QuestionCard({ sceneH = 190, boxDraw = 1, kenBurns = 1, selected
             const k = isSel ? selectT : 0;
             const other = selected >= 0 && !isSel ? selectT : 0;
             return (
-              <div key={o} style={{ display: "flex", alignItems: "center", gap: 12, height: 42, margin: "0 -8px", padding: "0 8px", borderRadius: 10, background: isSel ? mix("#FFFFFF", C.blue50, k) : "transparent" }}>
+              <div key={o} style={{ display: "flex", alignItems: "center", gap: 12, height: optH, margin: "0 -8px", padding: "0 8px", borderRadius: 10, background: isSel ? mix("#FFFFFF", C.blue50, k) : "transparent" }}>
                 <Radio t={k} />
                 <span style={t(14.5, 500, mix(C.ink, C.grey400, other))}>{o}</span>
               </div>
             );
           })}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, height: 42 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, height: optH }}>
             <Radio t={0} />
             <span style={t(14.5, 500, selected >= 0 ? mix(C.ink, C.grey400, selectT) : C.ink)}>직접 입력할게요</span>
           </div>

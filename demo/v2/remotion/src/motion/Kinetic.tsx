@@ -87,6 +87,9 @@ export function ScrambleSwap({ from, to, f, start, dur = 12, color = C.ink, styl
   );
 }
 
+/** 캡션·대사 자막 공통 바탕: 흰색 92% + 옅은 테두리. 뒤의 표 글자가 비치지 않게 한다. */
+const PILL: CSSProperties = { background: "rgba(255,255,255,0.92)", border: `1px solid ${C.grey200}` };
+
 /** T-CAP 캡션. CAP-IN: 샷 시작 6f 뒤부터 단어 간격 4f로 WORD-POP. 기준선 y=1004, 가운데, 한 줄. */
 export function Caption({ text, f, start = 6, dark = false }: { text: string; f: number; start?: number; dark?: boolean }) {
   if (f < start) return null;
@@ -94,7 +97,7 @@ export function Caption({ text, f, start = 6, dark = false }: { text: string; f:
   const fg = dark ? "#FFFFFF" : C.ink;
   return (
     <div style={{ position: "absolute", left: 0, right: 0, top: 1004 - 48 * 0.95, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-      <div style={{ display: "flex", gap: "0 0.26em", fontFamily: FONT, ...T.cap, letterSpacing: -0.6, color: fg, lineHeight: 1, whiteSpace: "nowrap", padding: dark ? 0 : "14px 30px 16px", borderRadius: 999, background: dark ? "transparent" : "rgba(242,244,246,0.96)", outline: dark ? undefined : `1px solid ${C.grey200}` }}>
+      <div style={{ display: "flex", gap: "0 0.26em", fontFamily: FONT, ...T.cap, letterSpacing: -0.6, color: fg, lineHeight: 1, whiteSpace: "nowrap", padding: dark ? 0 : "14px 30px 16px", borderRadius: 999, ...(dark ? {} : PILL) }}>
         {words.map((w, i) =>
           f >= start + i * 4 ? (
             <span key={i} style={{ display: "inline-block", ...wordPop(f, start + i * 4) }}>
@@ -114,7 +117,7 @@ export function Sub({ text, f, from, to }: { text: string; f: number; from: numb
   let acc = 0;
   return (
     <div style={{ position: "absolute", left: 0, right: 0, top: 1004 - 40 * 0.95 - 10, display: "flex", justifyContent: "center" }}>
-      <div style={{ display: "flex", gap: "0 0.28em", fontFamily: FONT, ...T.sub, lineHeight: 1, whiteSpace: "nowrap", padding: "14px 28px 16px", borderRadius: 999, background: C.surface, outline: `1px solid ${C.grey200}` }}>
+      <div style={{ display: "flex", gap: "0 0.28em", fontFamily: FONT, ...T.sub, lineHeight: 1, whiteSpace: "nowrap", padding: "14px 28px 16px", borderRadius: 999, ...PILL }}>
         {words.map((w, i) => {
           const at = from + ((to - from) * acc) / total;
           acc += w.length;

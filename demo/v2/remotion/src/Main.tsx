@@ -94,10 +94,10 @@ const CUES: [number, string, number][] = [
   // S16
   [1686, "swish", 0.5],
   // S17
-  [1876, "tick-soft", 0.5],
-  [1882, "tick-soft", 0.5],
-  [1888, "tick-soft", 0.5],
-  [1894, "tick-soft", 0.5],
+  [1848, "tick-soft", 0.5],
+  [1854, "tick-soft", 0.5],
+  [1860, "tick-soft", 0.5],
+  [1866, "tick-soft", 0.5],
   [1920, "click", 0.6],
   [1930, "send", 0.6],
   // S18

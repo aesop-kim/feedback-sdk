@@ -6,7 +6,7 @@ import { Camera, type Cam } from "../motion/Camera";
 import { Cursor, type Pt } from "../motion/Cursor";
 import { HostPage, UILayer } from "../ui/Host";
 import { AdminShell, AnalysisHead, CustomerBubble, DEFAULT_LIST, DraftCard, ISSUES, IssueRow, NeedBadge, RecordingChip } from "../ui/Admin";
-import { Launcher, MyBubble, Panel, PANEL, LAUNCHER, QuestionCard, QUESTION, RecordingCard, t } from "../ui/Widget";
+import { Launcher, MyBubble, Panel, PANEL, PANEL_CONTENT_TOP, LAUNCHER, QCARD_LAYOUT, QuestionCard, QUESTION, RecordingCard, t } from "../ui/Widget";
 import { cam, camLerp } from "./Record";
 
 const LF = ui(LAUNCHER.x, LAUNCHER.y);
@@ -30,9 +30,12 @@ function DraftPanel({ typed, optIn, btnScale, sent, caret }: { typed: number; op
   );
 }
 
+// 1.6배: 화면 왼쪽 끝이 대화 영역 시작(UI x=320)에 오게 잡아 목록 열이 잘려 보이지 않게 한다.
 const CAM17 = (k: number): Cam => {
-  const a = cam(1.3, ...ui(DRAFT.x + DRAFT.w / 2, DRAFT.y + 210), 160);
-  const b = cam(1.3, ...ui(DRAFT.x + DRAFT.w / 2, DRAFT.y + 330), 160);
+  const s = 1.6;
+  const fx = ui(320, 0)[0] + 960 / s;
+  const a = { s, fx, fy: ui(0, DRAFT.y + 250)[1] };
+  const b = { s, fx, fy: ui(0, DRAFT.y + 290)[1] };
   return camLerp(a, b, k);
 };
 
@@ -40,8 +43,8 @@ const CAM17 = (k: number): Cam => {
 export function S17() {
   const f = useCurrentFrame();
   const cardIn = f < 0 ? 0 : soft(f, 0);
-  const typed = Math.floor(tw(f, 10, 75, 0, QUESTION.length, LINEAR));
-  const optIn = [76, 82, 88, 94].map((a) => tw(f, a, a + 6, 0, 1));
+  const typed = Math.floor(tw(f, 6, 46, 0, QUESTION.length, LINEAR));
+  const optIn = [48, 54, 60, 66].map((a) => tw(f, a, a + 6, 0, 1));
   const btnScale = f < 124 ? 1 : kf(f, [[124, 1], [127, 0.97], [136, 1]], E_OUT);
   const c = CAM17(tw(f, 100, 118, 0, 1, E_INOUT));
   const btn = ui(DRAFT.x + DRAFT_BTN.x, DRAFT.y + DRAFT_BTN.y);
@@ -52,12 +55,12 @@ export function S17() {
           <AdminShell
             right={
               <div style={{ opacity: Math.min(1, cardIn * 1.5), transform: `translateY(${24 * (1 - cardIn)}px)`, position: "absolute", inset: 0 }}>
-                <DraftPanel typed={typed} optIn={optIn} btnScale={btnScale} sent={f >= 128} caret={f >= 10 && f < 80} />
+                <DraftPanel typed={typed} optIn={optIn} btnScale={btnScale} sent={f >= 128} caret={f >= 6 && f < 50} />
               </div>
             }
           />
         </UILayer>
-        <Cursor f={f} start={[btn[0] - 260, btn[1] + 260]} moves={[{ at: 104, to: [btn[0] + 6, btn[1] + 6], dur: 16 }]} clicks={[120]} size={52 / 1.3} visibleFrom={96} />
+        <Cursor f={f} start={[btn[0] - 260, btn[1] + 260]} moves={[{ at: 104, to: [btn[0] + 6, btn[1] + 6], dur: 16 }]} clicks={[120]} size={52 / 1.6} visibleFrom={96} />
       </Camera>
       <Caption text="질문 초안을 확인하고 보내기만 하면 돼요" f={f} />
     </AbsoluteFill>
@@ -65,8 +68,12 @@ export function S17() {
 }
 
 // 위젯 질문 카드 자리 (UI 좌표)
-const QCARD = { x: PANEL.x + 20, y: PANEL.y + 92, w: 338 };
+const QCARD = { x: PANEL.x + 20, y: PANEL.y + PANEL_CONTENT_TOP.compact + 8, w: 338 };
+const OPT_H = 38;
+const QL = QCARD_LAYOUT(OPT_H);
 const WIDGET_CAM = (s: number, dy = 0) => cam(s, ...ui(PANEL.x + PANEL.w / 2, PANEL.y + PANEL.h / 2 + dy), 400);
+// S19: 패널 전체(장면 + 질문 + 보기 + 버튼)가 한 화면에 들어오는 1.5배 고정
+const S19_CAM = WIDGET_CAM(1.5, 14);
 
 // ---------- S18 · 질문은 그 장면과 함께 고객에게 가요 ----------
 export function S18() {
@@ -75,7 +82,7 @@ export function S18() {
   const worldO = tw(f, 8, 22, 0, 1, LINEAR);
   const end17 = CAM17(1);
   let c: Cam = camLerp(end17, { s: 1, fx: 960, fy: 540 }, tw(f, 0, 24, 0, 1, E_INOUT));
-  if (f >= 30) c = camLerp({ s: 1, fx: 960, fy: 540 }, WIDGET_CAM(1.5), tw(f, 30, 45, 0, 1, E_INOUT));
+  if (f >= 30) c = camLerp({ s: 1, fx: 960, fy: 540 }, S19_CAM, tw(f, 30, 45, 0, 1, E_INOUT));
   // 질문 카드 비행 (UI 좌표에서 보간, 왼쪽으로 크게 휘는 호)
   const p = tw(f, 4, 26, 0, 1, E_INOUT);
   const from = { x: DRAFT.x, y: DRAFT.y + 50, w: DRAFT.w };
@@ -99,7 +106,7 @@ export function S18() {
         {worldO > 0 ? (
           <UILayer style={{ opacity: worldO }}>
             <HostPage />
-            <Panel>{landed ? <QuestionCard sceneH={sceneH} boxDraw={tw(f, 30, 40, 0, 1)} /> : null}</Panel>
+            <Panel compact footer={false}>{landed ? <QuestionCard sceneH={sceneH} boxDraw={tw(f, 30, 40, 0, 1)} optH={OPT_H} /> : null}</Panel>
             <div style={{ position: "absolute", left: LAUNCHER.x - 28, top: LAUNCHER.y - 28 }}>
               <Launcher x={28} y={28} open={1} />
             </div>
@@ -108,7 +115,7 @@ export function S18() {
         {!landed ? (
           <div style={{ position: "absolute", left: UI.x, top: UI.y, transform: `scale(${UI.s})`, transformOrigin: "0 0", perspective: 1600 }}>
             <div style={{ position: "absolute", left: x, top: y, transform: `rotateY(${rot}deg) scale(${s})`, transformOrigin: "50% 50%" }}>
-              <QuestionCard sceneH={0} width={w} />
+              <QuestionCard sceneH={0} width={w} optH={OPT_H} />
             </div>
           </div>
         ) : null}
@@ -118,32 +125,27 @@ export function S18() {
   );
 }
 
-// 질문 카드 안 위치 (카드 기준 px). 보기 1 가운데, 답변 보내기 버튼 가운데
-const OPT1_Y = 190 + 14 + 38 + 8 + 44 + 8 + 21;
-const SEND_Y = 190 + 14 + 38 + 8 + 44 + 8 + 5 * 42 + 10 + 23;
-
 // ---------- S19 · 고객은 하나만 고르면 돼요 ----------
+// 장면(제목 하이라이트)이 샷 내내 질문·보기 위에 보이도록 스크롤하지 않는다.
 export function S19() {
   const f = useCurrentFrame();
-  const scroll = f < 150 ? tw(f, 40, 58, 0, 150, E_INOUT) : tw(f, 150, 165, 150, 220, E_INOUT);
-  const c = camLerp(WIDGET_CAM(1.5, -40), WIDGET_CAM(1.5, 40), tw(f, 150, 165, 0, 1, E_INOUT));
+  const c = S19_CAM;
   const sel = f >= 90 ? 0 : -1;
   const selT = f < 90 ? 0 : pop(f, 90);
   const send = f < 162 ? 1 : kf(f, [[162, 1], [165, 0.97], [172, 1]], E_OUT);
   const fold = f < 166 ? 0 : soft(f, 166);
-  const contentTop = PANEL.y + 84 + 8; // 패널 안 메시지 영역 위
-  const opt1 = ui(QCARD.x + 130, contentTop + OPT1_Y - scroll);
-  const sendPt = ui(QCARD.x + QCARD.w / 2 + 20, contentTop + SEND_Y - 220);
+  const opt1 = ui(QCARD.x + 130, QCARD.y + QL.opt1);
+  const sendPt = ui(QCARD.x + QCARD.w / 2 + 20, QCARD.y + QL.send);
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       <Camera cam={c}>
         <UILayer>
           <HostPage />
-          <Panel scrollY={fold > 0 ? 220 * (1 - fold) : scroll}>
+          <Panel compact footer={false}>
             <div style={{ position: "relative" }}>
               {fold < 1 ? (
                 <div style={{ opacity: 1 - fold, transform: `scale(${1 - 0.15 * fold})`, transformOrigin: "100% 100%" }}>
-                  <QuestionCard boxDraw={tw(f, 6, 18, 0, 1)} kenBurns={tw(f, 0, 60, 1, 1.06, LINEAR)} selected={sel} selectT={Math.min(1, selT)} sendScale={send} />
+                  <QuestionCard boxDraw={tw(f, 6, 18, 0, 1)} kenBurns={tw(f, 0, 60, 1, 1.06, LINEAR)} selected={sel} selectT={Math.min(1, selT)} sendScale={send} optH={OPT_H} />
                 </div>
               ) : null}
               {fold > 0 ? (
