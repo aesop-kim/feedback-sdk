@@ -15,6 +15,8 @@ import {
   saveDiagnostics,
   seedAnalyzedRecording,
 } from "./qa-helpers";
+// eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e는 상대 경로로 가져온다.
+import { EXPIRED_UPLOAD_MESSAGE, expireStaleUploads } from "../../src/lib/feedback/expire-stale-uploads";
 
 // 녹화 QA: 시작·끝내기, 화면 공유/마이크 거부, 화면 공유 중단(자동 종료), 최대 시간 자동 종료,
 // 업로드 실패 → 다시 보내기, 녹화·업로드 중 새로고침.
@@ -282,15 +284,27 @@ test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' �
   const database = getQaDatabase();
   const staleRequestedAt = new Date(Date.now() - 31 * 60 * 1000).toISOString();
   await database.from("recordings").update({ upload_requested_at: staleRequestedAt }).eq("id", recordings[0].id);
-  const { data: expired, error } = await database.rpc("expire_stale_uploads", { p_stale_minutes: 30 });
-  expect(error).toBeNull();
-  expect((expired as { id: string }[]).map((row) => row.id)).toContain(recordings[0].id);
+  const expired = await expireStaleUploads(database, 30);
+  expect(expired.map((row) => row.id)).toContain(recordings[0].id);
+
+  // V4-05: 고객 위젯에도 받지 못했다는 안내가 한 번 뜬다. 다시 만료를 돌려도 메시지는 늘지 않는다.
+  // 시험은 워커의 실시간 신호 없이 같은 함수만 불러서, 위젯을 다시 열어 확인한다.
+  await page.reload();
+  await page.getByRole("button", { name: /피드백 보내기/ }).click();
+  await expect(reloadedWidget.getByText(EXPIRED_UPLOAD_MESSAGE.body)).toBeVisible({ timeout: 20_000 });
+  await captureQaScreen(page, "rec-08-widget-expired-notice");
+  await expireStaleUploads(database, 30);
+  const conversationId = await findConversationIdForUser(user.id);
+  const { data: notices } = await database.from("messages").select("id").eq("conversation_id", conversationId).eq("body", EXPIRED_UPLOAD_MESSAGE.body);
+  expect(notices).toHaveLength(1);
 
   const adminContext = await browser.newContext();
   const adminPage = await loginAdmin(adminContext);
-  await adminPage.goto(`${SDK_ORIGIN}/admin/${await findConversationIdForUser(user.id)}`);
+  await adminPage.goto(`${SDK_ORIGIN}/admin/${conversationId}`);
   const analysis = adminPage.getByRole("complementary", { name: "녹화 분석" });
-  await expect(analysis.getByText("업로드가 끝나지 않았어요. 고객이 업로드 중에 페이지를 떠났을 수 있어요.", { exact: false })).toBeVisible();
+  // V4-05: 이유 상자와 안내 줄이 같은 지시를 두 번 하지 않는다.
+  await expect(analysis.getByText("고객이 업로드 중에 페이지를 떠났을 수 있어요.", { exact: false })).toHaveCount(1);
+  await expect(analysis.getByText(/다시 녹화해 달라고/)).toHaveCount(1);
   await expect(analysis.getByText("고객이 영상을 올리고 있어요")).toHaveCount(0);
   // NEW-01: 받은 영상이 없으니 "받아 두었어요"·다시 정리하기를 보여 주지 않고, API로 눌러도 이유가 바뀌지 않는다.
   await expect(analysis.getByText("녹화를 끝까지 받지 못했어요")).toBeVisible();
