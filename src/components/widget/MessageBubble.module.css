@@ -1,0 +1,55 @@
+.userRow,
+.adminRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.userRow {
+  align-items: flex-end;
+}
+
+.adminRow {
+  align-items: flex-start;
+}
+
+.senderName {
+  margin: 0 0 var(--sp-1) 2px;
+  font-size: var(--fs-t8);
+  line-height: var(--lh-t8);
+  font-weight: var(--fw-semibold);
+  color: var(--text-tertiary);
+}
+
+.bubble {
+  max-width: 80%;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  white-space: pre-wrap;
+}
+
+.userBubble {
+  background: var(--blue-500);
+  color: var(--bg);
+  border-bottom-right-radius: 6px;
+}
+
+.userBubble[data-pending="true"] {
+  opacity: 0.6;
+}
+
+.adminBubble {
+  background: var(--grey-100);
+  color: var(--text-primary);
+  border-bottom-left-radius: 6px;
+}
+
+.systemCaption {
+  margin: var(--sp-2) 0;
+  text-align: center;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+  color: var(--text-tertiary);
+}

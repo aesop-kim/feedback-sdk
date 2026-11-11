@@ -1,0 +1,17 @@
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--page-x);
+}
+
+.bubble {
+  display: block;
+  height: 42px;
+  border-radius: 18px;
+  background: var(--grey-100);
+}
+
+.bubble[data-side="right"] {
+  align-self: flex-end;
+}

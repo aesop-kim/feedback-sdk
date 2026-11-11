@@ -50,3 +50,5 @@ supabase/.temp/
 
 # planning state
 /.omc/
+/fixtures/demo-recording/narration.wav
+/.screens/
