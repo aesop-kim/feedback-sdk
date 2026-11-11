@@ -3,9 +3,9 @@
 export const LAUNCHER_STYLES = `
 :host {
   all: initial;
-  --lattice-blue-500: #3182f6;
-  --lattice-blue-600: #2272eb;
-  --lattice-red-500: #f04452;
+  --lattice-blue-500: #1b64da;
+  --lattice-blue-600: #1957c2;
+  --lattice-red-500: #d22030;
   --lattice-white: #ffffff;
   --lattice-hairline: rgba(0, 27, 55, 0.08);
   --lattice-shadow-launcher: 0 2px 10px rgba(0, 27, 55, 0.14);
@@ -46,14 +46,14 @@ export const LAUNCHER_STYLES = `
   position: absolute;
   top: -2px;
   right: -2px;
-  min-width: 20px;
-  height: 20px;
+  min-width: 22px;
+  height: 22px;
   padding: 0 6px;
-  border-radius: 10px;
+  border-radius: 11px;
   border: 2px solid var(--lattice-white);
   background: var(--lattice-red-500);
   color: var(--lattice-white);
-  font: 700 11px/16px 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  font: 700 12px/18px 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }

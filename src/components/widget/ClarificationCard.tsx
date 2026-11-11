@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { CheckIcon } from "@/components/widget/WidgetIcons";
 import { useSceneZoom } from "@/hooks/use-scene-zoom";
 import { toHighlightStyle } from "@/lib/geometry/focus-transform";
+import { findNextRadioIndex } from "@/lib/widget/radio-navigation";
 import type { ClarificationCard as ClarificationCardData } from "@/types/feedback";
 import styles from "@/components/widget/ClarificationCard.module.css";
 
@@ -67,6 +68,24 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
   };
 
   const options = [...card.options, { id: CUSTOM_OPTION_ID, label: "직접 입력할게요" }];
+  // radiogroup은 Tab 정지점이 하나다: 고른 보기(없으면 첫 보기)만 Tab으로 닿고, 나머지는 방향키로 옮긴다.
+  const focusableOptionId = selectedOptionId ?? options[0].id;
+
+  const selectOption = (optionId: string) => {
+    setSelectedOptionId(optionId);
+    requestAnimationFrame(() => revealInWidget(submitButtonRef.current));
+  };
+
+  const handleOptionKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = options.findIndex((option) => option.id === focusableOptionId);
+    const nextIndex = findNextRadioIndex(event.key, currentIndex, options.length);
+    if (nextIndex === null) {
+      return;
+    }
+    event.preventDefault();
+    selectOption(options[nextIndex].id);
+    event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIndex]?.focus();
+  };
 
   return (
     <section className={styles.card} aria-label="확인 질문">
@@ -74,7 +93,7 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
       <div className={styles.content}>
         {card.quote ? <p className={styles.quote}>“{card.quote}”</p> : null}
         <p className={styles.question}>{card.question}</p>
-        <div className={styles.options} role="radiogroup" aria-label={card.question}>
+        <div className={styles.options} role="radiogroup" aria-label={card.question} onKeyDown={handleOptionKeyDown}>
           {options.map((option) => {
             const isSelected = selectedOptionId === option.id;
             return (
@@ -83,12 +102,10 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
                 type="button"
                 role="radio"
                 aria-checked={isSelected}
+                tabIndex={option.id === focusableOptionId ? 0 : -1}
                 className={styles.option}
                 data-selected={isSelected}
-                onClick={() => {
-                  setSelectedOptionId(option.id);
-                  requestAnimationFrame(() => revealInWidget(submitButtonRef.current));
-                }}
+                onClick={() => selectOption(option.id)}
               >
                 <span className={styles.radio} aria-hidden="true" />
                 <span className={styles.optionLabel}>{option.label}</span>

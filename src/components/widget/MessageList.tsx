@@ -88,7 +88,7 @@ export function MessageList({ messages, pendingTexts, pendingUpload, onAnswer, o
   }, [itemCount, waitingCardMessageId]);
 
   return (
-    <ol ref={listRef} className={styles.list}>
+    <ol ref={listRef} className={styles.list} role="log" aria-live="polite" aria-label="대화">
       {messages.map((message, index) => (
         <li
           key={message.id}

@@ -25,6 +25,7 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [pendingTexts, setPendingTexts] = useState<PendingText[]>([]);
   const toastTimerRef = useRef<number | null>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const recordingMessageHandlerRef = useRef<(message: HostToWidgetMessage) => void>(() => undefined);
 
   const showToast = useCallback((message: string) => {
@@ -47,6 +48,10 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
           return;
         case "host:visibility":
           setIsOpen(message.payload.open);
+          // 런처로 열면 키보드 사용자가 고객사 페이지를 다시 지나지 않게 바로 입력창에 둔다.
+          if (message.payload.open) {
+            requestAnimationFrame(() => composerInputRef.current?.focus());
+          }
           return;
         default:
           recordingMessageHandlerRef.current(message);
@@ -90,10 +95,25 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
     [],
   );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsOpen(false);
     post({ type: "widget:mode", payload: { mode: "closed" } });
-  };
+  }, [post]);
+
+  // Escape로 닫는다. 녹화 중에는 알약만 보이므로 무시한다.
+  const isRecordingIdle = recording.phase === "idle";
+  useEffect(() => {
+    if (!isOpen || !isRecordingIdle) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.isComposing) {
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, isRecordingIdle, handleClose]);
 
   const { sendText } = conversation;
   const handleSendText = (body: string) => {
@@ -158,7 +178,12 @@ export function WidgetApp({ projectKey }: WidgetAppProps) {
       </div>
       <div className={styles.footer}>
         <WidgetToast message={toastMessage} />
-        <WidgetComposer onSend={handleSendText} onStartRecording={handleStartRecording} isDisabled={!isReady} />
+        <WidgetComposer
+          onSend={handleSendText}
+          onStartRecording={handleStartRecording}
+          isDisabled={!isReady}
+          inputRef={composerInputRef}
+        />
       </div>
     </main>
   );

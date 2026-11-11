@@ -175,10 +175,10 @@
 
 .submitButton {
   width: 100%;
-  min-height: var(--h-btn-m);
+  min-height: var(--h-btn-l);
   margin-top: var(--sp-3);
   padding: 2px var(--sp-4);
-  border-radius: var(--r-btn-m);
+  border-radius: var(--r-btn-l);
   background: var(--blue-500);
   color: var(--white-alpha-900);
   font-size: var(--fs-t6);

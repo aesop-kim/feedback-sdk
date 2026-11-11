@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { ScreenIcon, SendIcon } from "@/components/widget/WidgetIcons";
 import styles from "@/components/widget/WidgetComposer.module.css";
 
@@ -11,11 +11,13 @@ type WidgetComposerProps = {
   onSend: (body: string) => void;
   onStartRecording: () => void;
   isDisabled: boolean;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
 };
 
-export function WidgetComposer({ onSend, onStartRecording, isDisabled }: WidgetComposerProps) {
+export function WidgetComposer({ onSend, onStartRecording, isDisabled, inputRef }: WidgetComposerProps) {
   const [text, setText] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const ownTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = inputRef ?? ownTextareaRef;
   const canSend = !isDisabled && text.trim().length > 0;
 
   useLayoutEffect(() => {
@@ -25,7 +27,7 @@ export function WidgetComposer({ onSend, onStartRecording, isDisabled }: WidgetC
     }
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
-  }, [text]);
+  }, [text, textareaRef]);
 
   const submit = () => {
     if (!canSend) {
