@@ -1,0 +1,25 @@
+{
+  "issues": [
+    {
+      "key": "register-button",
+      "title": "계약서 등록 버튼 무반응",
+      "textContains": ["등록", "버튼", "반응"],
+      "selectorContains": ["button", "_container_1lda2_2"],
+      "confidence": "clear"
+    },
+    {
+      "key": "amount-header-typo",
+      "title": "표 머리글 '계약 금액'이 '계약 긍액'으로 오타",
+      "textContains": ["계약 긍액", "계약 금액", "오타"],
+      "selectorContains": ["_headerText_1ohbh_12", "_headerTextContainer_1ohbh_12"],
+      "confidence": "clear"
+    },
+    {
+      "key": "page-title-style",
+      "title": "전체 계약서 제목 글씨가 다른 곳과 다르게 보임",
+      "textContains": ["전체 계약서", "제목", "글씨"],
+      "selectorContains": ["_title_1dv6w_41", "_titleSection_1dv6w_41"],
+      "confidence": "ambiguous"
+    }
+  ]
+}
