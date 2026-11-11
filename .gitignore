@@ -54,3 +54,4 @@ supabase/.temp/
 /.screens/
 /test-results/
 /playwright-report/
+!.env.example
