@@ -60,7 +60,9 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   iframe.className = `frame ${RRWEB_BLOCK_CLASS}`;
   iframe.src = iframeUrl.toString();
   iframe.title = "피드백 보내기";
-  iframe.allow = "display-capture; microphone; clipboard-write";
+  // 위젯은 카메라를 쓰지 않지만, 크롬은 iframe 안의 getDisplayMedia 호출에서 camera 정책도 확인해서
+  // 빠지면 "Permissions policy violation: camera"를 남긴다(NEW-09). 정책만 위임하고 카메라를 요청하지는 않는다.
+  iframe.allow = "display-capture; microphone; camera; clipboard-write";
   iframe.dataset.mode = "closed";
 
   shadowRoot.append(style, iframe, launcher);

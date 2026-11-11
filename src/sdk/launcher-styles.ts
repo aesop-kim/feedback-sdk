@@ -101,6 +101,11 @@ export const LAUNCHER_STYLES = `
     right: 8px;
     width: calc(100vw - 16px);
   }
+  /* 360px 화면에서 알약(340px)이 왼쪽으로 넘치지 않도록 오른쪽 여백을 줄이고 화면 폭에 맞춘다. */
+  .frame[data-mode="recording"] {
+    right: 8px;
+    width: min(340px, calc(100vw - 16px));
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .launcher, .frame, .frame[data-mode="closed"] { transition: none; }

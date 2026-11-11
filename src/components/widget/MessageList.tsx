@@ -88,7 +88,7 @@ export function MessageList({
   useEffect(() => {
     // scrollIntoView는 고객사 페이지까지 스크롤할 수 있어서, 감싼 스크롤 영역만 직접 움직인다.
     const list = listRef.current;
-    const scrollContainer = list?.parentElement;
+    const scrollContainer = list?.closest<HTMLElement>("[data-widget-scroll]");
     if (!list || !scrollContainer) {
       return;
     }
@@ -103,49 +103,52 @@ export function MessageList({
   }, [itemCount, waitingCardMessageId]);
 
   return (
-    <ol ref={listRef} className={styles.list} role="log" aria-live="polite" aria-label="대화">
-      {messages.map((message, index) => (
-        <li
-          key={message.id}
-          className={styles.item}
-          data-message-id={message.id}
-          data-sender={message.sender}
-          data-group-start={isGroupStart(messages, index)}
-        >
-          {reverifyPrompt?.messageId === message.id ? (
-            <ReverifyCard title={reverifyPrompt.title} onStart={() => onStartReverify(reverifyPrompt.issueId)} />
-          ) : (
-            <MessageContent message={message} showSenderName={isGroupStart(messages, index)} onAnswer={onAnswer} />
-          )}
-          {message.sender !== "system" && isGroupEnd(messages, index) ? (
-            <time className={styles.time} dateTime={message.createdAt}>
-              {formatMessageTime(message.createdAt)}
-            </time>
-          ) : null}
-        </li>
-      ))}
-      {pendingTexts.map((pendingText) => (
-        <li key={pendingText.localId} className={styles.item} data-sender="user">
-          <MessageBubble
-            sender="user"
-            body={pendingText.body}
-            showSenderName={false}
-            isPending={!pendingText.isFailed}
-            onRetry={pendingText.isFailed ? () => onRetryText(pendingText.localId) : undefined}
-          />
-        </li>
-      ))}
-      {pendingUpload ? (
-        <li className={styles.item} data-sender="user" data-group-start="true">
-          <RecordingMessage
-            durationMs={pendingUpload.durationMs}
-            status={pendingUpload.isFailed ? "upload_failed" : "uploading"}
-            issueCount={0}
-            uploadProgress={pendingUpload.progress}
-            onRetry={pendingUpload.isFailed ? onRetryUpload : undefined}
-          />
-        </li>
-      ) : null}
-    </ol>
+    // role="log"를 ol에 직접 주면 li의 목록 의미가 사라져서(axe listitem), 래퍼에 주고 ol/li는 그대로 둔다.
+    <div role="log" aria-live="polite" aria-label="대화">
+      <ol ref={listRef} className={styles.list}>
+        {messages.map((message, index) => (
+          <li
+            key={message.id}
+            className={styles.item}
+            data-message-id={message.id}
+            data-sender={message.sender}
+            data-group-start={isGroupStart(messages, index)}
+          >
+            {reverifyPrompt?.messageId === message.id ? (
+              <ReverifyCard title={reverifyPrompt.title} onStart={() => onStartReverify(reverifyPrompt.issueId)} />
+            ) : (
+              <MessageContent message={message} showSenderName={isGroupStart(messages, index)} onAnswer={onAnswer} />
+            )}
+            {message.sender !== "system" && isGroupEnd(messages, index) ? (
+              <time className={styles.time} dateTime={message.createdAt}>
+                {formatMessageTime(message.createdAt)}
+              </time>
+            ) : null}
+          </li>
+        ))}
+        {pendingTexts.map((pendingText) => (
+          <li key={pendingText.localId} className={styles.item} data-sender="user">
+            <MessageBubble
+              sender="user"
+              body={pendingText.body}
+              showSenderName={false}
+              isPending={!pendingText.isFailed}
+              onRetry={pendingText.isFailed ? () => onRetryText(pendingText.localId) : undefined}
+            />
+          </li>
+        ))}
+        {pendingUpload ? (
+          <li className={styles.item} data-sender="user" data-group-start="true">
+            <RecordingMessage
+              durationMs={pendingUpload.durationMs}
+              status={pendingUpload.isFailed ? "upload_failed" : "uploading"}
+              issueCount={0}
+              uploadProgress={pendingUpload.progress}
+              onRetry={pendingUpload.isFailed ? onRetryUpload : undefined}
+            />
+          </li>
+        ) : null}
+      </ol>
+    </div>
   );
 }
