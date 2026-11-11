@@ -11,6 +11,7 @@ import { buildAnalysisContext, type AnalysisContext, type FrameReference } from 
 import { buildAnalysisPrompt } from "@/lib/analysis/build-analysis-prompt";
 import { analysisResultSchema, getAnalysisJsonSchema, type AnalysisIssue } from "@/lib/analysis/issue-schema";
 import { mapIssuesToRows } from "@/lib/analysis/map-issues-to-rows";
+import { findMeanVolumeDb, isSilentAudio } from "@/lib/analysis/detect-silence";
 import { parseWhisperJson, type ParsedTranscript } from "@/lib/analysis/parse-whisper-json";
 import { getAdminChannelName, getConversationChannelName } from "@/lib/realtime/realtime-signal";
 import { sendChannelSignal } from "@/lib/realtime/send-channel-signal";
@@ -192,6 +193,12 @@ async function transcribe(audioPath: string, workDirectory: string): Promise<Par
   await runCommand("ffmpeg", ["-loglevel", "error", "-y", "-i", audioPath, "-ar", "16000", "-ac", "1", wavPath], {
     timeoutMs: WHISPER_TIMEOUT_MS,
   });
+  const volume = await runCommand("ffmpeg", ["-hide_banner", "-i", wavPath, "-af", "volumedetect", "-f", "null", "-"], {
+    timeoutMs: WHISPER_TIMEOUT_MS,
+  });
+  if (isSilentAudio(findMeanVolumeDb(volume.stderr))) {
+    throw new Error("목소리가 녹음되지 않았어요. 크롬에서 고른 마이크를 확인해 주세요");
+  }
   await runCommand(
     "whisper-cli",
     ["-m", WHISPER_MODEL_PATH, "-l", "ko", "-ojf", "-of", outputPrefix, "-np", "-f", wavPath],

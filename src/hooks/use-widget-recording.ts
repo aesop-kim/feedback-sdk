@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { requestMicrophone, watchForSilence } from "@/lib/recording/request-microphone";
 import { startCaptureSession, type CaptureResult, type CaptureSession } from "@/lib/recording/capture-session";
 import { uploadRecording, type RecordedContext } from "@/lib/recording/upload-recording";
 import { MAX_RECORDING_MS } from "@/lib/validation/api-schemas";
@@ -13,6 +14,7 @@ const RRWEB_META_EVENT_TYPE = 4;
 
 const SCREEN_DENIED_MESSAGE = "화면 공유를 시작하지 않았어요";
 const MICROPHONE_DENIED_MESSAGE = "마이크 권한이 필요해요";
+const MICROPHONE_SILENT_MESSAGE = "목소리가 들리지 않아요. 주소창의 마이크 아이콘에서 마이크를 바꿔 주세요";
 const UPLOAD_FAILED_MESSAGE = "연결이 잠깐 불안정해요. 잠시 후 다시 해볼까요?";
 
 export type RecordingPhase = "idle" | "recording" | "stopping";
@@ -167,7 +169,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
     }
     let microphoneStream: MediaStream;
     try {
-      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      microphoneStream = await requestMicrophone();
     } catch {
       for (const track of displayStream.getTracks()) {
         track.stop();
@@ -180,6 +182,11 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
     contextsRef.current = [];
     const session = startCaptureSession({ displayStream, microphoneStream, maxDurationMs: MAX_RECORDING_MS, frameIntervalMs: FRAME_INTERVAL_MS });
     sessionRef.current = session;
+    watchForSilence(microphoneStream, () => {
+      if (sessionRef.current === session) {
+        showToast(MICROPHONE_SILENT_MESSAGE);
+      }
+    });
     session.onAutoStop(() => {
       void stopRecording();
     });
