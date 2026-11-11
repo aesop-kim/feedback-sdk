@@ -81,6 +81,32 @@ describe("extractElementContexts", () => {
     ]);
   });
 
+  it("위젯이 올린 { t0, rrwebEvents, contexts } 형태에서도 읽는다", () => {
+    const uploaded = {
+      t0: T0,
+      rrwebEvents: [
+        {
+          type: 5,
+          timestamp: T0 + 4_000,
+          data: {
+            tag: "element-click",
+            payload: {
+              selector: "main > button",
+              text: "계약서 등록",
+              tagName: "button",
+              rect: { x: 1240, y: 18, width: 64, height: 20 },
+              viewport: { width: 1440, height: 900 },
+            },
+          },
+        },
+      ],
+      contexts: [],
+    };
+    const contexts = extractElementContexts(uploaded, T0);
+    expect(contexts).toHaveLength(1);
+    expect(contexts[0]).toMatchObject({ tMs: 4_000, kind: "click", context: { text: "계약서 등록" } });
+  });
+
   it("이상한 입력이면 빈 배열", () => {
     expect(extractElementContexts(null, T0)).toEqual([]);
     expect(extractElementContexts("nope", T0)).toEqual([]);
