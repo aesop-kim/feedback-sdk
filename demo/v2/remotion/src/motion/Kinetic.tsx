@@ -89,16 +89,19 @@ export function ScrambleSwap({ from, to, f, start, dur = 12, color = C.ink, styl
 
 /** T-CAP 캡션. CAP-IN: 샷 시작 6f 뒤부터 단어 간격 4f로 WORD-POP. 기준선 y=1004, 가운데, 한 줄. */
 export function Caption({ text, f, start = 6, dark = false }: { text: string; f: number; start?: number; dark?: boolean }) {
+  if (f < start) return null;
   const words = text.split(" ");
   const fg = dark ? "#FFFFFF" : C.ink;
   return (
     <div style={{ position: "absolute", left: 0, right: 0, top: 1004 - 48 * 0.95, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
       <div style={{ display: "flex", gap: "0 0.26em", fontFamily: FONT, ...T.cap, letterSpacing: -0.6, color: fg, lineHeight: 1, whiteSpace: "nowrap", padding: dark ? 0 : "14px 30px 16px", borderRadius: 999, background: dark ? "transparent" : "rgba(242,244,246,0.96)", outline: dark ? undefined : `1px solid ${C.grey200}` }}>
-        {words.map((w, i) => (
-          <span key={i} style={{ display: "inline-block", ...wordPop(f, start + i * 4) }}>
-            {w}
-          </span>
-        ))}
+        {words.map((w, i) =>
+          f >= start + i * 4 ? (
+            <span key={i} style={{ display: "inline-block", ...wordPop(f, start + i * 4) }}>
+              {w}
+            </span>
+          ) : null,
+        )}
       </div>
     </div>
   );

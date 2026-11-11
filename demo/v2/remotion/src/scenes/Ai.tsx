@@ -128,7 +128,7 @@ export function S16() {
                 <p style={{ ...t(18, 600, C.grey500), ...line(0) }}>고객이 한 말</p>
                 <p style={{ ...t(22, 500, C.grey700, { marginTop: 6, lineHeight: 1.5 }), ...line(1) }}>“{QUOTE}”</p>
                 <p style={{ ...t(18, 600, C.grey500, { marginTop: 22 }), ...line(2) }}>요약</p>
-                <p style={{ ...t(22, 500, C.ink, { marginTop: 6, lineHeight: 1.5 }), ...line(3) }}>{DETAIL_SUMMARY}</p>
+                <p style={{ ...t(21, 500, C.ink, { marginTop: 6, lineHeight: 1.5, width: 372 }), ...line(3) }}>{DETAIL_SUMMARY}</p>
               </div>
               <div style={{ position: "absolute", left: 84, right: 36, top: 486, height: 76, borderRadius: 16, background: C.grey50, display: "flex", alignItems: "center", padding: "0 24px", ...line(5) }}>
                 <span style={t(24, 700, C.ink, { flex: 1 })}>고객에게 물어볼 질문 초안이 준비됐어요</span>
