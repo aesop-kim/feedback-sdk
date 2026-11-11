@@ -5,6 +5,7 @@ import {
   findReanalyzeRejection,
   findRecordingFailureKind,
   getFailureGuidance,
+  hasProgressedIssue,
 } from "@/lib/feedback/recording-failure";
 
 describe("findRecordingFailureKind", () => {
@@ -73,5 +74,18 @@ describe("getFailureGuidance", () => {
   it("분석 실패는 다시 정리하기가 주 행동", () => {
     expect(getFailureGuidance("analysis", true).reanalyzeAction).toBe("primary");
     expect(getFailureGuidance("analysis", false).guide).toMatch(/다시 정리하면/);
+  });
+});
+
+describe("hasProgressedIssue", () => {
+  it("반영 완료·재확인·해결됨 이슈가 하나라도 있으면 true", () => {
+    expect(hasProgressedIssue(["open", "resolved"])).toBe(true);
+    expect(hasProgressedIssue(["reverify"])).toBe(true);
+    expect(hasProgressedIssue(["closed"])).toBe(true);
+  });
+
+  it("아직 처리하지 않은 이슈뿐이거나 이슈가 없으면 false", () => {
+    expect(hasProgressedIssue(["open", "asked", "answered"])).toBe(false);
+    expect(hasProgressedIssue([])).toBe(false);
   });
 });

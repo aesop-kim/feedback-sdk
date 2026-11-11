@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 // eslint-disable-next-line no-restricted-imports -- @/ 별칭은 src/만 가리켜서 e2e 도우미는 상대 경로로 가져온다.
 import {
   ADMIN_PASSWORD,
+  IS_DEPLOYED,
   SDK_ORIGIN,
   approveCardInDatabase,
   captureQaScreen,
@@ -215,6 +216,47 @@ test("업로드가 끝나지 않은 녹화는 다시 녹화를 안내하고 다�
   const { data: unchanged } = await getQaDatabase().from("recordings").select("status, error").eq("id", incomplete.recordingId).single();
   expect(unchanged).toEqual({ status: "failed", error: reason });
   await context.close();
+});
+
+// 분석했던 녹화의 이슈를 반영 완료로 바꾼 뒤 다시 정리가 실패한 상황을 만든다.
+async function seedFailedRecordingWithResolvedIssue(conversationId: string) {
+  const seeded = await seedAnalyzedRecording(conversationId, { ambiguous: false, withAudio: true });
+  const database = getQaDatabase();
+  await database.from("issues").update({ status: "resolved", resolved_at: new Date().toISOString() }).eq("id", seeded.issueId);
+  await database.from("recordings").update({ status: "failed", error: "이슈를 분석하지 못했어요: 시간 초과" }).eq("id", seeded.recordingId);
+  return seeded;
+}
+
+test("반영 완료한 이슈가 있는 녹화는 다시 정리하기 대신 이유를 보여 주고 API도 409로 거절한다", async ({ browser, request }) => {
+  const conversation = await startConversationViaApi(request, createQaUser("adm-progressed"));
+  const seeded = await seedFailedRecordingWithResolvedIssue(conversation.conversationId);
+  const context = await browser.newContext();
+  const adminPage = await loginAdmin(context);
+  const analysis = await openConversation(adminPage, conversation.conversationId);
+  await expect(analysis.getByText(/반영 완료했거나 해결된 이슈가 있어서 다시 정리할 수 없어요/)).toBeVisible();
+  await expect(analysis.getByRole("button", { name: /다시 정리하기/ })).toHaveCount(0);
+
+  const response = await adminPage.request.post(`${SDK_ORIGIN}/api/admin/recordings/${seeded.recordingId}/reanalyze`);
+  expect(response.status()).toBe(409);
+  expect(((await response.json()) as { error: string }).error).toMatch(/반영 완료했거나 해결된 이슈/);
+  const { data: issue } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
+  expect(issue?.status).toBe("resolved");
+  await context.close();
+});
+
+test("replace_recording_issues는 반영 완료한 이슈가 있으면 지우지 않고 거절한다", async ({ request }) => {
+  test.skip(IS_DEPLOYED, "운영 DB 마이그레이션은 배포 때 적용해서, RPC 가드는 로컬 DB에서만 직접 확인한다");
+  const conversation = await startConversationViaApi(request, createQaUser("adm-progressed-rpc"));
+  const seeded = await seedFailedRecordingWithResolvedIssue(conversation.conversationId);
+  const { error } = await getQaDatabase().rpc("replace_recording_issues", {
+    p_recording_id: seeded.recordingId,
+    p_attempt: 1,
+    p_transcript: { segments: [], words: [] },
+    p_issues: [],
+  });
+  expect(error?.message).toContain("progressed issues");
+  const { data: issue } = await getQaDatabase().from("issues").select("status").eq("id", seeded.issueId).single();
+  expect(issue?.status).toBe("resolved");
 });
 
 test("분석 완료 상태: 문제 수·확인 필요 표시와 이슈 펼침", async ({ browser, request }) => {

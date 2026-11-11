@@ -403,9 +403,10 @@ async function processRecording(
     if (error instanceof StageError || error instanceof ReadableFailure) {
       message = error.message;
     }
-    if (message.includes("approved clarification cards")) {
-      // 고객에게 이미 질문을 보낸 녹화는 결과를 바꾸지 않는다. 기존 이슈를 그대로 두고 analyzed로 돌린다.
-      console.warn(`[worker] ${claimed.id} 이미 고객에게 질문을 보낸 녹화라 기존 결과를 유지해요`);
+    if (message.includes("approved clarification cards") || message.includes("progressed issues")) {
+      // 고객에게 이미 질문을 보냈거나 관리자가 이미 처리한 이슈가 있는 녹화는 결과를 바꾸지 않는다.
+      // 기존 이슈를 그대로 두고 analyzed로 돌린다.
+      console.warn(`[worker] ${claimed.id} 이미 질문을 보냈거나 처리한 이슈가 있는 녹화라 기존 결과를 유지해요`);
       await supabase.from("recordings").update({ status: "analyzed" }).eq("id", claimed.id).eq("analysis_attempt", claimed.attempt);
       return;
     }
