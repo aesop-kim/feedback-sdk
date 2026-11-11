@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local env & artifacts
+.env*.local
+/public/sdk.js
+/playwright-report/
+/test-results/
+/.worker-tmp/
+supabase/.temp/
+
+# planning state
+/.omc/

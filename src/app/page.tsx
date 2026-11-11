@@ -1,69 +1,18 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import Link from "next/link";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main style={{ maxWidth: 560, margin: "0 auto", padding: "96px 20px" }}>
+      <p style={{ color: "var(--grey-600)", fontSize: "var(--fs-t6)", margin: 0 }}>래티스 피드백 SDK</p>
+      <h1 style={{ fontSize: "var(--fs-t2)", lineHeight: "var(--lh-t2)", margin: "8px 0 16px", fontWeight: 700 }}>
+        화면을 보여주며 말로 남기는 피드백
+      </h1>
+      <p style={{ color: "var(--grey-700)", lineHeight: 1.7, margin: "0 0 32px" }}>
+        고객사 페이지에 스크립트 한 줄을 넣으면 채팅 위젯이 열려요. 고객은 화면을 녹화하며 설명하고, 관리자는 정리된 이슈로 받아요.
+      </p>
+      <Link href="/admin" style={{ color: "var(--blue-500)", fontWeight: 600 }}>
+        관리자 화면으로 가기
+      </Link>
+    </main>
   );
 }
