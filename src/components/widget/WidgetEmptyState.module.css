@@ -1,9 +1,41 @@
 .emptyState {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   min-height: 100%;
-  padding: var(--sp-8) var(--page-x);
+  padding: var(--sp-6) var(--page-x) var(--sp-5);
+}
+
+.steps {
+  list-style: none;
+  margin: 0 0 var(--sp-5);
+  padding: var(--sp-1) 0;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  color: var(--text-secondary);
+}
+
+.stepNumber {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: var(--grey-100);
+  color: var(--grey-700);
+  font-size: var(--fs-t8);
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
 }
 
 .title {

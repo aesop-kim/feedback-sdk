@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckIcon } from "@/components/widget/WidgetIcons";
+import { getFocusTransform, toCssTransform } from "@/lib/geometry/focus-transform";
 import type { ClarificationCard as ClarificationCardData } from "@/types/feedback";
 import styles from "@/components/widget/ClarificationCard.module.css";
 
@@ -21,6 +22,8 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [customText, setCustomText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(true);
+  const focusTransform = getFocusTransform(card.highlight);
 
   if (card.answeredAt) {
     return (
@@ -57,21 +60,30 @@ export function ClarificationCard({ card, onAnswer }: ClarificationCardProps) {
     <section className={styles.card} aria-label="확인 질문">
       <p className={styles.eyebrow}>확인하고 싶은 게 있어요</p>
       {card.frameUrl ? (
-        <div className={styles.frame}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- signed URL이라 next/image 최적화를 거치지 않는다 */}
-          <img className={styles.frameImage} src={card.frameUrl} alt="녹화 속 해당 장면" />
-          {card.highlight ? (
-            <span
-              className={styles.highlight}
-              style={{
-                left: `${card.highlight.x * 100}%`,
-                top: `${card.highlight.y * 100}%`,
-                width: `${card.highlight.width * 100}%`,
-                height: `${card.highlight.height * 100}%`,
-              }}
-            />
-          ) : null}
-        </div>
+        <button
+          type="button"
+          className={styles.frame}
+          data-zoomed={isZoomed}
+          onClick={() => setIsZoomed((previous) => !previous)}
+          aria-label={isZoomed ? "화면 전체 보기" : "가리킨 곳 크게 보기"}
+        >
+          <span className={styles.frameCanvas} style={{ transform: isZoomed ? toCssTransform(focusTransform) : "none" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- signed URL이라 next/image 최적화를 거치지 않는다 */}
+            <img className={styles.frameImage} src={card.frameUrl} alt="녹화 속 해당 장면" />
+            {card.highlight ? (
+              <span
+                className={styles.highlight}
+                style={{
+                  left: `${card.highlight.x * 100}%`,
+                  top: `${card.highlight.y * 100}%`,
+                  width: `${card.highlight.width * 100}%`,
+                  height: `${card.highlight.height * 100}%`,
+                }}
+              />
+            ) : null}
+          </span>
+          {card.highlight ? <span className={styles.zoomHint}>{isZoomed ? "전체 보기" : "크게 보기"}</span> : null}
+        </button>
       ) : null}
       {card.quote ? <p className={styles.quote}>“{card.quote}”</p> : null}
       <p className={styles.question}>{card.question}</p>
