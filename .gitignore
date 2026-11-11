@@ -60,3 +60,7 @@ supabase/.temp/
 /demo/raw/
 /demo/build/
 /fixtures/demo-recording/snapshot/
+
+# reference videos (local study only)
+demo/v2/refs
+demo/v2/analysis
