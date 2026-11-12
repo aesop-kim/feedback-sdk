@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countRemainingIssues, findIssueTransition, getStatusAfterAnswer, isRemainingIssue } from "@/lib/feedback/issue-status";
+import { countRemainingIssues, findIssueTransition, getStatusAfterAnswer, getStatusBeforeResolve, isRemainingIssue } from "@/lib/feedback/issue-status";
 
 describe("getStatusAfterAnswer", () => {
   it("질문 중이거나 열린 이슈는 답변 받음이 된다", () => {
@@ -40,7 +40,10 @@ describe("findIssueTransition", () => {
     expect(findIssueTransition("resolved", "closed")).toBe("rejected");
     expect(findIssueTransition("asked", "closed")).toBe("rejected");
     expect(findIssueTransition("answered", "open")).toBe("rejected");
-    expect(findIssueTransition("resolved", "open")).toBe("rejected");
+  });
+
+  it("반영 완료는 취소(다시 열기)할 수 있다", () => {
+    expect(findIssueTransition("resolved", "open")).toBe("change");
   });
 
   it("이미 그 상태면 바꾸지 않는다(멱등)", () => {
@@ -73,5 +76,14 @@ describe("countRemainingIssues", () => {
     ];
     expect(countRemainingIssues(issues, new Set(["reverify-recording"]))).toBe(2);
     expect(countRemainingIssues(issues, new Set())).toBe(3);
+  });
+});
+
+describe("getStatusBeforeResolve", () => {
+  it("질문 카드 진행에 맞춰 반영 완료 전 상태로 돌린다", () => {
+    expect(getStatusBeforeResolve(null)).toBe("open");
+    expect(getStatusBeforeResolve({ approved_at: null, answered_at: null })).toBe("open");
+    expect(getStatusBeforeResolve({ approved_at: "2026-11-12T00:00:00Z", answered_at: null })).toBe("asked");
+    expect(getStatusBeforeResolve({ approved_at: "2026-11-12T00:00:00Z", answered_at: "2026-11-12T00:01:00Z" })).toBe("answered");
   });
 });

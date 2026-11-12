@@ -1,7 +1,7 @@
 import { findAdminRejection } from "@/lib/auth/require-admin";
 import { insertMessage } from "@/lib/feedback/feedback-repository";
-import { findIssueTransition, getAdminTransitionSources, type AdminIssueStatus } from "@/lib/feedback/issue-status";
-import { getIssueStatusMessage } from "@/lib/feedback/issue-status-message";
+import { findIssueTransition, getAdminTransitionSources, getStatusBeforeResolve, type AdminIssueStatus } from "@/lib/feedback/issue-status";
+import { getIssueStatusMessage, getResolveCancelMessage } from "@/lib/feedback/issue-status-message";
 import { respondError, respondJson, respondValidationError } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
 import { findFirstRelation, getFirstRelation } from "@/lib/supabase/first-relation";
@@ -9,8 +9,18 @@ import { getServerSupabase } from "@/lib/supabase/server-client";
 import { updateIssueSchema } from "@/lib/validation/api-schemas";
 import type { IssueStatus } from "@/types/feedback";
 
+type ClarificationProgress = { approved_at: string | null; answered_at: string | null };
+
 // resolved_at은 "재확인을 부탁한 때"다. 닫을 때는 그대로 두고, 다시 열면 지운다.
-function getIssueUpdate(target: AdminIssueStatus): { status: AdminIssueStatus; resolved_at?: string | null } {
+// 반영 완료를 취소하면 질문 카드 진행에 맞춰 반영 완료 전 상태(열림·질문 보냄·답변 받음)로 돌린다.
+function getIssueUpdate(
+  target: AdminIssueStatus,
+  isCancellingResolve: boolean,
+  card: ClarificationProgress | null,
+): { status: IssueStatus; resolved_at?: string | null } {
+  if (isCancellingResolve) {
+    return { status: getStatusBeforeResolve(card), resolved_at: null };
+  }
   if (target === "resolved") {
     return { status: target, resolved_at: new Date().toISOString() };
   }
@@ -23,7 +33,7 @@ function getIssueUpdate(target: AdminIssueStatus): { status: AdminIssueStatus; r
 const REJECTED_MESSAGES: Record<AdminIssueStatus, string> = {
   resolved: "고객이 이미 다시 확인했거나 닫힌 이슈예요. 새로고침해 주세요.",
   closed: "고객이 다시 확인한 이슈만 해결됨으로 닫을 수 있어요.",
-  open: "고객이 다시 확인했거나 해결됨으로 닫은 이슈만 다시 열 수 있어요.",
+  open: "반영 완료했거나, 고객이 다시 확인했거나, 해결됨으로 닫은 이슈만 다시 열 수 있어요.",
 };
 
 const REVERIFY_FINDING_REJECTION = "다시 확인 녹화에서 찾은 내용은 반영 완료로 바꾸지 않아요. 원래 이슈에서 닫거나 다시 열어 주세요.";
@@ -48,7 +58,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   const supabase = getServerSupabase();
   const { data: issue, error: issueError } = await supabase
     .from("issues")
-    .select("id, title, conversation_id, status, conversations!inner(project_id), recordings!issues_recording_id_fkey(reverify_issue_id)")
+    .select(
+      "id, title, conversation_id, status, conversations!inner(project_id), recordings!issues_recording_id_fkey(reverify_issue_id), clarification_cards(approved_at, answered_at)",
+    )
     .eq("id", issueId)
     .maybeSingle();
   if (issueError) {
@@ -69,12 +81,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
     return respondError(409, REVERIFY_FINDING_REJECTION);
   }
 
+  // 반영 완료 취소는 그 상태에서 출발할 때만 조건으로 건다. 사이에 고객이 재확인 녹화를 보냈으면 바뀌지 않는다.
+  const isCancellingResolve = target === "open" && issue.status === "resolved";
+  const card = findFirstRelation<ClarificationProgress>(issue.clarification_cards) ?? null;
+  const sourceStatuses = isCancellingResolve ? ["resolved"] : getAdminTransitionSources(target);
+
   // 출발 상태를 조건으로 걸어, 동시에 온 요청 중 하나만 바꾸고 메시지도 한 번만 보낸다.
   const { data: updated, error: updateError } = await supabase
     .from("issues")
-    .update(getIssueUpdate(target))
+    .update(getIssueUpdate(target, isCancellingResolve, card))
     .eq("id", issueId)
-    .in("status", getAdminTransitionSources(target))
+    .in("status", sourceStatuses)
     .select("id");
   // DB 오류를 changed:false로 돌려주면 관리자는 이미 바뀐 줄 안다. 실패는 실패로 알린다.
   if (updateError) {
@@ -85,7 +102,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ is
   }
 
   const projectRelation = getFirstRelation<{ project_id: string }>(issue.conversations);
-  const message = getIssueStatusMessage(target, issue.title);
+  const message = isCancellingResolve ? getResolveCancelMessage(issue.title) : getIssueStatusMessage(target, issue.title);
   const messageId = await insertMessage({
     conversationId: issue.conversation_id,
     sender: "system",

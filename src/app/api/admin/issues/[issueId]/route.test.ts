@@ -89,4 +89,17 @@ describe("PATCH /api/admin/issues/[issueId]", () => {
     expect(await (await patchIssue("closed")).json()).toEqual({ issueId: "issue-1", changed: false });
     expect(insertMessage).not.toHaveBeenCalled();
   });
+
+  it("반영 완료를 취소하면 반영 전 상태로 돌리고 고객에게 반영 안내를 취소했다고 알린다", async () => {
+    const answeredCard = { approved_at: "2026-11-12T00:00:00Z", answered_at: "2026-11-12T00:01:00Z" };
+    const fake = createFakeSupabase({
+      issues: [{ data: { ...ISSUE_ROW, status: "resolved", clarification_cards: answeredCard } }, { data: [{ id: "issue-1" }] }],
+    });
+    supabaseHolder.client = fake;
+    const response = await patchIssue("open");
+    expect(await response.json()).toEqual({ issueId: "issue-1", changed: true });
+    expect(vi.mocked(insertMessage).mock.calls[0][0]).toMatchObject({
+      body: "‘버튼이 안 눌려요’ 반영 안내를 취소했어요. 아직 고치는 중이라 다시 확인하지 않으셔도 돼요.",
+    });
+  });
 });
