@@ -22,4 +22,38 @@ describe("buildAnalysisPrompt", () => {
     expect(buildAnalysisPrompt(BASE)).not.toContain("다시 확인 녹화");
     expect(buildAnalysisPrompt({ ...BASE, reverifyIssue: null })).not.toContain("다시 확인 녹화");
   });
+
+  it("받아쓰기가 오타를 고쳐 적을 수 있으니 화면 글자 원문(text)을 믿으라고 안내한다", () => {
+    const prompt = buildAnalysisPrompt(BASE);
+    expect(prompt).toContain("## 받아쓰기와 화면 글자를 맞춰 보기");
+    expect(prompt).toContain("장면 이미지보다 text를 믿으세요");
+    expect(prompt).toContain("띄어쓰기 문제로 짐작하지 마세요");
+  });
+
+  it("요소 text를 80자에서 자르지 않고 200자까지 넘긴다", () => {
+    const longText = `문서 ID 계약서명 고객 ${"가".repeat(70)} 계약 긍액 체결 여부`;
+    const prompt = buildAnalysisPrompt({
+      ...BASE,
+      context: {
+        frames: [],
+        segments: [
+          {
+            index: 0,
+            startMs: 0,
+            endMs: 1000,
+            text: "계약금액 말고 계약금액으로 바꿔주세요",
+            frame: null,
+            contexts: [
+              {
+                tMs: 500,
+                kind: "hover",
+                context: { selector: "div.grid", text: longText, tagName: "div", rect: { x: 0, y: 0, width: 10, height: 10 }, viewport: { width: 100, height: 100 } },
+              },
+            ],
+          },
+        ],
+      },
+    });
+    expect(prompt).toContain("계약 긍액 체결 여부");
+  });
 });
