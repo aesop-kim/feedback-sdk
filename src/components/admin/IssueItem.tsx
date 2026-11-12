@@ -150,7 +150,7 @@ function IssueActions({ issue, isReverifyFinding }: { issue: Issue; isReverifyFi
   }
   switch (issue.status) {
     case "resolved":
-      return <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>;
+      return <ResolvedActions issueId={issue.id} />;
     case "closed":
       return <ClosedActions issueId={issue.id} />;
     case "reverify":
@@ -238,6 +238,23 @@ function ReverifyActions({ issueId }: { issueId: string }) {
         <AdminButton variant="text" size="small" onClick={() => void changeStatus("open")} isLoading={savingStatus === "open"}>
           다시 열기
         </AdminButton>
+      </div>
+      <ActionError message={errorMessage} />
+    </div>
+  );
+}
+
+// 반영 완료를 잘못 눌렀을 때 되돌린다. 반영 완료 전 상태로 돌아가고, 고객의 재확인 요청도 거둬들인다.
+function ResolvedActions({ issueId }: { issueId: string }) {
+  const { savingStatus, errorMessage, changeStatus } = useIssueStatusChange(issueId);
+  return (
+    <div className={styles.actions} role="group" aria-label="반영 완료한 이슈">
+      <p className={styles.resolvedNote}>반영 완료로 바꾸고 고객에게 다시 확인을 부탁했어요</p>
+      <div className={styles.actionButtons}>
+        <AdminButton variant="text" size="small" onClick={() => void changeStatus("open")} isLoading={savingStatus === "open"}>
+          반영 완료 취소
+        </AdminButton>
+        <span className={styles.actionCaption}>아직 고치지 않았으면 되돌려요. 고객에게 반영 안내를 취소했다고 알려요</span>
       </div>
       <ActionError message={errorMessage} />
     </div>
@@ -332,7 +349,7 @@ function SelectorChip({ selector }: { selector: string }) {
   );
 }
 
-// 반영 완료는 고객 위젯에 바로 메시지를 보내고 API로 되돌릴 수 없다. 그래서 누르기 전에 제자리에서 한 번 더 묻는다.
+// 반영 완료는 고객 위젯에 바로 메시지를 보낸다. 취소할 수는 있지만 고객이 메시지를 두 번 받으니 누르기 전에 제자리에서 한 번 더 묻는다.
 function ResolveButton({ issueId }: { issueId: string }) {
   const { savingStatus, errorMessage, changeStatus } = useIssueStatusChange(issueId);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);

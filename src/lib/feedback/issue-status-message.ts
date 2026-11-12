@@ -16,3 +16,11 @@ export function getIssueStatusMessage(target: AdminIssueStatus, issueTitle: stri
       return { body: `‘${issueTitle}’ 아직 남아 있는 걸 확인했어요. 다시 고칠게요.`, preview: "다시 고칠게요" };
   }
 }
+
+// 반영 완료를 잘못 눌렀을 때. 앞서 보낸 "다시 확인해 주세요"를 거둬들인다.
+export function getResolveCancelMessage(issueTitle: string): IssueStatusMessage {
+  return {
+    body: `‘${issueTitle}’ 반영 안내를 취소했어요. 아직 고치는 중이라 다시 확인하지 않으셔도 돼요.`,
+    preview: "반영 안내를 취소했어요",
+  };
+}
