@@ -1,6 +1,9 @@
 import type { AnalysisContext } from "@/lib/analysis/build-analysis-context";
 import { TITLE_TARGET_LENGTH } from "@/lib/analysis/issue-schema";
 
+// 요소 text는 화면 글자를 그대로 담은 원문이라, 오타를 찾을 수 있게 넉넉히 넘긴다.
+const ELEMENT_TEXT_LIMIT = 200;
+
 // claude -p 에 stdin으로 넘길 한국어 프롬프트.
 
 type PromptInput = {
@@ -29,7 +32,7 @@ function formatSegments(context: AnalysisContext): string {
       for (const item of segment.contexts) {
         const { selector, text, tagName, rect } = item.context;
         lines.push(
-          `    - ${item.kind} tMs=${item.tMs} selector=${JSON.stringify(selector)} tag=${tagName || "?"} text=${JSON.stringify(text.slice(0, 80))} rect=(${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)}x${Math.round(rect.height)})`,
+          `    - ${item.kind} tMs=${item.tMs} selector=${JSON.stringify(selector)} tag=${tagName || "?"} text=${JSON.stringify(text.slice(0, ELEMENT_TEXT_LIMIT))} rect=(${Math.round(rect.x)},${Math.round(rect.y)},${Math.round(rect.width)}x${Math.round(rect.height)})`,
         );
       }
       if (segment.frame) {
@@ -81,6 +84,12 @@ export function buildAnalysisPrompt(input: PromptInput): string {
     ...formatReverifySection(input.reverifyIssue ?? null),
     "## 받아쓰기 세그먼트 (tMs는 녹화 시작 기준 ms, 아래 줄은 그 무렵의 요소 컨텍스트)",
     context.segments.length > 0 ? formatSegments(context) : "(받아쓰기 없음)",
+    "",
+    "## 받아쓰기와 화면 글자를 맞춰 보기",
+    "- 받아쓰기는 소리를 듣고 맞춤법에 맞는 단어로 고쳐 적어요. 고객이 화면의 오타를 소리 내어 읽어도 받아쓰기에는 올바른 단어로 나올 수 있어요.",
+    "- 요소 컨텍스트의 text는 페이지 코드에서 읽은 화면 글자 원문이에요. 글자를 확인할 때는 장면 이미지보다 text를 믿으세요(이미지에서는 '금'과 '긍'처럼 비슷한 글자를 헷갈리기 쉬워요).",
+    "- 고객이 문구를 바꿔 달라고 하는데 받아쓰기에서 바꾸기 전과 후가 같거나 거의 같으면(예: \"계약금액 말고 계약금액으로\"), 띄어쓰기 문제로 짐작하지 마세요. 먼저 text에서 그 단어와 비슷하지만 철자가 다른 글자(예: \"계약 긍액\")를 찾으세요. 찾으면 그 글자를 받아쓰기 속 올바른 단어로 고치는 오타 이슈로 정리하세요.",
+    "- 이때 summary와 suggestion에는 화면 글자 원문(text)을 그대로 적고, 무엇을 무엇으로 바꿀지 분명히 쓰세요. quote는 받아쓰기 그대로 두세요.",
     "",
     "## 장면 이미지",
     "관련된 장면 이미지를 Read 도구로 직접 열어 보고, 고객이 가리킨 요소가 화면에서 어떻게 보이는지 확인하세요.",
