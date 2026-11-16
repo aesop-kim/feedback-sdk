@@ -1,10 +1,4 @@
-/* 설명은 위, 녹화와 캡처 버튼은 입력창 바로 위에 둔다. */
 .emptyState {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  min-height: 100%;
   padding: var(--sp-2) var(--page-x) var(--sp-5);
 }
 
@@ -50,63 +44,4 @@
   font-weight: var(--fw-semibold);
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
-}
-
-.action {
-  display: flex;
-  flex-direction: column;
-}
-
-.primaryButton,
-.captureButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  width: 100%;
-  min-height: var(--h-btn-l);
-  padding: 2px var(--sp-4);
-  border-radius: var(--r-btn-l);
-  font-size: var(--fs-t5);
-  font-weight: var(--fw-semibold);
-  transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out), opacity 150ms var(--ease-out);
-}
-
-.primaryButton {
-  background: var(--blue-500);
-  color: var(--white-alpha-900);
-}
-
-.captureButton {
-  margin-top: var(--sp-2);
-  background: #eaeaea;
-  color: var(--text-primary);
-}
-
-.captureButton:hover:not(:disabled) {
-  background: #dedede;
-}
-
-.primaryButton:hover:not(:disabled) {
-  background: var(--blue-600);
-}
-
-.primaryButton:active:not(:disabled),
-.captureButton:active:not(:disabled) {
-  transform: scale(var(--press-scale));
-  transition-duration: var(--dur-press);
-}
-
-.primaryButton:disabled,
-.captureButton:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.hint {
-  margin: var(--sp-3) 0 0;
-  text-align: center;
-  font-size: var(--fs-t7);
-  line-height: var(--lh-t7);
-  color: var(--text-tertiary);
 }

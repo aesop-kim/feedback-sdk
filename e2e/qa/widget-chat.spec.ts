@@ -53,6 +53,10 @@ test("고객 메시지는 2초 안에 관리자에게, 관리자 답장은 2초 
   await widget.getByRole("textbox", { name: "메시지" }).fill("첫 메시지");
   await widget.getByRole("button", { name: "보내기" }).click();
   await expect(widget.getByText("첫 메시지")).toBeVisible();
+  await expect(widget.getByRole("heading", { name: `${user.name}님, 불편한 점을 보여주세요` })).toBeVisible();
+  await expect(widget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeInViewport();
+  await expect(widget.getByRole("button", { name: "화면 캡처로 설명하기", exact: true })).toBeInViewport();
+  await expect(widget.getByRole("button", { name: "영역 캡처", exact: true })).toHaveCount(0);
   const conversationId = await findConversationIdForUser(user.id);
   expect(conversationId).not.toBeNull();
 
@@ -296,6 +300,6 @@ test("위젯을 열기 전에는 고객·대화를 만들지 않고, 처음 열 
 
   await launcher.click();
   const widget = page.frameLocator(WIDGET_FRAME);
-  await expect(widget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(widget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeEnabled({ timeout: 20_000 });
   expect(await findConversationIdForUser(user.id)).not.toBeNull();
 });

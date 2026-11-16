@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
-import { CaptureIcon, CloseIcon, ScreenIcon, SendIcon } from "@/components/widget/WidgetIcons";
+import { CloseIcon, SendIcon } from "@/components/widget/WidgetIcons";
 import styles from "@/components/widget/WidgetComposer.module.css";
 
 const MAX_TEXTAREA_HEIGHT = 120;
@@ -10,20 +10,17 @@ const MAX_MESSAGE_LENGTH = 2000;
 type WidgetComposerProps = {
   onSend: (body: string) => void;
   onSendCapture: (body: string) => Promise<boolean>;
-  onStartRecording: () => void;
-  onStartCapture?: () => void;
   onRemoveCapture: () => void;
   capturePreview: string | null;
   isDisabled: boolean;
+  isSendingCapture: boolean;
   inputRef?: RefObject<HTMLTextAreaElement | null>;
 };
 
 export function WidgetComposer({
-  onSend, onSendCapture, onStartRecording, onStartCapture, onRemoveCapture, capturePreview, isDisabled, inputRef,
+  onSend, onSendCapture, onRemoveCapture, capturePreview, isDisabled, isSendingCapture, inputRef,
 }: WidgetComposerProps) {
   const [text, setText] = useState("");
-  const [isSendingCapture, setIsSendingCapture] = useState(false);
-  const sendingRef = useRef(false);
   const ownTextareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = inputRef ?? ownTextareaRef;
   const canSend = !isDisabled && !isSendingCapture && (text.trim().length > 0 || capturePreview !== null);
@@ -38,7 +35,7 @@ export function WidgetComposer({
   }, [text, textareaRef]);
 
   const submit = async () => {
-    if (!canSend || sendingRef.current) {
+    if (!canSend) {
       return;
     }
     if (!capturePreview) {
@@ -46,15 +43,8 @@ export function WidgetComposer({
       setText("");
       return;
     }
-    sendingRef.current = true;
-    setIsSendingCapture(true);
-    try {
-      if (await onSendCapture(text.trim())) {
-        setText("");
-      }
-    } finally {
-      sendingRef.current = false;
-      setIsSendingCapture(false);
+    if (await onSendCapture(text.trim())) {
+      setText("");
     }
   };
 
@@ -86,20 +76,6 @@ export function WidgetComposer({
         </div>
       ) : null}
       <div className={styles.composer}>
-        <button type="button" className={styles.iconButton} onClick={onStartRecording} disabled={isDisabled || isSendingCapture} aria-label="화면 녹화">
-          <ScreenIcon size={22} />
-        </button>
-        {onStartCapture ? (
-          <button
-            type="button"
-            className={styles.iconButton}
-            onClick={onStartCapture}
-            disabled={isDisabled || isSendingCapture}
-            aria-label="영역 캡처"
-          >
-            <CaptureIcon size={22} />
-          </button>
-        ) : null}
         <div className={styles.field}>
           <textarea
             ref={textareaRef}

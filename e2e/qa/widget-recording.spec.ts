@@ -85,7 +85,7 @@ test("화면 공유를 거부하면 안내 토스트가 뜨고 다시 시도할 
   await captureQaScreen(page, "rec-02-screen-denied");
   await expect(page.locator(WIDGET_FRAME)).toHaveAttribute("data-mode", "open");
   await expect(widget.getByRole("button", { name: "화면 녹화로 설명하기" })).toBeEnabled();
-  await widget.getByRole("button", { name: "화면 녹화", exact: true }).click();
+  await widget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true }).click();
   await expect(widget.getByText("화면 공유를 시작하지 않았어요")).toBeVisible();
 });
 
@@ -244,7 +244,7 @@ test("녹화 중 새로고침하면 떠나기 전에 확인을 묻고, 떠나면
   expect(dialogs.types).toEqual(["beforeunload"]);
   await page.getByRole("button", { name: /피드백 보내기/ }).click();
   const reloadedWidget = page.frameLocator(WIDGET_FRAME);
-  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeEnabled({ timeout: 20_000 });
   await captureQaScreen(page, "rec-07-refresh-mid-recording");
   expect(await countRecordings(user.id)).toHaveLength(0);
   await expect(reloadedWidget.getByRole("status", { name: "화면 녹화 중" })).toHaveCount(0);
@@ -268,7 +268,7 @@ test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' �
   expect(dialogs.types).toEqual(["beforeunload"]);
   await page.getByRole("button", { name: /피드백 보내기/ }).click();
   const reloadedWidget = page.frameLocator(WIDGET_FRAME);
-  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeEnabled({ timeout: 20_000 });
   await captureQaScreen(page, "rec-08-after-refresh-widget");
   const recordings = await countRecordings(user.id);
   console.log(`[qa] refresh mid-upload recordings: ${JSON.stringify(recordings)}`);

@@ -1,11 +1,4 @@
-import { CaptureIcon, ScreenMicIcon } from "@/components/widget/WidgetIcons";
 import styles from "@/components/widget/WidgetEmptyState.module.css";
-
-type WidgetEmptyStateProps = {
-  onStartRecording: () => void;
-  onStartCapture?: () => void;
-  isDisabled: boolean;
-};
 
 const RECORDING_STEPS = [
   "녹화를 누르고 ‘이 탭’을 골라요",
@@ -13,36 +6,21 @@ const RECORDING_STEPS = [
   "‘끝내고 보내기’를 누르면 저희가 정리해서 확인해요",
 ];
 
-export function WidgetEmptyState({ onStartRecording, onStartCapture, isDisabled }: WidgetEmptyStateProps) {
+export function WidgetEmptyState() {
   return (
     <section className={styles.emptyState}>
-      <div>
-        <h2 className={styles.title}>말로 설명하면 저희가 정리할게요</h2>
-        <p className={styles.description}>어느 화면의 어떤 버튼인지 따로 적지 않아도 돼요</p>
-        <ol className={styles.steps}>
-          {RECORDING_STEPS.map((step, index) => (
-            <li key={step} className={styles.step}>
-              <span className={styles.stepNumber} aria-hidden="true">
-                {index + 1}
-              </span>
-              {step}
-            </li>
-          ))}
-        </ol>
-      </div>
-      <div className={styles.action}>
-        <button type="button" className={styles.primaryButton} onClick={onStartRecording} disabled={isDisabled}>
-          <ScreenMicIcon size={22} />
-          화면 녹화로 설명하기
-        </button>
-        {onStartCapture ? (
-          <button type="button" className={styles.captureButton} onClick={onStartCapture} disabled={isDisabled}>
-            <CaptureIcon size={22} />
-            화면 캡처로 설명하기
-          </button>
-        ) : null}
-        <p className={styles.hint}>최대 3분이에요. 글로 남기려면 아래에 적어 주세요</p>
-      </div>
+      <h2 className={styles.title}>말로 설명하면 저희가 정리할게요</h2>
+      <p className={styles.description}>어느 화면의 어떤 버튼인지 따로 적지 않아도 돼요</p>
+      <ol className={styles.steps}>
+        {RECORDING_STEPS.map((step, index) => (
+          <li key={step} className={styles.step}>
+            <span className={styles.stepNumber} aria-hidden="true">
+              {index + 1}
+            </span>
+            {step}
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

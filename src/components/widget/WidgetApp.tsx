@@ -5,6 +5,7 @@ import { MessageList, type PendingText } from "@/components/widget/MessageList";
 import { MessageSkeleton } from "@/components/widget/MessageSkeleton";
 import { RecordingPill } from "@/components/widget/RecordingPill";
 import { WidgetComposer } from "@/components/widget/WidgetComposer";
+import { WidgetFeedbackActions } from "@/components/widget/WidgetFeedbackActions";
 import { WidgetEmptyState } from "@/components/widget/WidgetEmptyState";
 import { WidgetHeader } from "@/components/widget/WidgetHeader";
 import { WidgetToast } from "@/components/widget/WidgetToast";
@@ -48,6 +49,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   const [pendingTexts, setPendingTexts] = useState<PendingText[]>([]);
   const [capture, setCapture] = useState<{ image: Blob; url: string } | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isSendingCapture, setIsSendingCapture] = useState(false);
   const captureRequestRef = useRef<string | null>(null);
   const captureSendRef = useRef<{ image: Blob; body: string; messageId: string } | null>(null);
   const isSendingCaptureRef = useRef(false);
@@ -238,7 +240,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   };
 
   const handleSendCapture = async (body: string) => {
-    if (!capture || isStartingRecordingRef.current || captureRequestRef.current) {
+    if (!capture || isSendingCaptureRef.current || isStartingRecordingRef.current || captureRequestRef.current) {
       return false;
     }
     const { image } = capture;
@@ -246,6 +248,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
     const messageId = previous?.image === image && previous.body === body ? previous.messageId : crypto.randomUUID();
     captureSendRef.current = { image, body, messageId };
     isSendingCaptureRef.current = true;
+    setIsSendingCapture(true);
     try {
       await conversation.sendCapture(messageId, body, image);
       removeCapture();
@@ -255,6 +258,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
       return false;
     } finally {
       isSendingCaptureRef.current = false;
+      setIsSendingCapture(false);
     }
   };
 
@@ -281,7 +285,6 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
       <WidgetHeader
         projectName={conversation.session?.projectName ?? ""}
         userName={conversation.session?.endUserName || init?.user.name || ""}
-        isCompact={isReady && hasMessages}
         onClose={handleClose}
       />
       {/* 대화가 길어져 안에 누를 것이 없어도 키보드로 스크롤할 수 있게 포커스를 받는다(V4-01, WCAG 2.1.1). */}
@@ -296,13 +299,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             </button>
           </section>
         ) : null}
-        {isReady && !hasMessages ? (
-          <WidgetEmptyState
-            onStartRecording={handleStartRecording}
-            onStartCapture={onStartCapture}
-            isDisabled={isCapturing}
-          />
-        ) : null}
+        {isReady && !hasMessages ? <WidgetEmptyState /> : null}
         {isReady && hasMessages ? (
           <MessageList
             messages={conversation.messages}
@@ -320,14 +317,21 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
       <div className={styles.footer}>
         <WidgetToast message={toastMessage} />
         {isCapturing ? <p className={styles.captureStatus} role="status">캡처 이미지를 준비하고 있어요.</p> : null}
+        {isReady ? (
+          <WidgetFeedbackActions
+            onStartRecording={handleStartRecording}
+            onStartCapture={onStartCapture}
+            isDisabled={isCapturing || isSendingCapture}
+            showHint={!hasMessages}
+          />
+        ) : null}
         <WidgetComposer
           onSend={handleSendText}
           onSendCapture={handleSendCapture}
-          onStartCapture={onStartCapture}
           onRemoveCapture={removeCapture}
           capturePreview={capture?.url ?? null}
-          onStartRecording={handleStartRecording}
           isDisabled={!isReady || isCapturing}
+          isSendingCapture={isSendingCapture}
           inputRef={composerInputRef}
         />
       </div>
