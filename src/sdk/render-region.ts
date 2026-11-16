@@ -1,4 +1,4 @@
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import { CAPTURE_MIME_TYPE, MAX_CAPTURE_BYTES, MAX_CAPTURE_EDGE } from "@/sdk/capture-image";
 import type { CaptureRegion } from "@/sdk/select-region";
 
