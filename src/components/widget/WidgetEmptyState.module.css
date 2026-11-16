@@ -1,4 +1,4 @@
-/* 설명은 위, 녹화 버튼은 입력창 바로 위(엄지 닿는 곳). 가운데 빈 곳은 그대로 둔다. */
+/* 설명은 위, 녹화와 캡처 버튼은 입력창 바로 위에 둔다. */
 .emptyState {
   display: flex;
   flex-direction: column;
@@ -57,7 +57,8 @@
   flex-direction: column;
 }
 
-.primaryButton {
+.primaryButton,
+.captureButton {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,23 +67,38 @@
   min-height: var(--h-btn-l);
   padding: 2px var(--sp-4);
   border-radius: var(--r-btn-l);
-  background: var(--blue-500);
-  color: var(--white-alpha-900);
   font-size: var(--fs-t5);
   font-weight: var(--fw-semibold);
   transition: transform var(--dur-release) var(--ease-out), background-color 150ms var(--ease-out), opacity 150ms var(--ease-out);
+}
+
+.primaryButton {
+  background: var(--blue-500);
+  color: var(--white-alpha-900);
+}
+
+.captureButton {
+  margin-top: var(--sp-2);
+  background: #eaeaea;
+  color: var(--text-primary);
+}
+
+.captureButton:hover:not(:disabled) {
+  background: #dedede;
 }
 
 .primaryButton:hover:not(:disabled) {
   background: var(--blue-600);
 }
 
-.primaryButton:active:not(:disabled) {
+.primaryButton:active:not(:disabled),
+.captureButton:active:not(:disabled) {
   transform: scale(var(--press-scale));
   transition-duration: var(--dur-press);
 }
 
-.primaryButton:disabled {
+.primaryButton:disabled,
+.captureButton:disabled {
   opacity: 0.3;
   cursor: default;
 }

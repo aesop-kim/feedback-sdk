@@ -223,7 +223,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   const handleStartRecording = () => startRecording();
 
   const handleStartCapture = () => {
-    if (captureRequestRef.current || isStartingRecordingRef.current || !isRecordingIdle) {
+    if (captureRequestRef.current || isSendingCaptureRef.current || isStartingRecordingRef.current || !isRecordingIdle) {
       return;
     }
     const requestId = crypto.randomUUID();
@@ -273,6 +273,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   }
 
   const isReady = conversation.status === "ready";
+  const onStartCapture = init?.canCaptureRegion && typeof crypto.randomUUID === "function" ? handleStartCapture : undefined;
   const hasMessages = conversation.messages.length > 0 || pendingTexts.length > 0 || recording.pendingUpload !== null;
 
   return (
@@ -295,7 +296,13 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             </button>
           </section>
         ) : null}
-        {isReady && !hasMessages ? <WidgetEmptyState onStartRecording={handleStartRecording} isRecordingDisabled={false} /> : null}
+        {isReady && !hasMessages ? (
+          <WidgetEmptyState
+            onStartRecording={handleStartRecording}
+            onStartCapture={onStartCapture}
+            isDisabled={isCapturing}
+          />
+        ) : null}
         {isReady && hasMessages ? (
           <MessageList
             messages={conversation.messages}
@@ -316,7 +323,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
         <WidgetComposer
           onSend={handleSendText}
           onSendCapture={handleSendCapture}
-          onStartCapture={init?.canCaptureRegion && typeof crypto.randomUUID === "function" ? handleStartCapture : undefined}
+          onStartCapture={onStartCapture}
           onRemoveCapture={removeCapture}
           capturePreview={capture?.url ?? null}
           onStartRecording={handleStartRecording}
