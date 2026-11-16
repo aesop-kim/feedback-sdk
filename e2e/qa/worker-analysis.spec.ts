@@ -53,7 +53,8 @@ test("무음 녹화: 위젯이 '목소리가 들리지 않아요'를 알리고, 
   await page.waitForTimeout(6_000);
   const silentToastCount = await widget.getByText(/목소리가 들리지 않아요/).count();
   await captureQaScreen(page, "wrk-01-silent-during-recording");
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(/화면 녹화 · 0:0\d/)).toBeVisible({ timeout: 60_000 });
 
   const adminContext = await browser.newContext();
@@ -108,7 +109,8 @@ test("말로 설명한 녹화: 워커가 이슈를 만들고, 승인한 질문�
   await waitUntil(page, startedAt, NARRATION_LEAD_MS + 51_500);
   await moveMouseTo(page, registerButton);
   await waitUntil(page, startedAt, NARRATION_LEAD_MS + 66_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(/화면 녹화 · \d+:\d{2}/)).toBeVisible({ timeout: 60_000 });
 
   const adminContext = await browser.newContext();

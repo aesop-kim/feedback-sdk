@@ -14,10 +14,13 @@ const RRWEB_META_EVENT_TYPE = 4;
 const SCREEN_DENIED_MESSAGE = "화면 공유를 시작하지 않았어요. 다시 누르고 ‘이 탭’을 골라 주세요";
 const MICROPHONE_DENIED_MESSAGE = "마이크를 쓸 수 없어요. 주소창 왼쪽 자물쇠에서 마이크를 허용해 주세요";
 const UPLOAD_FAILED_MESSAGE = "녹화를 보내지 못했어요. ‘다시 보내기’를 눌러 주세요";
+const RECORDING_PREPARE_FAILED_MESSAGE = "녹화 파일을 준비하지 못했어요. 다시 녹화해 주세요.";
 const CANCELLED_MESSAGE = "녹화를 취소했어요. 아무것도 보내지 않았어요";
 export const MICROPHONE_SILENT_MESSAGE = "목소리가 들리지 않아요. 주소창의 마이크 아이콘에서 마이크를 바꿔 주세요";
 
 export type RecordingPhase = "idle" | "recording" | "stopping";
+
+export type RecordingDraft = { durationMs: number; pageTitle: string; clickedText: string | null };
 
 export type PendingUpload = { localId: string; durationMs: number; progress: number; isFailed: boolean };
 
@@ -77,6 +80,7 @@ function getHostViewport(meta: RrwebMetaEvent["data"] | null, contexts: Recorded
 export function useWidgetRecording({ post, conversationToken, page, onToast, onModeChange, onUploaded, maxDurationMs }: UseWidgetRecordingInput) {
   const [phase, setPhase] = useState<RecordingPhase>("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [recordingDraft, setRecordingDraft] = useState<RecordingDraft | null>(null);
   const [pendingUpload, setPendingUpload] = useState<PendingUpload | null>(null);
   const [microphoneLevel, setMicrophoneLevel] = useState(0);
   const [isMicrophoneSilent, setIsMicrophoneSilent] = useState(false);
@@ -86,6 +90,8 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
   const rrwebEventsRef = useRef<unknown[]>([]);
   const contextsRef = useRef<RecordedContext[]>([]);
   const domStoppedResolverRef = useRef<(() => void) | null>(null);
+  const draftUploadRef = useRef<PreparedUpload | null>(null);
+  const isUploadingRef = useRef(false);
   const preparedUploadRef = useRef<PreparedUpload | null>(null);
   const latestInputRef = useRef({ post, conversationToken, page, onToast, onModeChange, onUploaded });
 
@@ -105,7 +111,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
   }, [phase]);
 
   // 녹화나 업로드가 진행 중이면 고객사 페이지가 새로고침·닫기 전에 확인을 묻게 한다.
-  const isBusy = phase !== "idle" || (pendingUpload !== null && !pendingUpload.isFailed);
+  const isBusy = phase !== "idle" || recordingDraft !== null || (pendingUpload !== null && !pendingUpload.isFailed);
   useEffect(() => {
     post({ type: "widget:busy", payload: { isBusy } });
   }, [post, isBusy]);
@@ -118,13 +124,15 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
 
   const runUpload = useCallback(async (prepared: PreparedUpload, localId: string) => {
     const { conversationToken: token, onToast: showToast, onUploaded: handleUploaded } = latestInputRef.current;
-    setPendingUpload({ localId, durationMs: prepared.capture.durationMs, progress: 0, isFailed: false });
-    if (!token) {
-      setPendingUpload((current) => (current ? { ...current, isFailed: true } : current));
-      showToast(UPLOAD_FAILED_MESSAGE);
+    if (isUploadingRef.current) {
       return;
     }
+    isUploadingRef.current = true;
+    setPendingUpload({ localId, durationMs: prepared.capture.durationMs, progress: 0, isFailed: false });
     try {
+      if (!token) {
+        throw new Error(UPLOAD_FAILED_MESSAGE);
+      }
       await uploadRecording({
         conversationToken: token,
         ...prepared,
@@ -141,10 +149,12 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
       }
       setPendingUpload((current) => (current ? { ...current, isFailed: true } : current));
       showToast(UPLOAD_FAILED_MESSAGE);
+    } finally {
+      isUploadingRef.current = false;
     }
   }, []);
 
-  // 녹화를 멈추고 패널로 돌아간다. 끝내기(업로드)와 취소(버리기)가 함께 쓴다.
+  // 녹화를 멈추고 검토 또는 취소를 위해 패널로 돌아간다.
   const finishSession = useCallback(async (session: CaptureSession): Promise<CaptureResult> => {
     sessionRef.current = null;
     stopMicrophoneWatchRef.current?.();
@@ -157,15 +167,17 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
       window.setTimeout(resolve, DOM_STOP_TIMEOUT_MS);
     });
     postToHost({ type: "recording:stop", payload: {} });
-    const [capture] = await Promise.all([session.stop(), domStopped]);
-    domStoppedResolverRef.current = null;
-
-    postToHost({ type: "widget:mode", payload: { mode: "open" } });
-    changeMode("open");
-    setPhase("idle");
-    setMicrophoneLevel(0);
-    setIsMicrophoneSilent(false);
-    return capture;
+    try {
+      const [capture] = await Promise.all([session.stop(), domStopped]);
+      return capture;
+    } finally {
+      domStoppedResolverRef.current = null;
+      postToHost({ type: "widget:mode", payload: { mode: "open" } });
+      changeMode("open");
+      setPhase("idle");
+      setMicrophoneLevel(0);
+      setIsMicrophoneSilent(false);
+    }
   }, []);
 
   const stopRecording = useCallback(async () => {
@@ -173,7 +185,13 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
     if (!session) {
       return;
     }
-    const capture = await finishSession(session);
+    const capture = await finishSession(session).catch(() => {
+      latestInputRef.current.onToast(RECORDING_PREPARE_FAILED_MESSAGE);
+      return null;
+    });
+    if (!capture) {
+      return;
+    }
     const currentPage = latestInputRef.current.page;
     const rrwebEvents = rrwebEventsRef.current;
     const contexts = contextsRef.current;
@@ -187,9 +205,27 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
       recordingId: null,
       reverifyIssueId: reverifyIssueIdRef.current,
     };
+    draftUploadRef.current = prepared;
+    const clickedText = contexts.findLast(({ kind, context }) => kind === "click" && context.text.trim())?.context.text ?? null;
+    setRecordingDraft({ durationMs: capture.durationMs, pageTitle: prepared.page.title, clickedText });
+  }, [finishSession]);
+
+  const confirmRecording = useCallback(async () => {
+    const prepared = draftUploadRef.current;
+    if (!prepared || isUploadingRef.current) {
+      return;
+    }
+    draftUploadRef.current = null;
+    setRecordingDraft(null);
     preparedUploadRef.current = prepared;
-    await runUpload(prepared, `local-${capture.t0}`);
-  }, [finishSession, runUpload]);
+    await runUpload(prepared, `local-${prepared.capture.t0}`);
+  }, [runUpload]);
+
+  const discardRecording = useCallback(() => {
+    draftUploadRef.current = null;
+    setRecordingDraft(null);
+    latestInputRef.current.onToast(CANCELLED_MESSAGE);
+  }, []);
 
   // 잘못 시작했거나 민감한 화면이 보였을 때: 아무것도 올리지 않고 버린다.
   const cancelRecording = useCallback(async () => {
@@ -197,14 +233,14 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
     if (!session) {
       return;
     }
-    await finishSession(session);
+    await finishSession(session).catch(() => undefined);
     latestInputRef.current.onToast(CANCELLED_MESSAGE);
   }, [finishSession]);
 
   // 브라우저는 사용자 클릭 직후에만 화면 공유를 허락하므로, 첫 await가 getDisplayMedia여야 한다.
   // reverifyIssueId를 주면 고친 이슈를 다시 확인하는 녹화로 올린다.
   const startRecording = useCallback(async (options?: { reverifyIssueId?: string | null }) => {
-    if (sessionRef.current || phase !== "idle") {
+    if (sessionRef.current || draftUploadRef.current || isUploadingRef.current || phase !== "idle") {
       return;
     }
     reverifyIssueIdRef.current = options?.reverifyIssueId ?? null;
@@ -255,7 +291,7 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
 
   const retryUpload = useCallback(() => {
     const prepared = preparedUploadRef.current;
-    if (prepared && pendingUpload) {
+    if (prepared && pendingUpload && !draftUploadRef.current) {
       void runUpload(prepared, pendingUpload.localId);
     }
   }, [pendingUpload, runUpload]);
@@ -289,6 +325,9 @@ export function useWidgetRecording({ post, conversationToken, page, onToast, onM
     elapsedMs,
     maxDurationMs,
     pendingUpload,
+    recordingDraft,
+    confirmRecording,
+    discardRecording,
     microphoneLevel,
     isMicrophoneSilent,
     startRecording,

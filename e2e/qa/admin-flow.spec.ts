@@ -395,7 +395,8 @@ test("반영 완료로 바꾸면 위젯에 재확인 안내가 뜨고, 그 안�
   await reverifyCard.getByRole("button", { name: "다시 녹화해서 확인하기" }).click();
   await expect(widget.getByRole("status", { name: "화면 녹화 중" })).toBeVisible({ timeout: 10_000 });
   await customerPage.waitForTimeout(2_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   // 끝내기 직후에는 아직 업로드 카드가 없다. 카드가 뜬 뒤 사라질 때(업로드 완료)까지 기다린다.
   const uploadingCard = widget.getByText(/보내는 중/);
   await expect(uploadingCard).toBeVisible({ timeout: 10_000 });

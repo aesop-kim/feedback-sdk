@@ -43,7 +43,7 @@ export function RecordingPill({ elapsedMs, maxDurationMs, isStopping, microphone
           <span className={styles.limit}> / {formatRecordingDuration(maxDurationMs)}</span>
         </span>
         <button type="button" className={styles.stopButton} onClick={onStop} disabled={isStopping}>
-          끝내고 보내기
+          녹화 끝내기
         </button>
       </div>
     </div>

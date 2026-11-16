@@ -78,3 +78,11 @@
   color: var(--grey-700);
   font-size: var(--fs-t6);
 }
+
+.attachmentNotice {
+  margin: var(--sp-3) var(--page-x);
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+}

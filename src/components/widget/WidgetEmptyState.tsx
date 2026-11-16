@@ -3,7 +3,7 @@ import styles from "@/components/widget/WidgetEmptyState.module.css";
 const RECORDING_STEPS = [
   "녹화를 누르고 ‘이 탭’을 골라요",
   "문제가 있는 곳을 가리키며 말해요",
-  "‘끝내고 보내기’를 누르면 저희가 정리해서 확인해요",
+  "녹화를 끝내고 확인한 뒤 보내요",
 ];
 
 export function WidgetEmptyState() {

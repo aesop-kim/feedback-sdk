@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useLayoutEffect, useRef, type KeyboardEvent, type RefObject } from "react";
 import { CloseIcon, SendIcon } from "@/components/widget/WidgetIcons";
 import styles from "@/components/widget/WidgetComposer.module.css";
 
@@ -9,7 +9,9 @@ const MAX_MESSAGE_LENGTH = 2000;
 
 type WidgetComposerProps = {
   onSend: (body: string) => void;
-  onSendCapture: (body: string) => Promise<boolean>;
+  text: string;
+  onTextChange: (body: string) => void;
+  onReviewCapture: () => void;
   onRemoveCapture: () => void;
   capturePreview: string | null;
   isDisabled: boolean;
@@ -18,9 +20,8 @@ type WidgetComposerProps = {
 };
 
 export function WidgetComposer({
-  onSend, onSendCapture, onRemoveCapture, capturePreview, isDisabled, isSendingCapture, inputRef,
+  text, onTextChange, onSend, onReviewCapture, onRemoveCapture, capturePreview, isDisabled, isSendingCapture, inputRef,
 }: WidgetComposerProps) {
-  const [text, setText] = useState("");
   const ownTextareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = inputRef ?? ownTextareaRef;
   const canSend = !isDisabled && !isSendingCapture && (text.trim().length > 0 || capturePreview !== null);
@@ -34,24 +35,22 @@ export function WidgetComposer({
     textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
   }, [text, textareaRef]);
 
-  const submit = async () => {
+  const submit = () => {
     if (!canSend) {
       return;
     }
-    if (!capturePreview) {
-      onSend(text.trim());
-      setText("");
+    if (capturePreview) {
+      onReviewCapture();
       return;
     }
-    if (await onSendCapture(text.trim())) {
-      setText("");
-    }
+    onSend(text.trim());
+    onTextChange("");
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
-      void submit();
+      submit();
     }
   };
 
@@ -81,7 +80,7 @@ export function WidgetComposer({
             ref={textareaRef}
             className={styles.textarea}
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => onTextChange(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="메시지를 입력해 주세요"
             rows={1}
@@ -89,7 +88,7 @@ export function WidgetComposer({
             aria-label="메시지"
             readOnly={isSendingCapture}
           />
-          <button type="button" className={styles.sendButton} onClick={() => void submit()} disabled={!canSend} aria-label="보내기">
+          <button type="button" className={styles.sendButton} onClick={submit} disabled={!canSend} aria-label="보내기">
             <SendIcon size={18} />
           </button>
         </div>

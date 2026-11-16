@@ -8,6 +8,7 @@ import {
 } from "@/sdk/bridge-protocol";
 import { RRWEB_BLOCK_CLASS, createDomRecorder } from "@/sdk/dom-recorder";
 import { CAPTURE_STYLES, CLOSE_ICON, LAUNCHER_ICON, LAUNCHER_STYLES } from "@/sdk/launcher-styles";
+import { readCaptureRegionText } from "@/sdk/capture-region-text";
 import { selectRegion } from "@/sdk/select-region";
 import type { EndUserInput } from "@/types/feedback";
 
@@ -137,6 +138,7 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
         return;
       }
       const { scrollX, scrollY } = window;
+      const labels = readCaptureRegionText(region);
       setOpen(true);
       didRestoreWidget = true;
       const rendererUrl = new URL("/sdk-capture-v1.js", SDK_ORIGIN).href;
@@ -153,7 +155,7 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
           }),
         ]);
         if (!controller.signal.aborted) {
-          postToWidget({ type: "capture:result", payload: { requestId, image } });
+          postToWidget({ type: "capture:result", payload: { requestId, image, labels } });
         }
       } finally {
         window.clearTimeout(timer);

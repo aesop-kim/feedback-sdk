@@ -1,0 +1,66 @@
+.review {
+  margin: var(--sp-4) var(--page-x);
+  padding: var(--sp-4);
+  border-radius: var(--r-btn-l);
+  background: var(--grey-50);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.summary,
+.description,
+.question {
+  margin: 0;
+}
+
+.summary,
+.description {
+  color: var(--text-secondary);
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+}
+
+.description {
+  margin-top: var(--sp-2);
+  white-space: pre-wrap;
+  max-height: 6lh;
+  overflow-y: auto;
+}
+
+.question {
+  margin-block: var(--sp-3);
+  color: var(--text-primary);
+  font-size: var(--fs-t6);
+  line-height: var(--lh-t6);
+  font-weight: var(--fw-semibold);
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.actions button {
+  min-height: 44px;
+  padding-inline: var(--sp-4);
+  border-radius: var(--r-btn-m);
+  font-size: var(--fs-t6);
+  font-weight: var(--fw-semibold);
+}
+
+.cancel {
+  background: var(--grey-100);
+  color: var(--text-primary);
+}
+
+.confirm {
+  background: var(--blue-500);
+  color: var(--white-alpha-900);
+}
+
+.actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

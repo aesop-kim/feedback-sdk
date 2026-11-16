@@ -11,7 +11,7 @@ export type HostToWidgetMessage =
       payload: { projectKey: string; user: EndUserInput; page: { url: string; title: string }; canCaptureRegion?: boolean };
     }
   | { type: "host:visibility"; payload: { open: boolean } }
-  | { type: "capture:result"; payload: { requestId: string; image: Blob } }
+  | { type: "capture:result"; payload: { requestId: string; image: Blob; labels?: string[] } }
   | { type: "capture:ended"; payload: { requestId: string; reason: "cancelled" | "failed" } }
   | { type: "dom:events"; payload: { events: unknown[] } }
   | { type: "dom:click"; payload: { epochMs: number; context: ElementContext | null } }
