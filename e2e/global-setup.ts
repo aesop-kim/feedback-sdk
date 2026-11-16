@@ -35,7 +35,7 @@ async function isWidgetOpenable(): Promise<boolean> {
     await pinQaUserOnDemoPage(page, READINESS_USER);
     await page.goto(DEMO_URL);
     await page.getByRole("button", { name: /피드백 보내기/ }).click({ timeout: 15_000 });
-    const recordButton = page.frameLocator(WIDGET_FRAME).getByRole("button", { name: "화면 녹화", exact: true });
+    const recordButton = page.frameLocator(WIDGET_FRAME).getByRole("button", { name: "화면 녹화로 설명하기", exact: true });
     // 대화는 위젯을 처음 열 때 만들어지므로, 버튼이 보인 뒤 켜질 때까지 기다린다.
     await expect(recordButton).toBeEnabled({ timeout: 15_000 });
     return true;

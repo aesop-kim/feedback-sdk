@@ -71,3 +71,18 @@
   transform: scale(var(--press-scale));
   transition-duration: var(--dur-press);
 }
+
+.captureStatus {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--grey-700);
+  font-size: var(--fs-t6);
+}
+
+.attachmentNotice {
+  margin: var(--sp-3) var(--page-x);
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: var(--fs-t7);
+  line-height: var(--lh-t7);
+}

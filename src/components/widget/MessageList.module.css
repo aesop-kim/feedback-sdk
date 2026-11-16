@@ -39,3 +39,24 @@
   font-weight: var(--fw-semibold);
   color: var(--text-tertiary);
 }
+
+.capture {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-1);
+  max-width: 100%;
+}
+
+.capture a {
+  display: block;
+  max-width: min(100%, 260px);
+  border-radius: 12px;
+}
+
+.capture img {
+  max-height: 220px;
+  border: 1px solid var(--border-hairline);
+  border-radius: inherit;
+  object-fit: contain;
+}

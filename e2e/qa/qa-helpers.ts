@@ -132,7 +132,7 @@ export async function openWidget(page: Page, user: { id: string; name: string; e
   await launcher.click();
   const widget = page.frameLocator(WIDGET_FRAME);
   // 텍스트 상자는 로딩 중에도 활성이라, 세션 준비가 끝나야 켜지는 녹화 아이콘 버튼으로 준비 완료를 판단한다.
-  await expect(widget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(widget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeEnabled({ timeout: 20_000 });
   return widget;
 }
 

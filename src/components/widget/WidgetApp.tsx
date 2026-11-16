@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MessageList, type PendingText } from "@/components/widget/MessageList";
 import { MessageSkeleton } from "@/components/widget/MessageSkeleton";
 import { RecordingPill } from "@/components/widget/RecordingPill";
+import { WidgetAttachmentReview } from "@/components/widget/WidgetAttachmentReview";
 import { WidgetComposer } from "@/components/widget/WidgetComposer";
+import { WidgetFeedbackActions } from "@/components/widget/WidgetFeedbackActions";
 import { WidgetEmptyState } from "@/components/widget/WidgetEmptyState";
 import { WidgetHeader } from "@/components/widget/WidgetHeader";
 import { WidgetToast } from "@/components/widget/WidgetToast";
@@ -16,6 +18,8 @@ import {
   type HostInit,
 } from "@/hooks/use-widget-conversation";
 import { MICROPHONE_SILENT_MESSAGE, useWidgetRecording } from "@/hooks/use-widget-recording";
+import { formatRecordingDuration } from "@/lib/recording/format-recording-time";
+import { CAPTURE_MIME_TYPE, MAX_CAPTURE_BYTES } from "@/sdk/capture-image";
 import type { HostToWidgetMessage } from "@/sdk/bridge-protocol";
 import styles from "@/components/widget/WidgetApp.module.css";
 
@@ -24,6 +28,9 @@ const TOAST_DURATION_MS = 3_000;
 const LONG_TOAST_DURATION_MS = 5_000;
 const LONG_TOAST_LENGTH = 25;
 const SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요. 말풍선 아래 ‘다시 보내기’를 눌러 주세요";
+const CAPTURE_FAILED_MESSAGE = "화면을 캡처하지 못했어요. 영역을 다시 선택해 주세요.";
+const CAPTURE_SEND_FAILED_MESSAGE = "캡처를 보내지 못했어요. 다시 전송해 주세요.";
+const ATTACHMENT_SENT_MESSAGE = "피드백을 전송했어요.";
 const ALREADY_ANSWERED_MESSAGE = "이미 답한 질문이에요";
 const LOAD_FAILED_DESCRIPTION = "연결이 잠깐 끊겼어요. 다시 불러와 볼게요";
 
@@ -43,6 +50,16 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [pendingTexts, setPendingTexts] = useState<PendingText[]>([]);
+  const [draftText, setDraftText] = useState("");
+  const [capture, setCapture] = useState<{ image: Blob; url: string; labels: string[] } | null>(null);
+  const [isReviewingCapture, setIsReviewingCapture] = useState(false);
+  const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [isSendingCapture, setIsSendingCapture] = useState(false);
+  const captureRequestRef = useRef<string | null>(null);
+  const captureSendRef = useRef<{ image: Blob; body: string; messageId: string } | null>(null);
+  const isSendingCaptureRef = useRef(false);
+  const isStartingRecordingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const recordingMessageHandlerRef = useRef<(message: HostToWidgetMessage) => void>(() => undefined);
@@ -73,11 +90,37 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             requestAnimationFrame(() => composerInputRef.current?.focus());
           }
           return;
+        case "capture:result":
+        case "capture:ended": {
+          if (!captureRequestRef.current || message.payload?.requestId !== captureRequestRef.current) {
+            return;
+          }
+          captureRequestRef.current = null;
+          setIsCapturing(false);
+          if (message.type === "capture:ended") {
+            if (message.payload.reason !== "cancelled") {
+              showToast(CAPTURE_FAILED_MESSAGE);
+            }
+            return;
+          }
+          const { image } = message.payload;
+          if (!(image instanceof Blob) || image.type !== CAPTURE_MIME_TYPE || !image.size || image.size > MAX_CAPTURE_BYTES) {
+            showToast(CAPTURE_FAILED_MESSAGE);
+            return;
+          }
+          captureSendRef.current = null;
+          const labels = Array.isArray(message.payload.labels)
+            ? message.payload.labels.filter((label) => typeof label === "string" && label.length <= 46).slice(0, 2)
+            : [];
+          setAttachmentNotice(null);
+          setCapture({ image, labels, url: URL.createObjectURL(image) });
+          return;
+        }
         default:
           recordingMessageHandlerRef.current(message);
       }
     },
-    [projectKey],
+    [projectKey, showToast],
   );
 
   const { post } = useWidgetBridge(handleHostMessage);
@@ -93,13 +136,18 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
     }
   }, []);
 
+  const handleRecordingUploaded = useCallback(async () => {
+    await refetch();
+    setAttachmentNotice(ATTACHMENT_SENT_MESSAGE);
+  }, [refetch]);
+
   const recording = useWidgetRecording({
     post,
     conversationToken: conversation.session?.conversationToken ?? null,
     page: init?.page ?? null,
     onToast: showToast,
     onModeChange: handleModeChange,
-    onUploaded: refetch,
+    onUploaded: handleRecordingUploaded,
     maxDurationMs,
   });
 
@@ -115,6 +163,12 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
     },
     [],
   );
+
+  useEffect(() => () => {
+    if (capture) {
+      URL.revokeObjectURL(capture.url);
+    }
+  }, [capture]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -150,6 +204,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   };
 
   const handleSendText = (body: string) => {
+    setAttachmentNotice(null);
     const localId = `pending-${Date.now()}`;
     setPendingTexts((current) => [...current, { localId, body, isFailed: false }]);
     deliverText(localId, body);
@@ -174,12 +229,59 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
     }
   };
 
-  const handleStartRecording = () => {
-    void recording.startRecording();
+  const startRecording = (issueId?: string | null) => {
+    if (capture || captureRequestRef.current || isSendingCaptureRef.current || isStartingRecordingRef.current) {
+      return;
+    }
+    isStartingRecordingRef.current = true;
+    setAttachmentNotice(null);
+    void recording.startRecording({ reverifyIssueId: issueId }).finally(() => {
+      isStartingRecordingRef.current = false;
+    });
+  };
+  const handleStartRecording = () => startRecording();
+
+  const handleStartCapture = () => {
+    if (capture || recording.recordingDraft || captureRequestRef.current || isSendingCaptureRef.current || isStartingRecordingRef.current || !isRecordingIdle) {
+      return;
+    }
+    const requestId = crypto.randomUUID();
+    captureRequestRef.current = requestId;
+    setIsCapturing(true);
+    post({ type: "capture:request", payload: { requestId } });
   };
 
-  const handleStartReverify = (issueId: string | null) => {
-    void recording.startRecording({ reverifyIssueId: issueId });
+  const removeCapture = () => {
+    captureSendRef.current = null;
+    setIsReviewingCapture(false);
+    setAttachmentNotice(null);
+    setCapture(null);
+  };
+
+  const handleSendCapture = async () => {
+    if (!isReviewingCapture || !capture || isSendingCaptureRef.current || isStartingRecordingRef.current || captureRequestRef.current) {
+      return;
+    }
+    const { image } = capture;
+    const body = draftText.trim();
+    const previous = captureSendRef.current;
+    const messageId = previous?.image === image && previous.body === body ? previous.messageId : crypto.randomUUID();
+    captureSendRef.current = { image, body, messageId };
+    setAttachmentNotice(null);
+    isSendingCaptureRef.current = true;
+    setIsSendingCapture(true);
+    try {
+      await conversation.sendCapture(messageId, body, image);
+      removeCapture();
+      setDraftText("");
+      setAttachmentNotice(ATTACHMENT_SENT_MESSAGE);
+      composerInputRef.current?.focus();
+    } catch {
+      setAttachmentNotice(CAPTURE_SEND_FAILED_MESSAGE);
+    } finally {
+      isSendingCaptureRef.current = false;
+      setIsSendingCapture(false);
+    }
   };
 
   if (recording.phase !== "idle") {
@@ -197,6 +299,10 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   }
 
   const isReady = conversation.status === "ready";
+  const onStartCapture = init?.canCaptureRegion && typeof crypto.randomUUID === "function" ? handleStartCapture : undefined;
+  const isUploadingRecording = recording.pendingUpload !== null && !recording.pendingUpload.isFailed;
+  const recordingDraft = recording.recordingDraft;
+  const isReviewing = isReviewingCapture || Boolean(recordingDraft);
   const hasMessages = conversation.messages.length > 0 || pendingTexts.length > 0 || recording.pendingUpload !== null;
 
   return (
@@ -204,7 +310,6 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
       <WidgetHeader
         projectName={conversation.session?.projectName ?? ""}
         userName={conversation.session?.endUserName || init?.user.name || ""}
-        isCompact={isReady && hasMessages}
         onClose={handleClose}
       />
       {/* 대화가 길어져 안에 누를 것이 없어도 키보드로 스크롤할 수 있게 포커스를 받는다(V4-01, WCAG 2.1.1). */}
@@ -219,7 +324,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             </button>
           </section>
         ) : null}
-        {isReady && !hasMessages ? <WidgetEmptyState onStartRecording={handleStartRecording} isRecordingDisabled={false} /> : null}
+        {isReady && !hasMessages && !isReviewing ? <WidgetEmptyState /> : null}
         {isReady && hasMessages ? (
           <MessageList
             messages={conversation.messages}
@@ -228,18 +333,61 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             pendingUpload={recording.pendingUpload}
             onAnswer={handleAnswer}
             onRetryText={handleRetryText}
-            onStartReverify={handleStartReverify}
+            onStartReverify={startRecording}
             onRetryUpload={recording.retryUpload}
             onStartRecording={handleStartRecording}
+          />
+        ) : null}
+        {isReviewingCapture && capture ? (
+          <WidgetAttachmentReview
+            summary={capture.labels.length
+              ? `선택한 영역에 ${capture.labels.map((label) => `‘${label}’`).join(" · ")} 문구가 보여요.`
+              : "선택한 화면 영역을 사진 한 장으로 담았어요."}
+            description={draftText.trim()}
+            notice={attachmentNotice}
+            isSending={isSendingCapture}
+            cancelLabel="수정하기"
+            onCancel={() => {
+              setIsReviewingCapture(false);
+              setAttachmentNotice(null);
+              composerInputRef.current?.focus();
+            }}
+            onConfirm={() => void handleSendCapture()}
+          />
+        ) : null}
+        {recordingDraft ? (
+          <WidgetAttachmentReview
+            summary={[
+              `${recordingDraft.pageTitle ? `‘${recordingDraft.pageTitle}’ 화면에서 ` : ""}${formatRecordingDuration(recordingDraft.durationMs)} 길이로 녹화했어요.`,
+              recordingDraft.clickedText ? `마지막으로 ‘${recordingDraft.clickedText}’ 요소를 눌렀어요.` : null,
+            ].filter(Boolean).join(" ")}
+            cancelLabel="녹화 버리기"
+            onCancel={recording.discardRecording}
+            onConfirm={() => void recording.confirmRecording()}
           />
         ) : null}
       </div>
       <div className={styles.footer}>
         <WidgetToast message={toastMessage} />
+        {attachmentNotice && !isReviewing ? <p className={styles.attachmentNotice} role="status">{attachmentNotice}</p> : null}
+        {isCapturing ? <p className={styles.captureStatus} role="status">캡처 이미지를 준비하고 있어요.</p> : null}
+        {isReady && !capture && !recordingDraft ? (
+          <WidgetFeedbackActions
+            onStartRecording={handleStartRecording}
+            onStartCapture={onStartCapture}
+            isDisabled={isCapturing || isUploadingRecording}
+            showHint={!hasMessages}
+          />
+        ) : null}
         <WidgetComposer
           onSend={handleSendText}
-          onStartRecording={handleStartRecording}
-          isDisabled={!isReady}
+          text={draftText}
+          onTextChange={setDraftText}
+          onReviewCapture={() => setIsReviewingCapture(true)}
+          onRemoveCapture={removeCapture}
+          capturePreview={capture?.url ?? null}
+          isDisabled={!isReady || isCapturing || isReviewing}
+          isSendingCapture={isSendingCapture}
           inputRef={composerInputRef}
         />
       </div>

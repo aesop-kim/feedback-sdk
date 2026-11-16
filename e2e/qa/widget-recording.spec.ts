@@ -51,7 +51,10 @@ test("녹화를 시작하고 끝내면 업로드되고 '정리하고 있어요' 
   await captureQaScreen(page, "rec-01-recording-pill");
   await page.getByRole("button", { name: "계약서 등록" }).click();
   await page.waitForTimeout(4_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await expect(widget.getByRole("heading", { name: "이대로 피드백을 전송할까요?" })).toBeVisible();
+  await expect(widget.getByText(/화면 녹화 · /)).toHaveCount(0);
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(/화면 녹화 · 0:0[3-9]/)).toBeVisible({ timeout: 60_000 });
   await expect(widget.getByText(/정리하고 있어요|정리를 마쳤어요|문제 \d+건을 정리했어요|받았어요. 담당자가 직접 볼게요/)).toBeVisible();
   await captureQaScreen(page, "rec-01-uploaded");
@@ -67,7 +70,8 @@ test("녹화 중에는 취소(올리지 않고 버리기) 버튼이 있다", asy
   await startRecording(widget);
   const pillButtons = await widget.getByRole("status", { name: "화면 녹화 중" }).getByRole("button").allTextContents();
   console.log(`[qa] recording pill buttons: ${JSON.stringify(pillButtons)}`);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(/화면 녹화 · /)).toBeVisible({ timeout: 60_000 });
   expect(pillButtons.some((label) => /취소|버리기/.test(label)), "녹화 취소 수단이 없다").toBe(true);
 });
@@ -85,7 +89,7 @@ test("화면 공유를 거부하면 안내 토스트가 뜨고 다시 시도할 
   await captureQaScreen(page, "rec-02-screen-denied");
   await expect(page.locator(WIDGET_FRAME)).toHaveAttribute("data-mode", "open");
   await expect(widget.getByRole("button", { name: "화면 녹화로 설명하기" })).toBeEnabled();
-  await widget.getByRole("button", { name: "화면 녹화", exact: true }).click();
+  await widget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true }).click();
   await expect(widget.getByText("화면 공유를 시작하지 않았어요")).toBeVisible();
 });
 
@@ -116,7 +120,7 @@ test("마이크를 거부하면 안내 토스트가 뜨고, 이미 받은 화면
   expect(trackStates.every((state) => state === "ended")).toBe(true);
 });
 
-test("크롬의 '공유 중지'로 화면 공유가 끊기면 녹화가 자동으로 끝나고 올라간다", async ({ page }) => {
+test("크롬의 '공유 중지'로 화면 공유가 끊기면 녹화가 자동으로 끝나고 전송 확인을 기다린다", async ({ page }) => {
   await page.addInitScript(() => {
     if (location.pathname.startsWith("/widget")) {
       const original = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
@@ -137,12 +141,13 @@ test("크롬의 '공유 중지'로 화면 공유가 끊기면 녹화가 자동�
     track.stop();
     track.dispatchEvent(new Event("ended"));
   });
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(/화면 녹화 · 0:0[2-9]/)).toBeVisible({ timeout: 60_000 });
   await captureQaScreen(page, "rec-04-share-stopped");
 });
 
 // 실제 3분을 기다리지 않는다. 개발 서버의 /widget은 maxRecordingMs로 한도를 줄일 수 있다(운영에서는 무시, get-max-recording-ms.test.ts).
-test("최대 녹화 시간에 닿으면 자동으로 끝나고 올라간다(개발 서버에서 한도를 5초로 줄여 확인)", async ({ page }) => {
+test("최대 녹화 시간에 닿으면 자동으로 끝나고 전송 확인을 기다린다(개발 서버에서 한도를 5초로 줄여 확인)", async ({ page }) => {
   test.skip(IS_DEPLOYED, "운영 빌드는 ?maxRecordingMs를 무시해서 실제 3분 한도를 기다려야 한다(get-max-recording-ms.ts)");
   const diagnostics = collectDiagnostics(page);
   await page.route(
@@ -160,6 +165,7 @@ test("최대 녹화 시간에 닿으면 자동으로 끝나고 올라간다(개�
   await expect(pill.getByText("/ 0:05")).toBeVisible();
   // 끝내기를 누르지 않는다. 한도에 닿으면 알약이 스스로 사라져야 한다.
   await expect(pill).toHaveCount(0, { timeout: SHORT_MAX_RECORDING_MS + 10_000 });
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   // 업로드 카드("보내는 중")가 서버 녹화 카드로 바뀐 뒤에 DB를 본다.
   await expect(widget.getByText(/보내는 중/)).toHaveCount(0, { timeout: 60_000 });
   await expect(widget.getByText(/화면 녹화 · 0:0[45]/)).toBeVisible();
@@ -182,7 +188,8 @@ test("업로드가 실패하면 다시 보내기 버튼이 뜨고, 다시 보내
   await page.route(STORAGE_UPLOAD_PATTERN, (route) => route.abort("failed"));
   await startRecording(widget);
   await page.waitForTimeout(3_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   const retryButton = widget.getByRole("button", { name: "다시 보내기" });
   await expect(retryButton).toBeVisible({ timeout: 30_000 });
   // 카드 상태와 토스트("녹화를 보내지 못했어요. ‘다시 보내기’를 눌러 주세요")가 둘 다 보인다.
@@ -216,7 +223,8 @@ test("업로드 실패 카드는 '정리하지 못했어요'가 아니라 '보�
   await page.route(STORAGE_UPLOAD_PATTERN, (route) => route.abort("failed"));
   await startRecording(widget);
   await page.waitForTimeout(2_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByRole("button", { name: "다시 보내기" })).toBeVisible({ timeout: 30_000 });
   const statusText = await widget.locator('[data-status="upload_failed"]').textContent();
   console.log(`[qa] upload-failed status copy: ${statusText}`);
@@ -244,7 +252,7 @@ test("녹화 중 새로고침하면 떠나기 전에 확인을 묻고, 떠나면
   expect(dialogs.types).toEqual(["beforeunload"]);
   await page.getByRole("button", { name: /피드백 보내기/ }).click();
   const reloadedWidget = page.frameLocator(WIDGET_FRAME);
-  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeEnabled({ timeout: 20_000 });
   await captureQaScreen(page, "rec-07-refresh-mid-recording");
   expect(await countRecordings(user.id)).toHaveLength(0);
   await expect(reloadedWidget.getByRole("status", { name: "화면 녹화 중" })).toHaveCount(0);
@@ -260,7 +268,8 @@ test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' �
   await page.route(STORAGE_UPLOAD_PATTERN, () => undefined);
   await startRecording(widget);
   await page.waitForTimeout(2_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(/보내는 중/)).toBeVisible({ timeout: 30_000 });
   await captureQaScreen(page, "rec-08-uploading");
   const dialogs = acceptLeaveConfirmation(page);
@@ -268,7 +277,7 @@ test("업로드 중 새로고침하면 확인을 묻고, 버려진 'uploading' �
   expect(dialogs.types).toEqual(["beforeunload"]);
   await page.getByRole("button", { name: /피드백 보내기/ }).click();
   const reloadedWidget = page.frameLocator(WIDGET_FRAME);
-  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화", exact: true })).toBeEnabled({ timeout: 20_000 });
+  await expect(reloadedWidget.getByRole("button", { name: "화면 녹화로 설명하기", exact: true })).toBeEnabled({ timeout: 20_000 });
   await captureQaScreen(page, "rec-08-after-refresh-widget");
   const recordings = await countRecordings(user.id);
   console.log(`[qa] refresh mid-upload recordings: ${JSON.stringify(recordings)}`);
@@ -346,7 +355,8 @@ test("업로드가 끝나지 않은 녹화는 위젯이 받지 못했다고 알�
   await widget.getByRole("button", { name: "다시 녹화하기" }).click();
   await expect(widget.getByRole("status", { name: "화면 녹화 중" })).toBeVisible({ timeout: 10_000 });
   await page.waitForTimeout(2_000);
-  await widget.getByRole("button", { name: "끝내고 보내기" }).click();
+  await widget.getByRole("button", { name: "녹화 끝내기" }).click();
+  await widget.getByRole("button", { name: "전송 확인", exact: true }).click();
   await expect(widget.getByText(SERVER_RECORDING_STATUS)).toBeVisible({ timeout: 60_000 });
   // 새 녹화가 가장 최근이 되면 옛 카드의 다시 녹화하기는 거둔다.
   await expect(widget.getByRole("button", { name: "다시 녹화하기" })).toHaveCount(0);

@@ -52,6 +52,19 @@ function MessageContent({ message, isRecordingSelected, isReverifyRecording, onS
   if (message.type === "clarification" && message.clarification) {
     return <ClarificationSummary card={message.clarification} />;
   }
+  if (message.type === "capture") {
+    return (
+      <div className={styles.bubble}>
+        {message.captureUrl ? (
+          <a href={message.captureUrl} target="_blank" rel="noreferrer" aria-label="첨부된 화면 캡처 크게 보기 (새 탭)">
+            {/* eslint-disable-next-line @next/next/no-img-element -- 비공개 파일의 서명 URL을 브라우저에서 바로 사용한다. */}
+            <img className={styles.captureImage} src={message.captureUrl} alt="고객이 첨부한 화면 캡처" />
+          </a>
+        ) : <span>캡처 이미지를 불러오지 못했어요.</span>}
+        {message.body ? <p className={styles.captureCaption}>{message.body}</p> : null}
+      </div>
+    );
+  }
   return <p className={styles.bubble}>{message.body}</p>;
 }
 

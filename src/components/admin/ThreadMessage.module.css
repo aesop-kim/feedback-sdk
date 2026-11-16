@@ -181,3 +181,15 @@
 .clarificationWaiting {
   color: var(--grey-600);
 }
+
+.captureImage {
+  display: block;
+  max-width: 100%;
+  max-height: 288px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.captureCaption {
+  margin: 8px 0 0;
+}

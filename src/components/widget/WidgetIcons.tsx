@@ -38,6 +38,15 @@ export function ScreenIcon(props: IconProps) {
   );
 }
 
+export function CaptureIcon(props: IconProps) {
+  return (
+    <IconFrame {...props}>
+      <path d="M8 4H4v4m12-4h4v4m0 8v4h-4m-8 0H4v-4" />
+      <rect x="8" y="8" width="8" height="8" rx="1" />
+    </IconFrame>
+  );
+}
+
 export function ScreenMicIcon(props: IconProps) {
   return (
     <IconFrame {...props}>

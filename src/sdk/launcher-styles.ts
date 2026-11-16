@@ -117,3 +117,58 @@ export const LAUNCHER_STYLES = `
 export const LAUNCHER_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5h10a3.5 3.5 0 0 1 3.5 3.5v6a3.5 3.5 0 0 1-3.5 3.5h-5l-3.5 3v-3H7A3.5 3.5 0 0 1 3.5 14V8A3.5 3.5 0 0 1 7 4.5Z"/><path d="M9 10v2M12 8.5v5M15 10v2"/></svg>`;
 
 export const CLOSE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`;
+
+export const CAPTURE_STYLES = `
+.capture-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.capture-dialog::backdrop { background: transparent; }
+.capture-selection {
+  position: absolute;
+  border: 2px solid #4695ff;
+  box-shadow: 0 0 0 200vmax rgba(0, 20, 45, 0.46);
+  pointer-events: none;
+}
+.capture-controls {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fff;
+  color: #172b4d;
+  font: 14px/1.4 system-ui, sans-serif;
+  cursor: default;
+}
+.capture-controls p { margin: 4px 0 8px; }
+.capture-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.capture-actions button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #385980;
+  border-radius: 8px;
+  background: #fff;
+  color: #172b4d;
+  font: inherit;
+  cursor: pointer;
+}
+.capture-actions button[data-select] { background: #1957c2; color: #fff; }
+.capture-actions button:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
+.capture-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+`;

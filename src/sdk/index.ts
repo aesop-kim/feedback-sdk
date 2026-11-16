@@ -7,13 +7,16 @@ import {
   type WidgetToHostMessage,
 } from "@/sdk/bridge-protocol";
 import { RRWEB_BLOCK_CLASS, createDomRecorder } from "@/sdk/dom-recorder";
-import { CLOSE_ICON, LAUNCHER_ICON, LAUNCHER_STYLES } from "@/sdk/launcher-styles";
+import { CAPTURE_STYLES, CLOSE_ICON, LAUNCHER_ICON, LAUNCHER_STYLES } from "@/sdk/launcher-styles";
+import { readCaptureRegionText } from "@/sdk/capture-region-text";
+import { selectRegion } from "@/sdk/select-region";
 import type { EndUserInput } from "@/types/feedback";
 
 const SDK_ORIGIN = process.env.NEXT_PUBLIC_SDK_ORIGIN ?? "http://localhost:3000";
 const ROOT_ELEMENT_ID = "lattice-feedback-root";
 const FRAME_ELEMENT_ID = "lattice-feedback-frame";
 const MAX_BADGE_COUNT = 99;
+const CAPTURE_RENDER_TIMEOUT_MS = 15_000;
 
 type FeedbackInitOptions = { projectKey: string; user: EndUserInput };
 
@@ -36,7 +39,7 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   const shadowRoot = host.attachShadow({ mode: "open" });
 
   const style = document.createElement("style");
-  style.textContent = LAUNCHER_STYLES;
+  style.textContent = LAUNCHER_STYLES + CAPTURE_STYLES;
 
   const launcher = document.createElement("button");
   launcher.type = "button";
@@ -70,6 +73,8 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
 
   let mode: WidgetDisplayMode = "closed";
   let isWidgetBusy = false;
+  let activeCapture: AbortController | null = null;
+  const canCaptureRegion = typeof HTMLDialogElement !== "undefined" && typeof HTMLDialogElement.prototype.showModal === "function";
 
   // 녹화·업로드 중에 새로고침하거나 탭을 닫으면 브라우저 확인 창을 띄운다(녹화가 조용히 사라지지 않게).
   window.addEventListener("beforeunload", (event) => {
@@ -112,6 +117,63 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
     postToWidget({ type: "host:visibility", payload: { open: isOpen } });
   };
 
+  async function captureRegion(requestId: string) {
+    if (!canCaptureRegion || mode !== "open" || activeCapture || domRecorder.isRecording()) {
+      postToWidget({ type: "capture:ended", payload: { requestId, reason: "failed" } });
+      return;
+    }
+
+    const controller = new AbortController();
+    activeCapture = controller;
+    applyMode("closed");
+    launcher.dataset.hidden = "true";
+    let didRestoreWidget = false;
+    try {
+      const region = await selectRegion(shadowRoot, controller.signal);
+      if (!region) {
+        postToWidget({ type: "capture:ended", payload: { requestId, reason: "cancelled" } });
+        return;
+      }
+      if (controller.signal.aborted) {
+        return;
+      }
+      const { scrollX, scrollY } = window;
+      const labels = readCaptureRegionText(region);
+      setOpen(true);
+      didRestoreWidget = true;
+      const rendererUrl = new URL("/sdk-capture-v1.js", SDK_ORIGIN).href;
+      const render = async () => {
+        const { renderRegion } = (await import(rendererUrl)) as typeof import("@/sdk/render-region");
+        return renderRegion(region, scrollX, scrollY);
+      };
+      let timer: number | undefined;
+      try {
+        const image = await Promise.race([
+          render(),
+          new Promise<never>((_, reject) => {
+            timer = window.setTimeout(() => reject(new Error("Capture timed out")), CAPTURE_RENDER_TIMEOUT_MS);
+          }),
+        ]);
+        if (!controller.signal.aborted) {
+          postToWidget({ type: "capture:result", payload: { requestId, image, labels } });
+        }
+      } finally {
+        window.clearTimeout(timer);
+      }
+    } catch {
+      if (!controller.signal.aborted) {
+        postToWidget({ type: "capture:ended", payload: { requestId, reason: "failed" } });
+      }
+    } finally {
+      if (activeCapture === controller) {
+        activeCapture = null;
+        if (!didRestoreWidget) {
+          setOpen(true);
+        }
+      }
+    }
+  }
+
   launcher.addEventListener("click", () => setOpen(mode !== "open"));
 
   // 위젯 바깥(고객사 페이지)에 포커스가 있을 때도 Escape로 닫는다.
@@ -125,9 +187,14 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
   const handleWidgetMessage = (message: WidgetToHostMessage) => {
     switch (message.type) {
       case "widget:ready":
+        if (activeCapture) {
+          activeCapture.abort();
+          activeCapture = null;
+          applyMode("open");
+        }
         postToWidget({
           type: "host:init",
-          payload: { projectKey, user, page: { url: location.href, title: document.title } },
+          payload: { projectKey, user, page: { url: location.href, title: document.title }, canCaptureRegion },
         });
         postToWidget({ type: "host:visibility", payload: { open: mode === "open" } });
         return;
@@ -146,6 +213,11 @@ function mountWidget({ projectKey, user }: FeedbackInitOptions): void {
         return;
       case "widget:warning":
         iframe.dataset.warning = String(message.payload.isVisible);
+        return;
+      case "capture:request":
+        if (typeof message.payload?.requestId === "string" && message.payload.requestId.length === 36) {
+          void captureRegion(message.payload.requestId);
+        }
         return;
       case "recording:start":
         domRecorder.start();

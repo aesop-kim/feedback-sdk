@@ -29,6 +29,8 @@ type MessageRow = {
   created_at: string;
   recording_id: string | null;
   clarification_card_id: string | null;
+  capture_path: string | null;
+  capture_device_hash: string | null;
 };
 
 type RecordingRow = {
@@ -134,11 +136,15 @@ function toRecordingSummary(row: RecordingRow, issueCount: number, reverifyIssue
 }
 
 // 위젯과 관리자 양쪽에서 쓰는 대화 메시지 목록. 위젯은 승인된 질문 카드만 본다.
-export async function getConversationMessages(conversationId: string, audience: "widget" | "admin"): Promise<ChatMessage[]> {
+export async function getConversationMessages(
+  conversationId: string,
+  audience: "widget" | "admin",
+  captureDeviceHash: string | null = null,
+): Promise<ChatMessage[]> {
   const supabase = getServerSupabase();
   const { data: messageRows } = await supabase
     .from("messages")
-    .select("id, sender, type, body, created_at, recording_id, clarification_card_id")
+    .select("id, sender, type, body, created_at, recording_id, clarification_card_id, capture_path, capture_device_hash")
     .eq("conversation_id", conversationId)
     .order("created_at");
   const messages = (messageRows ?? []) as MessageRow[];
@@ -161,7 +167,13 @@ export async function getConversationMessages(conversationId: string, audience: 
     ? await supabase.from("issues").select("id, quote, frame_path").in("id", cards.map((card) => card.issue_id))
     : { data: [] };
   const cardIssues = new Map((cardIssueRows ?? []).map((row) => [row.id as string, row as Pick<IssueRow, "quote" | "frame_path">]));
-  const signedUrls = await createSignedUrlMap([...cardIssues.values()].map((issue) => issue.frame_path));
+  // 위젯 대화 토큰과 별개로, 이미지를 보낸 브라우저의 키가 일치할 때만 캡처를 서명한다.
+  const capturePaths = new Map(
+    messages
+      .filter((message) => audience === "admin" || (captureDeviceHash && message.capture_device_hash === captureDeviceHash))
+      .map((message) => [message.id, message.capture_path]),
+  );
+  const signedUrls = await createSignedUrlMap([...capturePaths.values(), ...[...cardIssues.values()].map((issue) => issue.frame_path)]);
 
   const recordings = new Map(((recordingRows ?? []) as RecordingRow[]).map((row) => [row.id, row]));
   // 재확인 녹화는 위젯 카드에 원래 이슈 제목을 붙인다.
@@ -194,6 +206,9 @@ export async function getConversationMessages(conversationId: string, audience: 
             )
           : null,
         clarification: cardRow ? toClarificationCard(cardRow, cardIssues.get(cardRow.issue_id), answers, signedUrls) : null,
+        ...(message.type === "capture" && capturePaths.has(message.id)
+          ? { captureUrl: signedUrls.get(capturePaths.get(message.id) ?? "") ?? null }
+          : {}),
       };
     })
     .filter((message) => audience === "admin" || message.type !== "clarification" || message.clarification?.approvedAt);

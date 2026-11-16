@@ -87,6 +87,20 @@ function MessageContent({ message, showSenderName, onAnswer, onRerecord }: Messa
       />
     );
   }
+  if (message.type === "capture" && message.captureUrl) {
+    return (
+      <div className={styles.capture}>
+        <a href={message.captureUrl} target="_blank" rel="noreferrer" aria-label="보낸 화면 캡처 크게 보기 (새 탭)">
+          {/* eslint-disable-next-line @next/next/no-img-element -- 비공개 이미지의 서명 URL을 브라우저에서 직접 읽는다. */}
+          <img src={message.captureUrl} alt="보낸 화면 캡처" referrerPolicy="no-referrer" />
+        </a>
+        {message.body ? <MessageBubble sender={message.sender} body={message.body} showSenderName={showSenderName} /> : null}
+      </div>
+    );
+  }
+  if (message.type === "capture") {
+    return <MessageBubble sender={message.sender} body={message.body ? `화면 캡처 첨부\n${message.body}` : "화면 캡처 첨부"} showSenderName={showSenderName} />;
+  }
   return <MessageBubble sender={message.sender} body={message.body} showSenderName={showSenderName} />;
 }
 
