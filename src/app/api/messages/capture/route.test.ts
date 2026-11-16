@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CAPTURE_MIME_TYPE, MAX_CAPTURE_BYTES } from "@/sdk/capture-image";
 
@@ -18,16 +19,21 @@ vi.mock("@/lib/realtime/send-signal", () => ({ sendConversationSignal: signal })
 const { POST } = await import("@/app/api/messages/capture/route");
 
 const MESSAGE_ID = "fd07d458-f4f6-43c9-835f-b6399fada8c7";
+const CAPTURE_DEVICE_KEY = "3455472d-ba52-45ca-8a3f-19cd59c8d722";
 const SOF = [0xff, 0xc0, 0, 11, 8, 0, 16, 0, 32, 1, 1, 0x11, 0];
 const JPEG_HEADERS = new Uint8Array([0xff, 0xd8, ...SOF, 0xff, 0xd9]);
 
-function postCapture(bytes = JPEG_HEADERS, mimeType = CAPTURE_MIME_TYPE, caption = "  ") {
+function postCapture(bytes = JPEG_HEADERS, mimeType = CAPTURE_MIME_TYPE, caption = "  ", deviceKey?: string) {
   const form = new FormData();
   form.set("messageId", MESSAGE_ID);
   form.set("body", caption);
   form.set("conversationId", "another-conversation");
   form.set("image", new Blob([bytes], { type: mimeType }), "capture.jpg");
-  return POST(new Request("https://example.test/api/messages/capture", { method: "POST", body: form }));
+  return POST(new Request("https://example.test/api/messages/capture", {
+    method: "POST",
+    body: form,
+    headers: deviceKey ? { "x-capture-device": deviceKey } : {},
+  }));
 }
 
 describe("POST /api/messages/capture", () => {
@@ -76,9 +82,16 @@ describe("POST /api/messages/capture", () => {
     expect(bucket).toHaveBeenCalledWith("recordings");
     expect(path).toMatch(new RegExp(`^captures/owned/${MESSAGE_ID}-[a-f0-9]{64}\\.jpg$`));
     expect(rpc).toHaveBeenCalledWith("insert_capture_message", {
-      p_id: MESSAGE_ID, p_conversation_id: "owned", p_body: null, p_path: path,
+      p_id: MESSAGE_ID, p_conversation_id: "owned", p_body: null, p_path: path, p_device_hash: null,
     });
     expect(signal).toHaveBeenCalledWith("owned", "project", { type: "message.created", id: MESSAGE_ID });
+  });
+
+  it("브라우저의 첨부 열람 키는 해시만 저장한다", async () => {
+    expect((await postCapture(JPEG_HEADERS, CAPTURE_MIME_TYPE, "설명", CAPTURE_DEVICE_KEY)).status).toBe(201);
+    expect(rpc.mock.calls[0][1]).toMatchObject({
+      p_device_hash: createHash("sha256").update(CAPTURE_DEVICE_KEY).digest("hex"),
+    });
   });
 
   it("업로드 오류가 나면 대화에 메시지를 만들지 않는다", async () => {

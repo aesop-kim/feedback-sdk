@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { readCaptureDeviceHash } from "@/lib/auth/capture-device";
 import { findAuthorizedConversation } from "@/lib/auth/request-auth";
 import { respondError, respondJson, respondUnauthorized } from "@/lib/http/api-response";
 import { sendConversationSignal } from "@/lib/realtime/send-signal";
@@ -109,6 +110,7 @@ export async function POST(request: Request) {
     p_conversation_id: conversation.conversationId,
     p_body: body || null,
     p_path: path,
+    p_device_hash: readCaptureDeviceHash(request),
   });
   if (error) {
     return respondError(500, "캡처 메시지를 저장하지 못했어요. 다시 보내 주세요.");

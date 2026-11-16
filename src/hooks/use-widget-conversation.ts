@@ -44,14 +44,18 @@ export function isAlreadyAnsweredError(error: unknown): boolean {
 
 async function requestWidgetApi<TResponse>(path: string, init: RequestInit & { token?: string }): Promise<TResponse> {
   const { token, ...requestInit } = init;
+  const headers = new Headers(requestInit.headers);
+  if (!(requestInit.body instanceof FormData)) {
+    headers.set("content-type", "application/json");
+  }
+  if (token) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
   let response: Response;
   try {
     response = await fetch(path, {
       ...requestInit,
-      headers: {
-        ...(requestInit.body instanceof FormData ? {} : { "content-type": "application/json" }),
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
+      headers,
     });
   } catch {
     throw new WidgetApiError(NETWORK_ERROR_MESSAGE, 0);
@@ -96,8 +100,34 @@ function storeSession(key: string, session: WidgetSession): void {
 // reverifyRequest: 열린 재확인 요청(없으면 null). 이 필드를 모르는 서버면 undefined로 남긴다.
 type MessagesResponse = { messages: ChatMessage[]; reverifyRequest?: ReverifyRequest | null };
 
-async function getMessages(token: string): Promise<MessagesResponse> {
-  return requestWidgetApi<MessagesResponse>("/api/messages", { method: "GET", token });
+const captureDeviceKeys = new Map<string, string>();
+
+function captureDeviceHeaders(conversationId: string, create = false): HeadersInit {
+  const storageKey = `lattice-feedback:capture-device:${conversationId}`;
+  let key = captureDeviceKeys.get(conversationId);
+  try {
+    key = window.localStorage.getItem(storageKey) ?? key;
+  } catch {
+    // 저장소를 사용할 수 없으면 현재 위젯이 열려 있는 동안 키를 보관한다.
+  }
+  if (!key && create) {
+    key = crypto.randomUUID();
+    captureDeviceKeys.set(conversationId, key);
+    try {
+      window.localStorage.setItem(storageKey, key);
+    } catch {
+      // 현재 위젯에서는 메모리에 보관한 키를 사용한다.
+    }
+  }
+  return key ? { "x-capture-device": key } : {};
+}
+
+async function getMessages(session: WidgetSession): Promise<MessagesResponse> {
+  return requestWidgetApi<MessagesResponse>("/api/messages", {
+    method: "GET",
+    token: session.conversationToken,
+    headers: captureDeviceHeaders(session.conversationId),
+  });
 }
 
 async function startSession(
@@ -108,7 +138,7 @@ async function startSession(
   const storedSession = findStoredSession(storageKey);
   if (storedSession) {
     try {
-      return { session: storedSession, response: await getMessages(storedSession.conversationToken) };
+      return { session: storedSession, response: await getMessages(storedSession) };
     } catch {
       // 토큰이 만료됐거나 대화가 사라졌으면 아래에서 새로 연결한다.
     }
@@ -118,7 +148,7 @@ async function startSession(
     body: JSON.stringify({ projectKey: init.projectKey, hostOrigin, user: init.user }),
   });
   storeSession(storageKey, session);
-  return { session, response: await getMessages(session.conversationToken) };
+  return { session, response: await getMessages(session) };
 }
 
 type UseWidgetConversationInput = {
@@ -236,7 +266,7 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
       return;
     }
     try {
-      applyMessages(await getMessages(session.conversationToken));
+      applyMessages(await getMessages(session));
     } catch {
       // 다음 신호나 주기 재조회에서 다시 가져온다.
     }
@@ -266,7 +296,12 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
       form.set("messageId", messageId);
       form.set("body", body);
       form.set("image", image, "capture.jpg");
-      await requestWidgetApi("/api/messages/capture", { method: "POST", body: form, token: session.conversationToken });
+      await requestWidgetApi("/api/messages/capture", {
+        method: "POST",
+        body: form,
+        token: session.conversationToken,
+        headers: captureDeviceHeaders(session.conversationId, true),
+      });
       await refetch();
     },
     [session, refetch],
