@@ -16,6 +16,7 @@ import {
   type HostInit,
 } from "@/hooks/use-widget-conversation";
 import { MICROPHONE_SILENT_MESSAGE, useWidgetRecording } from "@/hooks/use-widget-recording";
+import { CAPTURE_MIME_TYPE, MAX_CAPTURE_BYTES } from "@/sdk/capture-image";
 import type { HostToWidgetMessage } from "@/sdk/bridge-protocol";
 import styles from "@/components/widget/WidgetApp.module.css";
 
@@ -24,6 +25,8 @@ const TOAST_DURATION_MS = 3_000;
 const LONG_TOAST_DURATION_MS = 5_000;
 const LONG_TOAST_LENGTH = 25;
 const SEND_FAILED_MESSAGE = "메시지를 보내지 못했어요. 말풍선 아래 ‘다시 보내기’를 눌러 주세요";
+const CAPTURE_FAILED_MESSAGE = "화면을 캡처하지 못했어요. 영역을 다시 선택해 주세요.";
+const CAPTURE_SEND_FAILED_MESSAGE = "캡처를 보내지 못했어요. 잠시 후 다시 보내 주세요.";
 const ALREADY_ANSWERED_MESSAGE = "이미 답한 질문이에요";
 const LOAD_FAILED_DESCRIPTION = "연결이 잠깐 끊겼어요. 다시 불러와 볼게요";
 
@@ -43,6 +46,12 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [pendingTexts, setPendingTexts] = useState<PendingText[]>([]);
+  const [capture, setCapture] = useState<{ image: Blob; url: string } | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const captureRequestRef = useRef<string | null>(null);
+  const captureSendRef = useRef<{ image: Blob; body: string; messageId: string } | null>(null);
+  const isSendingCaptureRef = useRef(false);
+  const isStartingRecordingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const recordingMessageHandlerRef = useRef<(message: HostToWidgetMessage) => void>(() => undefined);
@@ -73,11 +82,33 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             requestAnimationFrame(() => composerInputRef.current?.focus());
           }
           return;
+        case "capture:result":
+        case "capture:ended": {
+          if (!captureRequestRef.current || message.payload?.requestId !== captureRequestRef.current) {
+            return;
+          }
+          captureRequestRef.current = null;
+          setIsCapturing(false);
+          if (message.type === "capture:ended") {
+            if (message.payload.reason !== "cancelled") {
+              showToast(CAPTURE_FAILED_MESSAGE);
+            }
+            return;
+          }
+          const { image } = message.payload;
+          if (!(image instanceof Blob) || image.type !== CAPTURE_MIME_TYPE || !image.size || image.size > MAX_CAPTURE_BYTES) {
+            showToast(CAPTURE_FAILED_MESSAGE);
+            return;
+          }
+          captureSendRef.current = null;
+          setCapture({ image, url: URL.createObjectURL(image) });
+          return;
+        }
         default:
           recordingMessageHandlerRef.current(message);
       }
     },
-    [projectKey],
+    [projectKey, showToast],
   );
 
   const { post } = useWidgetBridge(handleHostMessage);
@@ -115,6 +146,12 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
     },
     [],
   );
+
+  useEffect(() => () => {
+    if (capture) {
+      URL.revokeObjectURL(capture.url);
+    }
+  }, [capture]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -174,12 +211,51 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
     }
   };
 
-  const handleStartRecording = () => {
-    void recording.startRecording();
+  const startRecording = (issueId?: string | null) => {
+    if (captureRequestRef.current || isSendingCaptureRef.current || isStartingRecordingRef.current) {
+      return;
+    }
+    isStartingRecordingRef.current = true;
+    void recording.startRecording({ reverifyIssueId: issueId }).finally(() => {
+      isStartingRecordingRef.current = false;
+    });
+  };
+  const handleStartRecording = () => startRecording();
+
+  const handleStartCapture = () => {
+    if (captureRequestRef.current || isStartingRecordingRef.current || !isRecordingIdle) {
+      return;
+    }
+    const requestId = crypto.randomUUID();
+    captureRequestRef.current = requestId;
+    setIsCapturing(true);
+    post({ type: "capture:request", payload: { requestId } });
   };
 
-  const handleStartReverify = (issueId: string | null) => {
-    void recording.startRecording({ reverifyIssueId: issueId });
+  const removeCapture = () => {
+    captureSendRef.current = null;
+    setCapture(null);
+  };
+
+  const handleSendCapture = async (body: string) => {
+    if (!capture || isStartingRecordingRef.current || captureRequestRef.current) {
+      return false;
+    }
+    const { image } = capture;
+    const previous = captureSendRef.current;
+    const messageId = previous?.image === image && previous.body === body ? previous.messageId : crypto.randomUUID();
+    captureSendRef.current = { image, body, messageId };
+    isSendingCaptureRef.current = true;
+    try {
+      await conversation.sendCapture(messageId, body, image);
+      removeCapture();
+      return true;
+    } catch {
+      showToast(CAPTURE_SEND_FAILED_MESSAGE);
+      return false;
+    } finally {
+      isSendingCaptureRef.current = false;
+    }
   };
 
   if (recording.phase !== "idle") {
@@ -228,7 +304,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
             pendingUpload={recording.pendingUpload}
             onAnswer={handleAnswer}
             onRetryText={handleRetryText}
-            onStartReverify={handleStartReverify}
+            onStartReverify={startRecording}
             onRetryUpload={recording.retryUpload}
             onStartRecording={handleStartRecording}
           />
@@ -236,10 +312,15 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
       </div>
       <div className={styles.footer}>
         <WidgetToast message={toastMessage} />
+        {isCapturing ? <p className={styles.captureStatus} role="status">캡처 이미지를 준비하고 있어요.</p> : null}
         <WidgetComposer
           onSend={handleSendText}
+          onSendCapture={handleSendCapture}
+          onStartCapture={init?.canCaptureRegion && typeof crypto.randomUUID === "function" ? handleStartCapture : undefined}
+          onRemoveCapture={removeCapture}
+          capturePreview={capture?.url ?? null}
           onStartRecording={handleStartRecording}
-          isDisabled={!isReady}
+          isDisabled={!isReady || isCapturing}
           inputRef={composerInputRef}
         />
       </div>

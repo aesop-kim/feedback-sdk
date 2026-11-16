@@ -8,9 +8,11 @@ export type WidgetDisplayMode = "closed" | "open" | "recording";
 export type HostToWidgetMessage =
   | {
       type: "host:init";
-      payload: { projectKey: string; user: EndUserInput; page: { url: string; title: string } };
+      payload: { projectKey: string; user: EndUserInput; page: { url: string; title: string }; canCaptureRegion?: boolean };
     }
   | { type: "host:visibility"; payload: { open: boolean } }
+  | { type: "capture:result"; payload: { requestId: string; image: Blob } }
+  | { type: "capture:ended"; payload: { requestId: string; reason: "cancelled" | "failed" } }
   | { type: "dom:events"; payload: { events: unknown[] } }
   | { type: "dom:click"; payload: { epochMs: number; context: ElementContext | null } }
   | { type: "dom:context"; payload: { epochMs: number; context: ElementContext } }
@@ -22,6 +24,7 @@ export type WidgetToHostMessage =
   | { type: "widget:unread"; payload: { count: number } }
   | { type: "widget:busy"; payload: { isBusy: boolean } }
   | { type: "widget:warning"; payload: { isVisible: boolean } }
+  | { type: "capture:request"; payload: { requestId: string } }
   | { type: "recording:start"; payload: { t0: number } }
   | { type: "recording:stop"; payload: Record<string, never> };
 

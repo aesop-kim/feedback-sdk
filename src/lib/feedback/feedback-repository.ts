@@ -29,6 +29,7 @@ type MessageRow = {
   created_at: string;
   recording_id: string | null;
   clarification_card_id: string | null;
+  capture_path: string | null;
 };
 
 type RecordingRow = {
@@ -138,7 +139,7 @@ export async function getConversationMessages(conversationId: string, audience: 
   const supabase = getServerSupabase();
   const { data: messageRows } = await supabase
     .from("messages")
-    .select("id, sender, type, body, created_at, recording_id, clarification_card_id")
+    .select("id, sender, type, body, created_at, recording_id, clarification_card_id, capture_path")
     .eq("conversation_id", conversationId)
     .order("created_at");
   const messages = (messageRows ?? []) as MessageRow[];
@@ -161,7 +162,9 @@ export async function getConversationMessages(conversationId: string, audience: 
     ? await supabase.from("issues").select("id, quote, frame_path").in("id", cards.map((card) => card.issue_id))
     : { data: [] };
   const cardIssues = new Map((cardIssueRows ?? []).map((row) => [row.id as string, row as Pick<IssueRow, "quote" | "frame_path">]));
-  const signedUrls = await createSignedUrlMap([...cardIssues.values()].map((issue) => issue.frame_path));
+  // 고객 식별자는 SDK 호출자가 전달하므로 저장된 캡처 파일의 열람 링크는 관리자에게만 발급한다.
+  const capturePaths = audience === "admin" ? messages.map((message) => message.capture_path) : [];
+  const signedUrls = await createSignedUrlMap([...capturePaths, ...[...cardIssues.values()].map((issue) => issue.frame_path)]);
 
   const recordings = new Map(((recordingRows ?? []) as RecordingRow[]).map((row) => [row.id, row]));
   // 재확인 녹화는 위젯 카드에 원래 이슈 제목을 붙인다.
@@ -194,6 +197,9 @@ export async function getConversationMessages(conversationId: string, audience: 
             )
           : null,
         clarification: cardRow ? toClarificationCard(cardRow, cardIssues.get(cardRow.issue_id), answers, signedUrls) : null,
+        ...(audience === "admin" && message.type === "capture"
+          ? { captureUrl: signedUrls.get(message.capture_path ?? "") ?? null }
+          : {}),
       };
     })
     .filter((message) => audience === "admin" || message.type !== "clarification" || message.clarification?.approvedAt);

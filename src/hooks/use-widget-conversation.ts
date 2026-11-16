@@ -48,7 +48,10 @@ async function requestWidgetApi<TResponse>(path: string, init: RequestInit & { t
   try {
     response = await fetch(path, {
       ...requestInit,
-      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      headers: {
+        ...(requestInit.body instanceof FormData ? {} : { "content-type": "application/json" }),
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
     });
   } catch {
     throw new WidgetApiError(NETWORK_ERROR_MESSAGE, 0);
@@ -254,6 +257,21 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
     [session, refetch],
   );
 
+  const sendCapture = useCallback(
+    async (messageId: string, body: string, image: Blob) => {
+      if (!session) {
+        throw new WidgetApiError(NETWORK_ERROR_MESSAGE, 0);
+      }
+      const form = new FormData();
+      form.set("messageId", messageId);
+      form.set("body", body);
+      form.set("image", image, "capture.jpg");
+      await requestWidgetApi("/api/messages/capture", { method: "POST", body: form, token: session.conversationToken });
+      await refetch();
+    },
+    [session, refetch],
+  );
+
   const answerClarification = useCallback(
     async (cardId: string, answer: { optionId?: string; text?: string }) => {
       if (!session) {
@@ -277,5 +295,5 @@ export function useWidgetConversation({ init, hostOrigin, isOpen, onUnreadChange
     [session, refetch],
   );
 
-  return { status, errorMessage, session, messages, reverifyRequest, refetch, reload, sendText, answerClarification };
+  return { status, errorMessage, session, messages, reverifyRequest, refetch, reload, sendText, sendCapture, answerClarification };
 }

@@ -43,6 +43,7 @@ next-env.d.ts
 # local env & artifacts
 .env*.local
 /public/sdk.js
+/public/sdk-capture-v1.js
 /playwright-report/
 /test-results/
 /.worker-tmp/

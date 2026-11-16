@@ -1,7 +1,7 @@
 # 래티스 피드백 SDK — 말로 하는 QA
 
 래티스 × NEXT 15기 기업 과제. 운영 중인 서비스에 스크립트 한 줄로 붙는 **피드백 채팅 SDK**예요.
-고객은 채팅하거나, **화면을 녹화하며 말로** 문제를 설명해요. 로컬 분석 워커가 말한 내용·가리킨 요소·그 순간의 장면을 묶어 **이슈 카드**로 정리하고, 애매한 건 관리자가 승인하면 고객 위젯에 **그 장면 위 객관식 질문**으로 되물어요.
+고객은 채팅에 **선택한 화면 영역을 첨부**하거나, **화면을 녹화하며 말로** 문제를 설명해요. 로컬 분석 워커가 말한 내용·가리킨 요소·그 순간의 장면을 묶어 **이슈 카드**로 정리하고, 애매한 건 관리자가 승인하면 고객 위젯에 **그 장면 위 객관식 질문**으로 되물어요.
 
 | 래티스가 겪던 문제 | 이 SDK의 답 |
 |---|---|
@@ -52,6 +52,12 @@ npm run worker                        # 로컬 분석 워커
 <script>Feedback.init({ projectKey: 'lattice-demo', user: window.DEMO_USER });</script>
 ```
 
+### 채팅에 화면 영역 첨부
+
+위젯에서 **영역 캡처**를 누르고 드래그하거나 방향키와 Enter로 두 모서리를 지정해요. 미리보기를 확인하고 선택적으로 설명을 붙여 보내면 관리자 대화에 이미지가 표시돼요. 위젯의 전송 기록에는 첨부 표시와 설명이 남아요.
+
+캡처는 고객사 페이지에 보이는 DOM으로 이미지를 만들어요. 비밀번호 입력란, 중첩 iframe, `rr-block`, `data-feedback-capture-ignore`가 붙은 요소는 제외해요. 고객사에서 가려야 할 영역에는 `data-feedback-capture-ignore`를 추가해 주세요.
+
 ### 환경 변수 (`.env.local`)
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SDK_ORIGIN`, `WIDGET_TOKEN_SECRET`, `ADMIN_SESSION_SECRET`, `ADMIN_PASSWORD`
 
@@ -76,6 +82,7 @@ E2E는 데모 페이지에서 실제로 녹화(대본대로 버튼 클릭·오�
 ## 배포
 
 - SDK 앱: Vercel 새 프로젝트 → 환경 변수 등록(`NEXT_PUBLIC_SDK_ORIGIN`은 배포 주소) → Supabase 클라우드 프로젝트에 `supabase db push`, `projects.allowed_origins`에 데모 페이지 주소 추가.
+- 영역 캡처를 배포하기 전에 `20261116000000_capture_messages.sql` 마이그레이션을 적용해 주세요.
 - 데모 페이지: `aesop-kim/feedback-sdk-demo-page`를 별도 Vercel 프로젝트로 배포하고 `sdk.js` 주소만 바꿔요.
 - 분석 워커는 Claude Code 구독을 쓰는 로컬 프로세스라 배포 대상이 아니에요. 같은 Supabase를 바라보게 `.env.local`만 맞추면 배포된 위젯의 녹화도 처리해요.
 

@@ -28,6 +28,17 @@ async function reportSize() {
   return gzipBytes;
 }
 
+const captureOptions = {
+  entryPoints: [`${PROJECT_ROOT}src/sdk/render-region.ts`],
+  outfile: `${PROJECT_ROOT}public/sdk-capture-v1.js`,
+  bundle: true,
+  format: "esm",
+  minify: true,
+  target: "es2020",
+  legalComments: "eof",
+  tsconfig: `${PROJECT_ROOT}tsconfig.json`,
+};
+
 const reportPlugin = {
   name: "report-size",
   setup(build) {
@@ -54,11 +65,14 @@ const buildOptions = {
 };
 
 if (isWatchMode) {
-  const context = await esbuild.context({ ...buildOptions, plugins: [reportPlugin] });
-  await context.watch();
+  const contexts = await Promise.all([
+    esbuild.context({ ...buildOptions, plugins: [reportPlugin] }),
+    esbuild.context(captureOptions),
+  ]);
+  await Promise.all(contexts.map((context) => context.watch()));
   console.log("[sdk] 변경을 지켜보고 있어요");
 } else {
-  await esbuild.build(buildOptions);
+  await Promise.all([esbuild.build(buildOptions), esbuild.build(captureOptions)]);
   const gzipBytes = await reportSize();
   if (gzipBytes > GZIP_BUDGET_BYTES) {
     process.exitCode = 1;

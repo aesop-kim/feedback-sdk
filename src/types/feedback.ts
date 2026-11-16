@@ -1,7 +1,7 @@
 // 위젯·관리자·워커가 함께 쓰는 데이터 모양(API 응답 기준, camelCase).
 
 export type MessageSender = "user" | "admin" | "system";
-export type MessageType = "text" | "recording" | "clarification" | "system";
+export type MessageType = "text" | "recording" | "clarification" | "system" | "capture";
 export type RecordingStatus = "uploading" | "uploaded" | "analyzing" | "analyzed" | "failed";
 export type IssueConfidence = "clear" | "ambiguous";
 // resolved: 고쳤고 고객에게 재확인을 부탁한 중. reverify: 고객이 재확인 녹화를 보냄. closed: 확인까지 끝나 닫음.
@@ -56,6 +56,7 @@ export type ChatMessage = {
   createdAt: string;
   recording: RecordingSummary | null;
   clarification: ClarificationCard | null;
+  captureUrl?: string | null;
 };
 
 export type Issue = {

@@ -87,6 +87,9 @@ function MessageContent({ message, showSenderName, onAnswer, onRerecord }: Messa
       />
     );
   }
+  if (message.type === "capture") {
+    return <MessageBubble sender={message.sender} body={message.body ? `화면 캡처 첨부\n${message.body}` : "화면 캡처 첨부"} showSenderName={showSenderName} />;
+  }
   return <MessageBubble sender={message.sender} body={message.body} showSenderName={showSenderName} />;
 }
 
