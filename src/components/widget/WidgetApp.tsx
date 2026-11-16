@@ -317,7 +317,7 @@ export function WidgetApp({ projectKey, maxDurationMs }: WidgetAppProps) {
       <div className={styles.footer}>
         <WidgetToast message={toastMessage} />
         {isCapturing ? <p className={styles.captureStatus} role="status">캡처 이미지를 준비하고 있어요.</p> : null}
-        {isReady ? (
+        {isReady && !capture ? (
           <WidgetFeedbackActions
             onStartRecording={handleStartRecording}
             onStartCapture={onStartCapture}
