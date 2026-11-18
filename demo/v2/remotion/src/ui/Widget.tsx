@@ -65,7 +65,7 @@ export function Panel({ children, scale = 1, dy = 0, opacity = 1, scrollY = 0, f
       ) : (
         <div style={{ position: "absolute", left: 20, top: 22, right: 20 }}>
           <p style={t(12, 500, C.grey600)}>래티스 주식회사</p>
-          <p style={t(19, 700, C.ink, { letterSpacing: -0.3, marginTop: 2 })}>김데모님, 무엇이든 알려주세요</p>
+          <p style={t(19, 700, C.ink, { letterSpacing: -0.3, marginTop: 2 })}>김데모님, 불편한 점을 보여주세요</p>
         </div>
       )}
       <div style={{ position: "absolute", right: 22, top: compact ? 15 : 26, color: C.grey600 }}>

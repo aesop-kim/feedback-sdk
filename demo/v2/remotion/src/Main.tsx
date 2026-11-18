@@ -7,6 +7,7 @@ import { S07, S08, S09, S10, S11, S12, S13 } from "./scenes/Record";
 import { S14, S15, S16 } from "./scenes/Ai";
 import { S17, S18, S19, S20 } from "./scenes/Question";
 import { S21, S22, S23, S24, S25 } from "./scenes/Outro";
+import { S22b, CAPTURE_LEN } from "./scenes/Capture";
 
 // [컴포넌트, 시작 프레임, 끝 프레임]
 export const SHOTS: [ComponentType, number, number][] = [
@@ -32,11 +33,14 @@ export const SHOTS: [ComponentType, number, number][] = [
   [S20, 2205, 2310],
   [S21, 2310, 2445],
   [S22, 2445, 2595],
-  [S23, 2595, 2790],
-  [S24, 2790, 2925],
-  [S25, 2925, 3120],
+  [S22b, 2595, 2595 + CAPTURE_LEN],
+  [S23, 2595 + CAPTURE_LEN, 2790 + CAPTURE_LEN],
+  [S24, 2790 + CAPTURE_LEN, 2925 + CAPTURE_LEN],
+  [S25, 2925 + CAPTURE_LEN, 3120 + CAPTURE_LEN],
 ];
-export const TOTAL = 3120;
+export const TOTAL = 3120 + CAPTURE_LEN;
+/** 캡처 장면(S22b)이 2595에 들어가면서 그 뒤 큐는 CAPTURE_LEN만큼 밀린다 */
+const shift = (g: number) => (g >= 2595 ? g + CAPTURE_LEN : g);
 
 // SFX 큐 (전역 프레임, 파일, 볼륨). 스토리보드 샷별 SFX 줄을 옮김.
 const every = (from: number, to: number, step: number) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
@@ -127,6 +131,7 @@ const CUES: [number, string, number][] = [
   [2487, "drop-2", 0.4],
   [2495, "drop-3", 0.4],
   [2585, "whip", 0.35],
+  // S22b 캡처 (장면 프레임 + 2595, shift 전 좌표로 둔다 → 아래에서 따로 더함)
   // S23
   [2640, "tick-soft", 0.5],
   [2670, "tick-soft", 0.5],
@@ -150,9 +155,23 @@ const NARRATION: [number, string][] = [
   [1232, "n5"],
 ];
 
+// 캡처 장면 효과음(전역 프레임)
+const CAPTURE_CUES: [number, string, number][] = [
+  [2595 + 44, "click", 0.6],
+  [2595 + 52, "swish", 0.4],
+  [2595 + 100, "click", 0.5],
+  [2595 + 136, "pop", 0.5],
+  [2595 + 156, "whoosh", 0.35],
+  ...[182, 188, 194, 200, 206].map((g): [number, string, number] => [2595 + g, "key", 0.4]),
+  [2595 + 222, "send", 0.55],
+  [2595 + 230, "blip", 0.4],
+  [2595 + 268, "click", 0.6],
+  [2595 + 278, "chime", 0.45],
+];
+
 export function Main() {
   const files = new Set(getStaticFiles().map((s) => s.name));
-  const hasPad = files.has("sfx/pad.wav");
+  const hasBgm = files.has("sfx/bgm.wav");
   return (
     <AbsoluteFill style={{ background: C.bg }}>
       {SHOTS.map(([Comp, a, b], i) => (
@@ -160,7 +179,7 @@ export function Main() {
           <Comp />
         </Sequence>
       ))}
-      {CUES.map(([g, name, vol], i) => (
+      {[...CUES.map(([g, n, v]): [number, string, number] => [shift(g), n, v]), ...CAPTURE_CUES].map(([g, name, vol], i) => (
         <Sequence key={`sfx-${i}`} from={g} durationInFrames={45} name={`sfx ${name}`} layout="none">
           <Audio src={staticFile(`sfx/${name}.wav`)} volume={vol} />
         </Sequence>
@@ -170,15 +189,12 @@ export function Main() {
           <Audio src={staticFile(`audio/${id}.wav`)} volume={1} />
         </Sequence>
       ))}
-      {hasPad ? <Audio src={staticFile("sfx/pad.wav")} volume={(g) => padVolume(g)} /> : null}
+      {hasBgm ? <Audio src={staticFile("sfx/bgm.wav")} volume={(g) => bgmVolume(g)} /> : null}
     </AbsoluteFill>
   );
 }
 
-/** 패드 볼륨: 문제 구간(S03~S05)은 낮게, S06에서 열림, 대사 구간은 -8dB, 끝에서 사라짐 */
-function padVolume(g: number) {
-  const base = interpolate(g, [0, 180, 186, 450, 470, 3060, 3120], [0.22, 0.22, 0.09, 0.09, 0.24, 0.24, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const duck = interpolate(g, [815, 825, 1310, 1320], [1, 0.4, 0.4, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const duck2 = g >= 1228 && g < 1320 ? 0.7 : 1;
-  return base * duck * duck2;
+/** 배경음악 볼륨: 효과음·자막이 묻히지 않게 낮게, 끝에서 사라짐 */
+function bgmVolume(g: number) {
+  return interpolate(g, [0, 20, TOTAL - 45, TOTAL], [0, 0.32, 0.32, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 }
