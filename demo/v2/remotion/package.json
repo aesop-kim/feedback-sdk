@@ -7,7 +7,7 @@
     "studio": "remotion studio src/index.ts",
     "sfx": "bash scripts/make-sfx.sh",
     "narration": "bash scripts/make-narration.sh",
-    "prerender": "bash scripts/make-sfx.sh > /dev/null",
+    "prerender": "bash scripts/make-sfx.sh > /dev/null && python3 scripts/make-bgm.py",
     "render": "remotion render src/index.ts LatticeDemoV2 out/lattice-demo-v2.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p --audio-codec=aac --audio-bitrate=192k --concurrency=3 --timeout=120000",
     "postrender": "bash scripts/loudnorm.sh",
     "draft": "remotion render src/index.ts LatticeDemoV2 out/draft.mp4 --scale=0.5 --crf=26",

@@ -120,7 +120,7 @@ export function S22() {
 }
 
 /** 화면 정리: bg 타일이 무작위 순서로 덮는다(SCRAMBLE을 화면 전체에 적용한 근사). */
-function TileWipe({ f, start }: { f: number; start: number }) {
+export function TileWipe({ f, start }: { f: number; start: number }) {
   if (f < start) return null;
   const cols = 16;
   const rows = 9;
